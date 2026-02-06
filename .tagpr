@@ -2,3 +2,4 @@
     vPrefix = false
     releaseBranch = main
     changelog = true
+	versionFile = -
