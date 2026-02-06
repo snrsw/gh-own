@@ -183,7 +183,11 @@ func TestModel_Update_KeyMsg(t *testing.T) {
 			})
 
 			newModel, cmd := m.Update(tt.key)
-			m = newModel.(Model)
+			var ok bool
+			m, ok = newModel.(Model)
+			if !ok {
+				t.Fatal("expected Model type")
+			}
 
 			if m.activeTab != tt.expectedTab {
 				t.Errorf("activeTab = %d, want %d", m.activeTab, tt.expectedTab)
@@ -210,7 +214,11 @@ func TestModel_Update_TabWrap(t *testing.T) {
 	// Press tab 3 times to wrap around
 	for i := 0; i < 3; i++ {
 		newModel, _ := m.Update(keyMsg)
-		m = newModel.(Model)
+		var ok bool
+		m, ok = newModel.(Model)
+		if !ok {
+			t.Fatal("expected Model type")
+		}
 	}
 
 	if m.activeTab != 0 {
@@ -235,7 +243,11 @@ func TestModel_Update_WindowSize(t *testing.T) {
 
 			sizeMsg := tea.WindowSizeMsg{Width: tt.width, Height: tt.height}
 			newModel, _ := m.Update(sizeMsg)
-			m = newModel.(Model)
+			var ok bool
+			m, ok = newModel.(Model)
+			if !ok {
+				t.Fatal("expected Model type")
+			}
 
 			if m.width != tt.width {
 				t.Errorf("width = %d, want %d", m.width, tt.width)
@@ -252,7 +264,11 @@ func TestModel_View(t *testing.T) {
 
 	sizeMsg := tea.WindowSizeMsg{Width: 80, Height: 24}
 	newModel, _ := m.Update(sizeMsg)
-	m = newModel.(Model)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	if view := m.View(); view == "" {
 		t.Error("View() should not be empty")

@@ -2,41 +2,6 @@ version: "2"
 run:
   timeout: 5m
   tests: true
-  skip-dirs:
-    - vendor
-    - dist
-    - profile
-
-output:
-  sort-results: true
-
-linters-settings:
-  govet:
-    enable:
-      - shadow
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  gocyclo:
-    min-complexity: 15
-  cyclop:
-    max-complexity: 15
-  revive:
-    rules:
-      - name: unexported-return
-        disabled: true
-      - name: exported
-        disabled: false
-  staticcheck:
-    checks: ["all"]
-  stylecheck:
-    checks: ["all"]
-  misspell:
-    locale: US
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: github.com/snrsw/gh-own
 
 linters:
   enable:
@@ -54,6 +19,28 @@ linters:
     - gocyclo
     - cyclop
 
+  settings:
+    govet:
+      enable:
+        - shadow
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    gocyclo:
+      min-complexity: 15
+    cyclop:
+      max-complexity: 15
+    revive:
+      rules:
+        - name: unexported-return
+          disabled: true
+        - name: exported
+          disabled: false
+    staticcheck:
+      checks: ["all"]
+    misspell:
+      locale: US
+
   exclusions:
     generated: lax
     presets:
@@ -62,6 +49,9 @@ linters:
       - legacy
       - std-error-handling
     paths:
+      - vendor
+      - dist
+      - profile
       - tmpmod
       - third_party$
       - builtin$
