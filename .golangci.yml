@@ -1,0 +1,58 @@
+version: "2"
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errorlint
+    - godot
+    - gosec
+    - misspell
+    - revive
+    - funcorder
+    - govet
+    - errcheck
+    - staticcheck
+    - ineffassign
+    - unused
+    - gocyclo
+    - cyclop
+
+  settings:
+    govet:
+      enable:
+        - shadow
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    gocyclo:
+      min-complexity: 15
+    cyclop:
+      max-complexity: 15
+    revive:
+      rules:
+        - name: unexported-return
+          disabled: true
+        - name: exported
+          disabled: false
+    staticcheck:
+      checks: ["all"]
+    misspell:
+      locale: US
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - vendor
+      - dist
+      - profile
+      - tmpmod
+      - third_party$
+      - builtin$
+      - examples$

@@ -1,0 +1,59 @@
+// Package pullrequest provides functionality to handle GitHub pull requests owned by a user.
+package pullrequest
+
+import (
+	"fmt"
+
+	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/snrsw/gh-own/internal/gh"
+	"github.com/snrsw/gh-own/internal/ui"
+)
+
+func (o *GroupedPullRequests) View() error {
+	m := ui.NewModel([]ui.Tab{
+		ui.NewTab("Created", ui.CreateList(o.prItems(o.Created))),
+		ui.NewTab("Participated", ui.CreateList(o.prItems(o.Participated))),
+		ui.NewTab("Assigned", ui.CreateList(o.prItems(o.Assigned))),
+		ui.NewTab("Review Requested", ui.CreateList(o.prItems(o.ReviewRequested))),
+	})
+
+	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
+	return err
+}
+
+func (p PullRequest) toItem() ui.Item {
+	return ui.NewItem(
+		fmt.Sprintf("%s %s", p.RepositoryFullName(), p.Title),
+		fmt.Sprintf(
+			"%s opened on %s by %s, updated %s",
+			RenderPRNumber(p.Number, p.Draft),
+			ui.CreatedOn(p.CreatedAt),
+			p.User.Login,
+			ui.UpdatedAgo(p.UpdatedAt),
+		),
+		p.HTMLURL,
+	)
+}
+
+func (o *GroupedPullRequests) prItems(prs gh.SearchResult[PullRequest]) []list.Item {
+	items := make([]list.Item, 0, len(prs.Items))
+	for _, pr := range prs.Items {
+		items = append(items, pr.toItem())
+	}
+	return items
+}
+
+func RenderPRNumber(n int, draft bool) string {
+	s := fmt.Sprintf("#%d", n)
+	if draft {
+		return numberDraftStyle.Render(s)
+	}
+	return numberStyle.Render(s)
+}
+
+var (
+	numberStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#0969DA")) // GitHub blue
+	numberDraftStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#6E7781")) // GitHub gray
+)
