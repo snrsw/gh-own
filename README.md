@@ -10,8 +10,31 @@ gh extension install snrsw/gh-own
 
 ## Usage
 
-```shell
-gh own
+```sh
+gh own [command]
 ```
 
-This command will display a list of pull requests (distinguished by your role as author, reviewer, or assignee) and issues that you own across all repositories you have access to on GitHub.
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `gh own` | List your pull requests (default) |
+| `gh own pr` | List your pull requests |
+| `gh own issue` | List your issues |
+
+### Examples
+
+```sh
+# List your pull requests (default behavior)
+gh own
+
+# Explicitly list pull requests
+gh own pr
+
+# List your issues
+gh own issue
+```
+
+## Requirements
+
+- [GitHub CLI](https://cli.github.com/) installed and authenticated
