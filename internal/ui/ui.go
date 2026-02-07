@@ -13,23 +13,29 @@ import (
 )
 
 type Item struct {
-	title, description, url string
+	repoName, titleText, description, url string
 }
 
-func NewItem(title, description, url string) Item {
+func NewItem(repoName, titleText, description, url string) Item {
 	return Item{
-		title:       title,
+		repoName:    repoName,
+		titleText:   titleText,
 		description: description,
 		url:         url,
 	}
 }
 
-func (i Item) Title() string       { return i.title }
+func (i Item) Title() string {
+	if i.repoName == "" {
+		return i.titleText
+	}
+	return i.repoName + " " + i.titleText
+}
 func (i Item) Description() string { return i.description }
-func (i Item) FilterValue() string { return i.title }
+func (i Item) FilterValue() string { return i.Title() }
 
 func CreateList(items []list.Item) list.Model {
-	delegate := GithubDelegate()
+	delegate := newGithubDelegate()
 	l := list.New(items, delegate, 0, 0)
 	l.SetShowTitle(false)
 	l.SetShowStatusBar(false)

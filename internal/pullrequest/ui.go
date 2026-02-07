@@ -26,7 +26,8 @@ func (o *GroupedPullRequests) View() error {
 
 func (p PullRequest) toItem() ui.Item {
 	return ui.NewItem(
-		fmt.Sprintf("%s %s %s", p.RepositoryFullName(), p.Title, cistatus.RenderCIStatus(p.CIStatus)),
+		p.RepositoryFullName(),
+		fmt.Sprintf("%s %s", p.Title, cistatus.RenderCIStatus(p.CIStatus)),
 		fmt.Sprintf(
 			"%s opened on %s by %s, updated %s",
 			RenderPRNumber(p.Number, p.Draft),

@@ -2,62 +2,29 @@
 package ui
 
 import (
-	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
 )
 
-func githubTabColors() (active, inactive lipgloss.AdaptiveColor) {
-	return lipgloss.AdaptiveColor{
-			Light: "#0969DA", // GitHub blue
-			Dark:  "#2F81F7",
-		}, lipgloss.AdaptiveColor{
-			Light: "#57606A", // GitHub gray
-			Dark:  "#8B949E",
-		}
-}
+var (
+	colorAccent    = lipgloss.AdaptiveColor{Light: "#0969DA", Dark: "#2F81F7"} // GitHub blue
+	colorSecondary = lipgloss.AdaptiveColor{Light: "#57606A", Dark: "#8B949E"} // GitHub gray
+	colorMuted     = lipgloss.AdaptiveColor{Light: "#6E7781", Dark: "#6E7681"} // GitHub muted
+	colorRepoName  = lipgloss.AdaptiveColor{Light: "#656D76", Dark: "#848D97"} // light gray
+)
 
 func GithubTabStyles() (active, inactive lipgloss.Style) {
-	activeColor, inactiveColor := githubTabColors()
-
 	active = lipgloss.NewStyle().
-		Foreground(activeColor).
+		Foreground(colorAccent).
 		Bold(true).
 		Padding(0, 1).
 		Border(lipgloss.NormalBorder(), false, false, true, false).
-		BorderForeground(activeColor)
+		BorderForeground(colorAccent)
 
 	inactive = lipgloss.NewStyle().
-		Foreground(inactiveColor).
+		Foreground(colorSecondary).
 		Padding(0, 1)
 
 	return
-}
-
-func githubAccentColor() lipgloss.AdaptiveColor {
-	return lipgloss.AdaptiveColor{
-		Light: "#0969DA", // GitHub blue (light theme)
-		Dark:  "#2F81F7", // GitHub blue (dark theme)
-	}
-}
-
-func GithubDelegate() list.DefaultDelegate {
-	d := list.NewDefaultDelegate()
-
-	accent := githubAccentColor()
-
-	d.Styles.SelectedTitle = lipgloss.NewStyle().
-		Foreground(accent).
-		Bold(true)
-
-	d.Styles.SelectedDesc = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#57606A", Dark: "#8B949E"})
-
-	d.Styles.NormalTitle = lipgloss.NewStyle()
-
-	d.Styles.NormalDesc = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#6E7781", Dark: "#6E7681"})
-
-	return d
 }
 
 var (
