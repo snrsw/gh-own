@@ -2,7 +2,6 @@
 package issue
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
@@ -30,26 +29,41 @@ func (i *Issue) RepositoryFullName() string {
 }
 
 type GroupedIssues struct {
-	Created      gh.SearchResult[Issue]
-	Assigned     gh.SearchResult[Issue]
-	Participated gh.SearchResult[Issue]
+	Created      []Issue
+	Assigned     []Issue
+	Participated []Issue
 }
 
-func SearchIssues(client *api.RESTClient, username string) (*GroupedIssues, error) {
-	conditions := []gh.Condition{
-		{Name: "created", Query: fmt.Sprintf("is:issue is:open author:%s", username)},
-		{Name: "assigned", Query: fmt.Sprintf("is:issue is:open assignee:%s", username)},
-		{Name: "participated", Query: fmt.Sprintf("is:issue is:open (mentions:%s OR commenter:%s)", username, username)},
+func issueFromNode(node gh.IssueSearchNode) Issue {
+	return Issue{
+		Number:        node.Number,
+		User:          gh.User{Login: node.Author.Login},
+		RepositoryURL: node.RepositoryURL(),
+		Title:         node.Title,
+		State:         node.State,
+		HTMLURL:       node.URL,
+		UpdatedAt:     node.UpdatedAt,
+		CreatedAt:     node.CreatedAt,
 	}
+}
 
-	results, err := gh.Search[Issue](client, conditions)
+func issuesFromNodes(nodes []gh.IssueSearchNode) []Issue {
+	issues := make([]Issue, len(nodes))
+	for i, node := range nodes {
+		issues[i] = issueFromNode(node)
+	}
+	return issues
+}
+
+func SearchIssues(client *api.GraphQLClient, username string) (*GroupedIssues, error) {
+	results, err := gh.SearchIssuesGraphQL(client, username)
 	if err != nil {
 		return nil, err
 	}
 
 	return &GroupedIssues{
-		Created:      results["created"],
-		Assigned:     results["assigned"],
-		Participated: results["participated"],
+		Created:      issuesFromNodes(results["created"]),
+		Assigned:     issuesFromNodes(results["assigned"]),
+		Participated: issuesFromNodes(results["participated"]),
 	}, nil
 }
