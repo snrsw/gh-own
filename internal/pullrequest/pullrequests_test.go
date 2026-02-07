@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/snrsw/gh-own/internal/cistatus"
 	"github.com/snrsw/gh-own/internal/gh"
 )
 
@@ -80,7 +81,7 @@ func TestPullRequest_ToItem(t *testing.T) {
 				Draft:         false,
 				CreatedAt:     "2024-03-10T08:00:00Z",
 			},
-			expectedTitle: "owner/repo Add new feature",
+			expectedTitle: "owner/repo Add new feature -",
 			descContains:  []string{"#123", "2024-03-10", "contributor"},
 		},
 		{
@@ -93,8 +94,36 @@ func TestPullRequest_ToItem(t *testing.T) {
 				Draft:         true,
 				CreatedAt:     "2024-01-15T12:00:00Z",
 			},
-			expectedTitle: "org/project Work in progress",
+			expectedTitle: "org/project Work in progress -",
 			descContains:  []string{"#456", "2024-01-15", "author"},
+		},
+		{
+			name: "PR with CI status success",
+			pr: PullRequest{
+				Number:        789,
+				User:          gh.User{Login: "dev"},
+				RepositoryURL: "https://api.github.com/repos/owner/repo",
+				Title:         "Feature with CI",
+				Draft:         false,
+				CreatedAt:     "2024-03-15T10:00:00Z",
+				CIStatus:      cistatus.CIStatusSuccess,
+			},
+			expectedTitle: "owner/repo Feature with CI ✓",
+			descContains:  []string{"#789"},
+		},
+		{
+			name: "PR with CI status failure",
+			pr: PullRequest{
+				Number:        101,
+				User:          gh.User{Login: "dev"},
+				RepositoryURL: "https://api.github.com/repos/owner/repo",
+				Title:         "Failing CI",
+				Draft:         false,
+				CreatedAt:     "2024-03-15T10:00:00Z",
+				CIStatus:      cistatus.CIStatusFailure,
+			},
+			expectedTitle: "owner/repo Failing CI ✗",
+			descContains:  []string{"#101"},
 		},
 	}
 
@@ -203,5 +232,87 @@ func TestGroupedPullRequests_PRItems(t *testing.T) {
 				t.Errorf("prItems() returned %d items, want %d", len(items), tt.expected)
 			}
 		})
+	}
+}
+
+func TestPullRequest_HasCIStatusField(t *testing.T) {
+	pr := PullRequest{
+		Number:   123,
+		CIStatus: cistatus.CIStatusSuccess,
+	}
+
+	if pr.CIStatus != cistatus.CIStatusSuccess {
+		t.Errorf("CIStatus = %v, want %v", pr.CIStatus, cistatus.CIStatusSuccess)
+	}
+}
+
+func TestFromGraphQL(t *testing.T) {
+	node := gh.PRSearchNode{
+		Number:      123,
+		Title:       "Test PR",
+		URL:         "https://github.com/owner/repo/pull/123",
+		IsDraft:     false,
+		UpdatedAt:   "2024-03-10T10:00:00Z",
+		CreatedAt:   "2024-03-10T08:00:00Z",
+		StatusState: "SUCCESS",
+	}
+	node.Author.Login = "testuser"
+	node.Repository.NameWithOwner = "owner/repo"
+
+	pr := FromGraphQL(node)
+
+	if pr.Number != 123 {
+		t.Errorf("Number = %d, want 123", pr.Number)
+	}
+	if pr.Title != "Test PR" {
+		t.Errorf("Title = %q, want %q", pr.Title, "Test PR")
+	}
+	if pr.User.Login != "testuser" {
+		t.Errorf("User.Login = %q, want %q", pr.User.Login, "testuser")
+	}
+	if pr.CIStatus != cistatus.CIStatusSuccess {
+		t.Errorf("CIStatus = %v, want %v", pr.CIStatus, cistatus.CIStatusSuccess)
+	}
+	if pr.HTMLURL != "https://github.com/owner/repo/pull/123" {
+		t.Errorf("HTMLURL = %q, want %q", pr.HTMLURL, "https://github.com/owner/repo/pull/123")
+	}
+}
+
+func TestFromGraphQLNodes(t *testing.T) {
+	nodes := []gh.PRSearchNode{
+		{Number: 1, Title: "PR 1", StatusState: "SUCCESS"},
+		{Number: 2, Title: "PR 2", StatusState: "FAILURE"},
+	}
+
+	prs := FromGraphQLNodes(nodes)
+
+	if len(prs) != 2 {
+		t.Fatalf("FromGraphQLNodes returned %d items, want 2", len(prs))
+	}
+	if prs[0].Number != 1 {
+		t.Errorf("prs[0].Number = %d, want 1", prs[0].Number)
+	}
+	if prs[1].CIStatus != cistatus.CIStatusFailure {
+		t.Errorf("prs[1].CIStatus = %v, want %v", prs[1].CIStatus, cistatus.CIStatusFailure)
+	}
+}
+
+func TestBuildConditions(t *testing.T) {
+	conditions := BuildConditions("testuser")
+
+	if len(conditions) != 4 {
+		t.Fatalf("BuildConditions returned %d conditions, want 4", len(conditions))
+	}
+
+	names := make(map[string]bool)
+	for _, c := range conditions {
+		names[c.Name] = true
+	}
+
+	expectedNames := []string{"created", "assigned", "participated", "review-requested"}
+	for _, name := range expectedNames {
+		if !names[name] {
+			t.Errorf("BuildConditions missing condition %q", name)
+		}
 	}
 }

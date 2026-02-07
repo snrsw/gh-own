@@ -12,7 +12,27 @@ type User struct {
 	Login string `json:"login"`
 }
 
-func CurrentUser() (*api.RESTClient, string, error) {
+// CurrentUser returns a GraphQL client and the current user's login.
+func CurrentUser() (*api.GraphQLClient, string, error) {
+	client, err := api.DefaultGraphQLClient()
+	if err != nil {
+		return nil, "", err
+	}
+
+	var query struct {
+		Viewer struct {
+			Login string
+		}
+	}
+	if err := client.Query("viewer", &query, nil); err != nil {
+		return nil, "", fmt.Errorf("failed to get current user: %w", err)
+	}
+
+	return client, query.Viewer.Login, nil
+}
+
+// CurrentUserREST returns a REST client and the current user's login.
+func CurrentUserREST() (*api.RESTClient, string, error) {
 	client, err := api.DefaultRESTClient()
 	if err != nil {
 		return nil, "", err
