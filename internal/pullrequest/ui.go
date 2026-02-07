@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/snrsw/gh-own/internal/cistatus"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/ui"
 )
@@ -25,7 +26,7 @@ func (o *GroupedPullRequests) View() error {
 
 func (p PullRequest) toItem() ui.Item {
 	return ui.NewItem(
-		fmt.Sprintf("%s %s", p.RepositoryFullName(), p.Title),
+		fmt.Sprintf("%s %s %s", p.RepositoryFullName(), p.Title, cistatus.RenderCIStatus(p.CIStatus)),
 		fmt.Sprintf(
 			"%s opened on %s by %s, updated %s",
 			RenderPRNumber(p.Number, p.Draft),
