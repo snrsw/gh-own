@@ -33,6 +33,6 @@ jobs:
       - uses: actions/checkout@v6
       - uses: cli/gh-extension-precompile@v2
         with:
-          tag: ${{ needs.tagpr.outputs.tagpr-tag }}
+          release_tag: ${{ needs.tagpr.outputs.tagpr-tag }}
           go_version_file: go.mod
           generate_attestations: true
