@@ -2,6 +2,10 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.0.4](https://github.com/snrsw/gh-own/compare/0.0.3...0.0.4) - 2026-02-07
+### Other Changes
+- Fix release workflow input name by @snrsw in https://github.com/snrsw/gh-own/pull/15
+
 ## [0.0.3](https://github.com/snrsw/gh-own/compare/0.0.2...0.0.3) - 2026-02-07
 ### Other Changes
 - Fix release job tag detection on shallow clone by @snrsw in https://github.com/snrsw/gh-own/pull/12
