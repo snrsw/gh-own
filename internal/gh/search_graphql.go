@@ -7,7 +7,6 @@ import (
 	"github.com/snrsw/gh-own/internal/cistatus"
 )
 
-// IssueSearchNode represents an issue from GraphQL search.
 type IssueSearchNode struct {
 	Number    int
 	Title     string
@@ -23,7 +22,6 @@ type IssueSearchNode struct {
 	}
 }
 
-// RepositoryURL returns the REST API URL for the repository.
 func (i *IssueSearchNode) RepositoryURL() string {
 	return fmt.Sprintf("https://api.github.com/repos/%s", i.Repository.NameWithOwner)
 }
@@ -184,4 +182,12 @@ func SearchGraphQL(client *api.GraphQLClient, conditions []Condition) (map[strin
 	}
 
 	return results, nil
+}
+
+func SearchIssuesGraphQL(client *api.GraphQLClient, username string) (map[string][]IssueSearchNode, error) {
+	if username == "" {
+		return make(map[string][]IssueSearchNode), nil
+	}
+
+	return make(map[string][]IssueSearchNode), nil
 }

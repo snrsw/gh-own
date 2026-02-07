@@ -110,3 +110,17 @@ func TestIssueSearchNode_Fields(t *testing.T) {
 		t.Errorf("Repository.NameWithOwner = %q, want %q", issue.Repository.NameWithOwner, "owner/repo")
 	}
 }
+
+func TestSearchIssuesGraphQL_EmptyUsername(t *testing.T) {
+	results, err := SearchIssuesGraphQL(nil, "")
+
+	if err != nil {
+		t.Errorf("SearchIssuesGraphQL with empty username returned error: %v", err)
+	}
+	if results == nil {
+		t.Error("SearchIssuesGraphQL returned nil map")
+	}
+	if len(results) != 0 {
+		t.Errorf("SearchIssuesGraphQL with empty username returned %d results, want 0", len(results))
+	}
+}
