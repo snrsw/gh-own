@@ -2,6 +2,12 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.0.2](https://github.com/snrsw/gh-own/compare/0.0.1...0.0.2) - 2026-02-07
+### Other Changes
+- Add CI status indicators to PR list by @snrsw in https://github.com/snrsw/gh-own/pull/8
+- Migrate issues to GraphQL with batched queries by @snrsw in https://github.com/snrsw/gh-own/pull/10
+- Fix release workflow not triggering on tagpr-created tags by @snrsw in https://github.com/snrsw/gh-own/pull/11
+
 ## [0.0.1](https://github.com/snrsw/gh-own/commits/0.0.1) - 2026-02-06
 ### Other Changes
 - Add Claude Code GitHub Workflow by @snrsw in https://github.com/snrsw/gh-own/pull/1
