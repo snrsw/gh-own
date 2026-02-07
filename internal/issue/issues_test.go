@@ -101,35 +101,26 @@ func TestIssue_ToItem(t *testing.T) {
 func TestGroupedIssues_IssueItems(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    gh.SearchResult[Issue]
+		input    []Issue
 		expected int
 	}{
 		{
 			name: "multiple issues",
-			input: gh.SearchResult[Issue]{
-				TotalCount: 2,
-				Items: []Issue{
-					{Number: 1, RepositoryURL: "https://api.github.com/repos/owner/repo1", Title: "Issue 1"},
-					{Number: 2, RepositoryURL: "https://api.github.com/repos/owner/repo2", Title: "Issue 2"},
-				},
+			input: []Issue{
+				{Number: 1, RepositoryURL: "https://api.github.com/repos/owner/repo1", Title: "Issue 1"},
+				{Number: 2, RepositoryURL: "https://api.github.com/repos/owner/repo2", Title: "Issue 2"},
 			},
 			expected: 2,
 		},
 		{
-			name: "empty list",
-			input: gh.SearchResult[Issue]{
-				TotalCount: 0,
-				Items:      []Issue{},
-			},
+			name:     "empty list",
+			input:    []Issue{},
 			expected: 0,
 		},
 		{
 			name: "single issue",
-			input: gh.SearchResult[Issue]{
-				TotalCount: 1,
-				Items: []Issue{
-					{Number: 42, RepositoryURL: "https://api.github.com/repos/owner/repo", Title: "Solo Issue"},
-				},
+			input: []Issue{
+				{Number: 42, RepositoryURL: "https://api.github.com/repos/owner/repo", Title: "Solo Issue"},
 			},
 			expected: 1,
 		},
@@ -144,5 +135,39 @@ func TestGroupedIssues_IssueItems(t *testing.T) {
 				t.Errorf("issueItems() returned %d items, want %d", len(items), tt.expected)
 			}
 		})
+	}
+}
+
+func TestIssueFromNode(t *testing.T) {
+	node := gh.IssueSearchNode{
+		Number:    42,
+		Title:     "Test Issue",
+		URL:       "https://github.com/owner/repo/issues/42",
+		State:     "OPEN",
+		UpdatedAt: "2024-03-15T10:00:00Z",
+		CreatedAt: "2024-03-10T08:00:00Z",
+	}
+	node.Author.Login = "testuser"
+	node.Repository.NameWithOwner = "owner/repo"
+
+	issue := issueFromNode(node)
+
+	if issue.Number != 42 {
+		t.Errorf("Number = %d, want 42", issue.Number)
+	}
+	if issue.Title != "Test Issue" {
+		t.Errorf("Title = %q, want %q", issue.Title, "Test Issue")
+	}
+	if issue.HTMLURL != "https://github.com/owner/repo/issues/42" {
+		t.Errorf("HTMLURL = %q, want %q", issue.HTMLURL, "https://github.com/owner/repo/issues/42")
+	}
+	if issue.State != "OPEN" {
+		t.Errorf("State = %q, want %q", issue.State, "OPEN")
+	}
+	if issue.User.Login != "testuser" {
+		t.Errorf("User.Login = %q, want %q", issue.User.Login, "testuser")
+	}
+	if issue.RepositoryURL != "https://api.github.com/repos/owner/repo" {
+		t.Errorf("RepositoryURL = %q, want %q", issue.RepositoryURL, "https://api.github.com/repos/owner/repo")
 	}
 }

@@ -12,7 +12,7 @@ var issueCmd = &cobra.Command{
 	Short: "GitHub CLI extension to list your owned issues.",
 	Long:  "GitHub CLI extension to list your owned issues.",
 	RunE: func(_ *cobra.Command, _ []string) error {
-		client, username, err := gh.CurrentUserREST()
+		client, username, err := gh.CurrentUser()
 		if err != nil {
 			return err
 		}

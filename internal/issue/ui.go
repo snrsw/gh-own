@@ -6,7 +6,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/ui"
 )
 
@@ -29,9 +28,9 @@ func (i Issue) toItem() ui.Item {
 	)
 }
 
-func (o *GroupedIssues) issueItems(issues gh.SearchResult[Issue]) []list.Item {
-	items := make([]list.Item, 0, len(issues.Items))
-	for _, issue := range issues.Items {
+func (o *GroupedIssues) issueItems(issues []Issue) []list.Item {
+	items := make([]list.Item, 0, len(issues))
+	for _, issue := range issues {
 		items = append(items, issue.toItem())
 	}
 	return items
