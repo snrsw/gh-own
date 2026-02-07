@@ -5,6 +5,11 @@ All notable changes to this repository will be documented in this file.
 ## [0.0.4](https://github.com/snrsw/gh-own/compare/0.0.3...0.0.4) - 2026-02-07
 ### Other Changes
 - Fix release workflow input name by @snrsw in https://github.com/snrsw/gh-own/pull/15
+- Release for 0.0.4 by @github-actions[bot] in https://github.com/snrsw/gh-own/pull/16
+
+## [0.0.4](https://github.com/snrsw/gh-own/compare/0.0.3...0.0.4) - 2026-02-07
+### Other Changes
+- Fix release workflow input name by @snrsw in https://github.com/snrsw/gh-own/pull/15
 
 ## [0.0.3](https://github.com/snrsw/gh-own/compare/0.0.2...0.0.3) - 2026-02-07
 ### Other Changes
