@@ -2,6 +2,8 @@
 package ui
 
 import (
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -25,6 +27,22 @@ func GithubTabStyles() (active, inactive lipgloss.Style) {
 		Padding(0, 1)
 
 	return
+}
+
+func configureHelp(l *list.Model) {
+	l.KeyMap.CursorUp.SetEnabled(false)
+	l.KeyMap.CursorDown.SetEnabled(false)
+	l.KeyMap.Quit.SetEnabled(false)
+	l.KeyMap.ShowFullHelp.SetEnabled(false)
+	l.KeyMap.CloseFullHelp.SetEnabled(false)
+
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "switch tabs")),
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "open")),
+			key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "quit")),
+		}
+	}
 }
 
 var (

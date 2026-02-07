@@ -41,6 +41,7 @@ func CreateList(items []list.Item) list.Model {
 	l.SetShowStatusBar(false)
 	l.SetShowHelp(true)
 	l.SetFilteringEnabled(true)
+	configureHelp(&l)
 	return l
 }
 
