@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/snrsw/gh-own/internal/cistatus"
@@ -122,5 +123,96 @@ func TestSearchIssuesGraphQL_EmptyUsername(t *testing.T) {
 	}
 	if len(results) != 0 {
 		t.Errorf("SearchIssuesGraphQL with empty username returned %d results, want 0", len(results))
+	}
+}
+
+func TestBuildIssueSearchVariables(t *testing.T) {
+	username := "testuser"
+	vars := buildIssueSearchVariables(username)
+
+	expectedCreated := "is:issue is:open author:testuser"
+	if vars["created"] != expectedCreated {
+		t.Errorf("created = %q, want %q", vars["created"], expectedCreated)
+	}
+
+	expectedAssigned := "is:issue is:open assignee:testuser"
+	if vars["assigned"] != expectedAssigned {
+		t.Errorf("assigned = %q, want %q", vars["assigned"], expectedAssigned)
+	}
+
+	expectedParticipated := "is:issue is:open involves:testuser -author:testuser -assignee:testuser"
+	if vars["participated"] != expectedParticipated {
+		t.Errorf("participated = %q, want %q", vars["participated"], expectedParticipated)
+	}
+}
+
+func TestIssueSearchQuery_ContainsAliases(t *testing.T) {
+	query := issueSearchQuery
+
+	if query == "" {
+		t.Fatal("issueSearchQuery is empty")
+	}
+
+	requiredParts := []string{
+		"created: search",
+		"assigned: search",
+		"participated: search",
+		"... on Issue",
+	}
+
+	for _, part := range requiredParts {
+		if !strings.Contains(query, part) {
+			t.Errorf("issueSearchQuery should contain %q", part)
+		}
+	}
+}
+
+func TestParseIssueSearchNodes(t *testing.T) {
+	node1 := issueSearchRawNode{
+		Number:    1,
+		Title:     "Issue One",
+		URL:       "https://github.com/owner/repo/issues/1",
+		State:     "OPEN",
+		UpdatedAt: "2024-03-15T10:00:00Z",
+		CreatedAt: "2024-03-10T08:00:00Z",
+	}
+	node1.Author.Login = "user1"
+	node1.Repository.NameWithOwner = "owner/repo"
+
+	node2 := issueSearchRawNode{
+		Number:    2,
+		Title:     "Issue Two",
+		URL:       "https://github.com/owner/repo/issues/2",
+		State:     "OPEN",
+		UpdatedAt: "2024-03-16T10:00:00Z",
+		CreatedAt: "2024-03-11T08:00:00Z",
+	}
+	node2.Author.Login = "user2"
+	node2.Repository.NameWithOwner = "owner/repo"
+
+	rawNodes := []issueSearchRawNode{
+		node1,
+		{Number: 0}, // Should be skipped
+		node2,
+	}
+
+	nodes := parseIssueSearchNodes(rawNodes)
+
+	if len(nodes) != 2 {
+		t.Fatalf("expected 2 nodes, got %d", len(nodes))
+	}
+
+	if nodes[0].Number != 1 {
+		t.Errorf("nodes[0].Number = %d, want 1", nodes[0].Number)
+	}
+	if nodes[0].Title != "Issue One" {
+		t.Errorf("nodes[0].Title = %q, want %q", nodes[0].Title, "Issue One")
+	}
+	if nodes[0].Author.Login != "user1" {
+		t.Errorf("nodes[0].Author.Login = %q, want %q", nodes[0].Author.Login, "user1")
+	}
+
+	if nodes[1].Number != 2 {
+		t.Errorf("nodes[1].Number = %d, want 2", nodes[1].Number)
 	}
 }
