@@ -7,6 +7,27 @@ import (
 	"github.com/snrsw/gh-own/internal/cistatus"
 )
 
+// IssueSearchNode represents an issue from GraphQL search.
+type IssueSearchNode struct {
+	Number    int
+	Title     string
+	URL       string
+	State     string
+	UpdatedAt string
+	CreatedAt string
+	Author    struct {
+		Login string
+	}
+	Repository struct {
+		NameWithOwner string
+	}
+}
+
+// RepositoryURL returns the REST API URL for the repository.
+func (i *IssueSearchNode) RepositoryURL() string {
+	return fmt.Sprintf("https://api.github.com/repos/%s", i.Repository.NameWithOwner)
+}
+
 // PRSearchNode represents a pull request from GraphQL search.
 type PRSearchNode struct {
 	Number     int
