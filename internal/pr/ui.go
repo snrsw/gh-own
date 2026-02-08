@@ -1,5 +1,5 @@
-// Package pullrequest provides functionality to handle GitHub pull requests owned by a user.
-package pullrequest
+// Package pr provides functionality to handle GitHub pull requests owned by a user.
+package pr
 
 import (
 	"fmt"
@@ -14,10 +14,10 @@ import (
 
 func (o *GroupedPullRequests) View() error {
 	m := ui.NewModel([]ui.Tab{
-		ui.NewTab("Created", ui.CreateList(o.prItems(o.Created))),
-		ui.NewTab("Participated", ui.CreateList(o.prItems(o.Participated))),
-		ui.NewTab("Assigned", ui.CreateList(o.prItems(o.Assigned))),
-		ui.NewTab("Review Requested", ui.CreateList(o.prItems(o.ReviewRequested))),
+		ui.NewTab(fmt.Sprintf("Created (%d)", o.Created.TotalCount), ui.CreateList(o.prItems(o.Created))),
+		ui.NewTab(fmt.Sprintf("Participated (%d)", o.Participated.TotalCount), ui.CreateList(o.prItems(o.Participated))),
+		ui.NewTab(fmt.Sprintf("Assigned (%d)", o.Assigned.TotalCount), ui.CreateList(o.prItems(o.Assigned))),
+		ui.NewTab(fmt.Sprintf("Review Requested (%d)", o.ReviewRequested.TotalCount), ui.CreateList(o.prItems(o.ReviewRequested))),
 	})
 
 	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()

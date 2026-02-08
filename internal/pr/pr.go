@@ -1,8 +1,7 @@
-// Package pullrequest provides functionality to handle GitHub pull requests owned by a user.
-package pullrequest
+// Package pr provides functionality to handle GitHub pull requests owned by a user.
+package pr
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
@@ -61,28 +60,17 @@ type GroupedPullRequests struct {
 	Participated    gh.SearchResult[PullRequest]
 }
 
-func BuildConditions(username string) []gh.Condition {
-	return []gh.Condition{
-		{Name: "created", Query: fmt.Sprintf("is:pr is:open author:%s", username)},
-		{Name: "assigned", Query: fmt.Sprintf("is:pr is:open assignee:%s", username)},
-		{Name: "participated", Query: fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username)},
-		{Name: "review-requested", Query: fmt.Sprintf("is:pr is:open review-requested:%s", username)},
-	}
-}
-
 func SearchPullRequests(client *api.GraphQLClient, username string) (*GroupedPullRequests, error) {
-	conditions := BuildConditions(username)
-
-	results, err := gh.SearchGraphQL(client, conditions)
+	results, err := gh.SearchPRs(client, username)
 	if err != nil {
 		return nil, err
 	}
 
 	return &GroupedPullRequests{
-		Created:         toSearchResult(results["created"]),
-		Assigned:        toSearchResult(results["assigned"]),
-		Participated:    toSearchResult(results["participated"]),
-		ReviewRequested: toSearchResult(results["review-requested"]),
+		Created:         toSearchResult(results.Created),
+		Assigned:        toSearchResult(results.Assigned),
+		ReviewRequested: toSearchResult(results.ReviewRequested),
+		Participated:    toSearchResult(results.Participated),
 	}, nil
 }
 
