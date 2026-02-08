@@ -1,10 +1,79 @@
 package gh
 
 import (
+	"fmt"
+	"net/http"
 	"testing"
 
+	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/config"
 )
+
+type mockTransport struct {
+	handler func(req *http.Request) (*http.Response, error)
+}
+
+func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.handler(req)
+}
+
+func newTestRESTClient(t *testing.T, transport http.RoundTripper) *api.RESTClient {
+	t.Helper()
+	client, err := api.NewRESTClient(api.ClientOptions{
+		AuthToken: "test-token",
+		Transport: transport,
+	})
+	if err != nil {
+		t.Fatalf("failed to create test REST client: %v", err)
+	}
+	return client
+}
+
+func TestParseTeamSlugs(t *testing.T) {
+	teams := []teamResponse{
+		{Slug: "team-a"},
+		{Slug: "team-b"},
+	}
+	teams[0].Organization.Login = "my-org"
+	teams[1].Organization.Login = "other-org"
+
+	slugs := parseTeamSlugs(teams)
+
+	expected := []string{"my-org/team-a", "other-org/team-b"}
+	if len(slugs) != len(expected) {
+		t.Fatalf("parseTeamSlugs returned %d slugs, want %d", len(slugs), len(expected))
+	}
+	for i, want := range expected {
+		if slugs[i] != want {
+			t.Errorf("slugs[%d] = %q, want %q", i, slugs[i], want)
+		}
+	}
+}
+
+func TestParseTeamSlugs_EmptyInput(t *testing.T) {
+	slugs := parseTeamSlugs([]teamResponse{})
+
+	if slugs == nil {
+		t.Fatal("parseTeamSlugs returned nil, want empty slice")
+	}
+	if len(slugs) != 0 {
+		t.Errorf("parseTeamSlugs returned %d slugs, want 0", len(slugs))
+	}
+}
+
+func TestGetTeamSlugs_ErrorOnAPIFailure(t *testing.T) {
+	transport := &mockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			return nil, fmt.Errorf("network error")
+		},
+	}
+	client := newTestRESTClient(t, transport)
+
+	_, err := GetTeamSlugs(client)
+	if err == nil {
+		t.Fatal("expected error on API failure, got nil")
+	}
+}
 
 func TestSearchResult_GenericTypes(t *testing.T) {
 	// Verify the generic SearchResult works with custom types

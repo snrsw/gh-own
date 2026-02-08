@@ -46,8 +46,23 @@ func TestPRSearchNode_RepositoryURL(t *testing.T) {
 	}
 }
 
+func TestSearchPRs_EmptyUsernameWithTeams(t *testing.T) {
+	results, err := SearchPRs(nil, "", []string{"my-org/team-a"})
+
+	if err != nil {
+		t.Errorf("SearchPRs with empty username returned error: %v", err)
+	}
+
+	if len(results.Created) != 0 {
+		t.Errorf("SearchPRs with empty username returned %d created, want 0", len(results.Created))
+	}
+	if len(results.ReviewRequested) != 0 {
+		t.Errorf("SearchPRs with empty username returned %d reviewRequested, want 0", len(results.ReviewRequested))
+	}
+}
+
 func TestSearchPRs_EmptyUsername(t *testing.T) {
-	results, err := SearchPRs(nil, "")
+	results, err := SearchPRs(nil, "", nil)
 
 	if err != nil {
 		t.Errorf("SearchPRs with empty username returned error: %v", err)
@@ -91,7 +106,7 @@ func TestPRSearchQuery_ContainsAliases(t *testing.T) {
 }
 
 func TestBuildPRSearchVariables(t *testing.T) {
-	vars := buildPRSearchVariables("testuser")
+	vars := buildPRSearchVariables("testuser", nil)
 
 	expected := map[string]string{
 		"created":         "is:pr is:open author:testuser",
@@ -111,6 +126,68 @@ func TestBuildPRSearchVariables(t *testing.T) {
 		}
 	}
 }
+func TestBuildPRSearchVariables_WithTeams_ReviewRequested(t *testing.T) {
+	vars := buildPRSearchVariables("testuser", []string{"my-org/team-a"})
+
+	got, ok := vars["reviewRequested"]
+	if !ok {
+		t.Fatal("missing reviewRequested variable")
+	}
+	want := "is:pr is:open (review-requested:testuser OR team-review-requested:my-org/team-a)"
+	if got != want {
+		t.Errorf("reviewRequested = %q, want %q", got, want)
+	}
+}
+
+func TestBuildPRSearchVariables_WithTeams_Participated(t *testing.T) {
+	vars := buildPRSearchVariables("testuser", []string{"my-org/team-a"})
+
+	got, ok := vars["participated"]
+	if !ok {
+		t.Fatal("missing participated variable")
+	}
+	want := "is:pr is:open (mentions:testuser OR commenter:testuser OR team:my-org/team-a)"
+	if got != want {
+		t.Errorf("participated = %q, want %q", got, want)
+	}
+}
+
+func TestBuildPRSearchVariables_MultipleTeams(t *testing.T) {
+	vars := buildPRSearchVariables("testuser", []string{"org-a/team-1", "org-b/team-2"})
+
+	wantReview := "is:pr is:open (review-requested:testuser OR team-review-requested:org-a/team-1 OR team-review-requested:org-b/team-2)"
+	if got := vars["reviewRequested"]; got != wantReview {
+		t.Errorf("reviewRequested = %q, want %q", got, wantReview)
+	}
+
+	wantParticipated := "is:pr is:open (mentions:testuser OR commenter:testuser OR team:org-a/team-1 OR team:org-b/team-2)"
+	if got := vars["participated"]; got != wantParticipated {
+		t.Errorf("participated = %q, want %q", got, wantParticipated)
+	}
+}
+
+func TestBuildPRSearchVariables_EmptyTeams(t *testing.T) {
+	vars := buildPRSearchVariables("testuser", []string{})
+
+	expected := map[string]string{
+		"created":         "is:pr is:open author:testuser",
+		"assigned":        "is:pr is:open assignee:testuser",
+		"participated":    "is:pr is:open (mentions:testuser OR commenter:testuser)",
+		"reviewRequested": "is:pr is:open review-requested:testuser",
+	}
+
+	for key, want := range expected {
+		got, ok := vars[key]
+		if !ok {
+			t.Errorf("missing variable %q", key)
+			continue
+		}
+		if got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
 func TestParsePRSearchNodes(t *testing.T) {
 	node1 := prSearchRawNode{
 		Number:    10,

@@ -108,11 +108,20 @@ query($created: String!, $assigned: String!, $participated: String!) {
 }
 `
 
-func buildIssueSearchVariables(username string) map[string]interface{} {
+func buildIssueSearchVariables(username string, teams []string) map[string]interface{} {
+	participated := fmt.Sprintf("is:issue is:open involves:%s -author:%s -assignee:%s", username, username, username)
+	if len(teams) > 0 {
+		parts := fmt.Sprintf("involves:%s", username)
+		for _, team := range teams {
+			parts += fmt.Sprintf(" OR team:%s", team)
+		}
+		participated = fmt.Sprintf("is:issue is:open (%s) -author:%s -assignee:%s", parts, username, username)
+	}
+
 	return map[string]interface{}{
 		"created":      fmt.Sprintf("is:issue is:open author:%s", username),
 		"assigned":     fmt.Sprintf("is:issue is:open assignee:%s", username),
-		"participated": fmt.Sprintf("is:issue is:open involves:%s -author:%s -assignee:%s", username, username, username),
+		"participated": participated,
 	}
 }
 
@@ -134,12 +143,12 @@ type IssueSearchResult struct {
 	Participated []IssueSearchNode
 }
 
-func SearchIssues(client *api.GraphQLClient, username string) (*IssueSearchResult, error) {
+func SearchIssues(client *api.GraphQLClient, username string, teams []string) (*IssueSearchResult, error) {
 	if username == "" {
 		return &IssueSearchResult{}, nil
 	}
 
-	variables := buildIssueSearchVariables(username)
+	variables := buildIssueSearchVariables(username, teams)
 
 	var result issueSearchResult
 	if err := client.Do(issueSearchQuery, variables, &result); err != nil {

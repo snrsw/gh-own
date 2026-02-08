@@ -55,8 +55,8 @@ func FromGraphQLNodes(nodes []gh.IssueSearchNode) []Issue {
 	return issues
 }
 
-func SearchIssues(client *api.GraphQLClient, username string) (*GroupedIssues, error) {
-	results, err := gh.SearchIssues(client, username)
+func SearchIssues(client *api.GraphQLClient, username string, teams []string) (*GroupedIssues, error) {
+	results, err := gh.SearchIssues(client, username, teams)
 	if err != nil {
 		return nil, err
 	}

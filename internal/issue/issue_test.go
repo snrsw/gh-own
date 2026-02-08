@@ -148,6 +148,16 @@ func TestGroupedIssues_IssueItems(t *testing.T) {
 	}
 }
 
+func TestSearchIssues_AcceptsTeams(t *testing.T) {
+	result, err := SearchIssues(nil, "", []string{"my-org/team-a"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Created.Items) != 0 {
+		t.Errorf("Created.Items = %d, want 0", len(result.Created.Items))
+	}
+}
+
 func TestIssueFromNode(t *testing.T) {
 	node := gh.IssueSearchNode{
 		Number:    42,

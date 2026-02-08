@@ -170,12 +170,30 @@ func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
 	return nodes
 }
 
-func buildPRSearchVariables(username string) map[string]interface{} {
+func buildPRSearchVariables(username string, teams []string) map[string]interface{} {
+	reviewRequested := fmt.Sprintf("is:pr is:open review-requested:%s", username)
+	if len(teams) > 0 {
+		parts := fmt.Sprintf("review-requested:%s", username)
+		for _, team := range teams {
+			parts += fmt.Sprintf(" OR team-review-requested:%s", team)
+		}
+		reviewRequested = fmt.Sprintf("is:pr is:open (%s)", parts)
+	}
+
+	participated := fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username)
+	if len(teams) > 0 {
+		parts := fmt.Sprintf("mentions:%s OR commenter:%s", username, username)
+		for _, team := range teams {
+			parts += fmt.Sprintf(" OR team:%s", team)
+		}
+		participated = fmt.Sprintf("is:pr is:open (%s)", parts)
+	}
+
 	return map[string]interface{}{
 		"created":         fmt.Sprintf("is:pr is:open author:%s", username),
 		"assigned":        fmt.Sprintf("is:pr is:open assignee:%s", username),
-		"participated":    fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username),
-		"reviewRequested": fmt.Sprintf("is:pr is:open review-requested:%s", username),
+		"participated":    participated,
+		"reviewRequested": reviewRequested,
 	}
 }
 
@@ -201,12 +219,12 @@ type PRSearchResult struct {
 	ReviewRequested []PRSearchNode
 }
 
-func SearchPRs(client *api.GraphQLClient, username string) (*PRSearchResult, error) {
+func SearchPRs(client *api.GraphQLClient, username string, teams []string) (*PRSearchResult, error) {
 	if username == "" {
 		return &PRSearchResult{}, nil
 	}
 
-	variables := buildPRSearchVariables(username)
+	variables := buildPRSearchVariables(username, teams)
 
 	var result prBatchedSearchResult
 	if err := client.Do(prSearchQuery, variables, &result); err != nil {

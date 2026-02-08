@@ -246,6 +246,17 @@ func TestPullRequest_HasCIStatusField(t *testing.T) {
 	}
 }
 
+func TestSearchPullRequests_AcceptsTeams(t *testing.T) {
+	// Empty username returns empty result, verifying teams parameter is accepted.
+	result, err := SearchPullRequests(nil, "", []string{"my-org/team-a"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Created.Items) != 0 {
+		t.Errorf("Created.Items = %d, want 0", len(result.Created.Items))
+	}
+}
+
 func TestFromGraphQL(t *testing.T) {
 	node := gh.PRSearchNode{
 		Number:      123,

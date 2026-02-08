@@ -52,8 +52,23 @@ func TestIssueSearchNode_Fields(t *testing.T) {
 	}
 }
 
+func TestSearchIssues_EmptyUsernameWithTeams(t *testing.T) {
+	results, err := SearchIssues(nil, "", []string{"my-org/team-a"})
+
+	if err != nil {
+		t.Errorf("SearchIssues with empty username returned error: %v", err)
+	}
+
+	if len(results.Created) != 0 {
+		t.Errorf("SearchIssues with empty username returned %d created, want 0", len(results.Created))
+	}
+	if len(results.Participated) != 0 {
+		t.Errorf("SearchIssues with empty username returned %d participated, want 0", len(results.Participated))
+	}
+}
+
 func TestSearchIssues_EmptyUsername(t *testing.T) {
-	results, err := SearchIssues(nil, "")
+	results, err := SearchIssues(nil, "", nil)
 
 	if err != nil {
 		t.Errorf("SearchIssues with empty username returned error: %v", err)
@@ -87,6 +102,40 @@ func TestIssueSearchQuery_ContainsAliases(t *testing.T) {
 	for _, part := range requiredParts {
 		if !strings.Contains(query, part) {
 			t.Errorf("issueSearchQuery should contain %q", part)
+		}
+	}
+}
+
+func TestBuildIssueSearchVariables_WithTeams_Participated(t *testing.T) {
+	vars := buildIssueSearchVariables("testuser", []string{"my-org/team-a"})
+
+	got, ok := vars["participated"]
+	if !ok {
+		t.Fatal("missing participated variable")
+	}
+	want := "is:issue is:open (involves:testuser OR team:my-org/team-a) -author:testuser -assignee:testuser"
+	if got != want {
+		t.Errorf("participated = %q, want %q", got, want)
+	}
+}
+
+func TestBuildIssueSearchVariables_EmptyTeams(t *testing.T) {
+	vars := buildIssueSearchVariables("testuser", []string{})
+
+	expected := map[string]string{
+		"created":      "is:issue is:open author:testuser",
+		"assigned":     "is:issue is:open assignee:testuser",
+		"participated": "is:issue is:open involves:testuser -author:testuser -assignee:testuser",
+	}
+
+	for key, want := range expected {
+		got, ok := vars[key]
+		if !ok {
+			t.Errorf("missing variable %q", key)
+			continue
+		}
+		if got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
 		}
 	}
 }
