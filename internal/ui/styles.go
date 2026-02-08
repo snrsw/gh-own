@@ -2,7 +2,8 @@
 package ui
 
 import (
-	"github.com/charmbracelet/bubbles/key"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -30,19 +31,30 @@ func GithubTabStyles() (active, inactive lipgloss.Style) {
 }
 
 func configureHelp(l *list.Model) {
-	l.KeyMap.CursorUp.SetEnabled(false)
-	l.KeyMap.CursorDown.SetEnabled(false)
-	l.KeyMap.Quit.SetEnabled(false)
-	l.KeyMap.ShowFullHelp.SetEnabled(false)
-	l.KeyMap.CloseFullHelp.SetEnabled(false)
+	l.SetShowHelp(false)
+}
 
-	l.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "switch tabs")),
-			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "open")),
-			key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "quit")),
-		}
+var (
+	helpKeyStyle  = lipgloss.NewStyle().Foreground(colorSecondary)
+	helpDescStyle = lipgloss.NewStyle().Foreground(colorMuted)
+	helpSepStyle  = lipgloss.NewStyle().Foreground(colorMuted)
+)
+
+func helpView() string {
+	entries := []struct{ key, desc string }{
+		{"/", "filter"},
+		{"tab", "switch tabs"},
+		{"enter", "open"},
+		{"ctrl+c", "quit"},
 	}
+
+	var parts []string
+	for _, e := range entries {
+		parts = append(parts, helpKeyStyle.Render(e.key)+" "+helpDescStyle.Render(e.desc))
+	}
+
+	sep := helpSepStyle.Render(" • ")
+	return strings.Join(parts, sep)
 }
 
 var (
