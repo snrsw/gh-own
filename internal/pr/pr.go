@@ -1,5 +1,5 @@
-// Package pullrequest provides functionality to handle GitHub pull requests owned by a user.
-package pullrequest
+// Package pr provides functionality to handle GitHub pull requests owned by a user.
+package pr
 
 import (
 	"strings"

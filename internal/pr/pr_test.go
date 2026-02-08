@@ -1,4 +1,4 @@
-package pullrequest
+package pr
 
 import (
 	"strings"
