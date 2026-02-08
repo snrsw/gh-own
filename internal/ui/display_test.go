@@ -66,12 +66,12 @@ func TestUpdatedAgo(t *testing.T) {
 		{
 			name:     "just now RFC3339",
 			input:    now.Format(time.RFC3339),
-			expected: "just now ago",
+			expected: "just now",
 		},
 		{
 			name:     "just now RFC3339Nano",
 			input:    now.Format(time.RFC3339Nano),
-			expected: "just now ago",
+			expected: "just now",
 		},
 		{
 			name:     "5 minutes ago",

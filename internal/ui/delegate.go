@@ -59,7 +59,8 @@ func newGithubDelegate() githubDelegate {
 	d.Styles.SelectedDesc = lipgloss.NewStyle().
 		Foreground(colorSecondary)
 
-	d.Styles.NormalTitle = lipgloss.NewStyle().Bold(true)
+	d.Styles.NormalTitle = lipgloss.NewStyle().
+		Foreground(colorTitle)
 
 	d.Styles.NormalDesc = lipgloss.NewStyle().
 		Foreground(colorMuted)
@@ -67,6 +68,6 @@ func newGithubDelegate() githubDelegate {
 	return githubDelegate{
 		DefaultDelegate: d,
 		repoNameStyle: lipgloss.NewStyle().
-			Foreground(colorRepoName),
+			Foreground(colorSecondary),
 	}
 }

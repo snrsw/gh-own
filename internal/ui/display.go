@@ -28,7 +28,11 @@ func UpdatedAgo(updatedAt string) string {
 		d = -d
 		return "in " + humanizeDuration(d)
 	}
-	return humanizeDuration(d) + " ago"
+	h := humanizeDuration(d)
+	if h == "just now" {
+		return h
+	}
+	return h + " ago"
 }
 
 func CreatedOn(createdAt string) string {
