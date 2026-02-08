@@ -2,6 +2,12 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.0.5](https://github.com/snrsw/gh-own/compare/0.0.4...0.0.5) - 2026-02-08
+### Other Changes
+- Update TUI styling and help bar by @snrsw in https://github.com/snrsw/gh-own/pull/18
+- Refactor gh package structure for clarity by @snrsw in https://github.com/snrsw/gh-own/pull/20
+- Add team option to search prs and issues by @snrsw in https://github.com/snrsw/gh-own/pull/21
+
 ## [0.0.4](https://github.com/snrsw/gh-own/compare/0.0.3...0.0.4) - 2026-02-07
 ### Other Changes
 - Fix release workflow input name by @snrsw in https://github.com/snrsw/gh-own/pull/15
