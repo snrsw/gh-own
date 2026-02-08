@@ -9,43 +9,51 @@ import (
 
 func TestNewItem(t *testing.T) {
 	tests := []struct {
-		name        string
-		title       string
-		description string
-		url         string
+		name          string
+		repoName      string
+		titleText     string
+		description   string
+		url           string
+		wantTitle     string
 	}{
 		{
-			name:        "basic item",
-			title:       "Test Title",
+			name:        "with repo name",
+			repoName:    "owner/repo",
+			titleText:   "Test Title",
 			description: "Test Description",
 			url:         "https://example.com",
+			wantTitle:   "owner/repo Test Title",
 		},
 		{
 			name:        "empty values",
-			title:       "",
+			repoName:    "",
+			titleText:   "",
 			description: "",
 			url:         "",
+			wantTitle:   "",
 		},
 		{
-			name:        "searchable item",
-			title:       "Searchable Title",
+			name:        "without repo name",
+			repoName:    "",
+			titleText:   "Searchable Title",
 			description: "Description",
 			url:         "url",
+			wantTitle:   "Searchable Title",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			item := NewItem(tt.title, tt.description, tt.url)
+			item := NewItem(tt.repoName, tt.titleText, tt.description, tt.url)
 
-			if got := item.Title(); got != tt.title {
-				t.Errorf("Title() = %q, want %q", got, tt.title)
+			if got := item.Title(); got != tt.wantTitle {
+				t.Errorf("Title() = %q, want %q", got, tt.wantTitle)
 			}
 			if got := item.Description(); got != tt.description {
 				t.Errorf("Description() = %q, want %q", got, tt.description)
 			}
-			if got := item.FilterValue(); got != tt.title {
-				t.Errorf("FilterValue() = %q, want %q", got, tt.title)
+			if got := item.FilterValue(); got != tt.wantTitle {
+				t.Errorf("FilterValue() = %q, want %q", got, tt.wantTitle)
 			}
 		})
 	}
@@ -70,8 +78,8 @@ func TestCreateList(t *testing.T) {
 		{
 			name: "two items",
 			items: []list.Item{
-				NewItem("Item 1", "Desc 1", "url1"),
-				NewItem("Item 2", "Desc 2", "url2"),
+				NewItem("", "Item 1", "Desc 1", "url1"),
+				NewItem("", "Item 2", "Desc 2", "url2"),
 			},
 			expected: 2,
 		},

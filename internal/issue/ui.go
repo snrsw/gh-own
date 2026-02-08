@@ -22,7 +22,8 @@ func (o *GroupedIssues) View() error {
 
 func (i Issue) toItem() ui.Item {
 	return ui.NewItem(
-		fmt.Sprintf("%s %s", i.RepositoryFullName(), i.Title),
+		i.RepositoryFullName(),
+		i.Title,
 		fmt.Sprintf("#%d opened on %s by %s, updated %s", i.Number, ui.CreatedOn(i.CreatedAt), i.User.Login, ui.UpdatedAgo(i.UpdatedAt)),
 		i.HTMLURL,
 	)

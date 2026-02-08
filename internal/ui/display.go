@@ -28,7 +28,11 @@ func UpdatedAgo(updatedAt string) string {
 		d = -d
 		return "in " + humanizeDuration(d)
 	}
-	return humanizeDuration(d) + " ago"
+	h := humanizeDuration(d)
+	if h == "just now" {
+		return h
+	}
+	return h + " ago"
 }
 
 func CreatedOn(createdAt string) string {
@@ -63,5 +67,11 @@ func humanizeDuration(d time.Duration) string {
 	if d < 7*24*time.Hour {
 		return fmt.Sprintf("%dd", int(d.Hours()/24))
 	}
-	return fmt.Sprintf("%dw", int(d.Hours()/(24*7)))
+	if d < 30*24*time.Hour {
+		return fmt.Sprintf("%dw", int(d.Hours()/(24*7)))
+	}
+	if d < 365*24*time.Hour {
+		return fmt.Sprintf("%dmo", int(d.Hours()/(24*30)))
+	}
+	return fmt.Sprintf("%dy", int(d.Hours()/(24*365)))
 }

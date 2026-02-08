@@ -26,7 +26,12 @@ func TestHumanizeDuration(t *testing.T) {
 		{"6 days", 6 * 24 * time.Hour, "6d"},
 		{"7 days", 7 * 24 * time.Hour, "1w"},
 		{"14 days", 14 * 24 * time.Hour, "2w"},
-		{"30 days", 30 * 24 * time.Hour, "4w"},
+		{"29 days", 29 * 24 * time.Hour, "4w"},
+		{"30 days", 30 * 24 * time.Hour, "1mo"},
+		{"60 days", 60 * 24 * time.Hour, "2mo"},
+		{"11 months", 330 * 24 * time.Hour, "11mo"},
+		{"365 days", 365 * 24 * time.Hour, "1y"},
+		{"2 years", 730 * 24 * time.Hour, "2y"},
 	}
 
 	for _, tt := range tests {
@@ -61,12 +66,12 @@ func TestUpdatedAgo(t *testing.T) {
 		{
 			name:     "just now RFC3339",
 			input:    now.Format(time.RFC3339),
-			expected: "just now ago",
+			expected: "just now",
 		},
 		{
 			name:     "just now RFC3339Nano",
 			input:    now.Format(time.RFC3339Nano),
-			expected: "just now ago",
+			expected: "just now",
 		},
 		{
 			name:     "5 minutes ago",

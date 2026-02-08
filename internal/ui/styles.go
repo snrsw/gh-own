@@ -2,62 +2,59 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
 )
 
-func githubTabColors() (active, inactive lipgloss.AdaptiveColor) {
-	return lipgloss.AdaptiveColor{
-			Light: "#0969DA", // GitHub blue
-			Dark:  "#2F81F7",
-		}, lipgloss.AdaptiveColor{
-			Light: "#57606A", // GitHub gray
-			Dark:  "#8B949E",
-		}
-}
+var (
+	colorAccent    = lipgloss.AdaptiveColor{Light: "#0969DA", Dark: "#2F81F7"} // GitHub blue
+	colorSecondary = lipgloss.AdaptiveColor{Light: "#57606A", Dark: "#8B949E"} // GitHub gray
+	colorTitle     = lipgloss.AdaptiveColor{Light: "#000000", Dark: "#D1D5DB"} // slightly light
+	colorMuted     = lipgloss.AdaptiveColor{Light: "#6E7781", Dark: "#6E7681"} // GitHub muted
+)
 
 func GithubTabStyles() (active, inactive lipgloss.Style) {
-	activeColor, inactiveColor := githubTabColors()
-
 	active = lipgloss.NewStyle().
-		Foreground(activeColor).
+		Foreground(colorAccent).
 		Bold(true).
 		Padding(0, 1).
 		Border(lipgloss.NormalBorder(), false, false, true, false).
-		BorderForeground(activeColor)
+		BorderForeground(colorAccent)
 
 	inactive = lipgloss.NewStyle().
-		Foreground(inactiveColor).
+		Foreground(colorSecondary).
 		Padding(0, 1)
 
 	return
 }
 
-func githubAccentColor() lipgloss.AdaptiveColor {
-	return lipgloss.AdaptiveColor{
-		Light: "#0969DA", // GitHub blue (light theme)
-		Dark:  "#2F81F7", // GitHub blue (dark theme)
-	}
+func configureHelp(l *list.Model) {
+	l.SetShowHelp(false)
 }
 
-func GithubDelegate() list.DefaultDelegate {
-	d := list.NewDefaultDelegate()
+var (
+	helpKeyStyle  = lipgloss.NewStyle().Foreground(colorSecondary)
+	helpDescStyle = lipgloss.NewStyle().Foreground(colorMuted)
+	helpSepStyle  = lipgloss.NewStyle().Foreground(colorMuted)
+)
 
-	accent := githubAccentColor()
+func helpView() string {
+	entries := []struct{ key, desc string }{
+		{"/", "filter"},
+		{"tab", "switch tabs"},
+		{"enter", "open"},
+		{"ctrl+c", "quit"},
+	}
 
-	d.Styles.SelectedTitle = lipgloss.NewStyle().
-		Foreground(accent).
-		Bold(true)
+	var parts []string
+	for _, e := range entries {
+		parts = append(parts, helpKeyStyle.Render(e.key)+" "+helpDescStyle.Render(e.desc))
+	}
 
-	d.Styles.SelectedDesc = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#57606A", Dark: "#8B949E"})
-
-	d.Styles.NormalTitle = lipgloss.NewStyle()
-
-	d.Styles.NormalDesc = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#6E7781", Dark: "#6E7681"})
-
-	return d
+	sep := helpSepStyle.Render(" • ")
+	return strings.Join(parts, sep)
 }
 
 var (
