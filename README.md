@@ -1,6 +1,18 @@
 # gh-own
 
-GitHub CLI extension to list your owned pull requests and issues.
+GitHub CLI extension to list your owned pull requests and issues across repositories unlike `gh pr list` and `gh issue list`, which are repo-scoped.
+
+Key features:
+
+- List your pull requests across all repositories grouped into:
+  - Created by you
+  - Assigned to you
+  - Requested your review (including teams)
+  - You have participated in mentioned or commented (including teams)
+- List your issues across all repositories grouped into:
+  - Created by you
+  - Assigned to you
+  - You have participated in mentioned or commented (including teams)
 
 ## Installation
 
