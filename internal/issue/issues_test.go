@@ -101,26 +101,36 @@ func TestIssue_ToItem(t *testing.T) {
 func TestGroupedIssues_IssueItems(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    []Issue
+		input    gh.SearchResult[Issue]
 		expected int
 	}{
 		{
 			name: "multiple issues",
-			input: []Issue{
-				{Number: 1, RepositoryURL: "https://api.github.com/repos/owner/repo1", Title: "Issue 1"},
-				{Number: 2, RepositoryURL: "https://api.github.com/repos/owner/repo2", Title: "Issue 2"},
+			input: gh.SearchResult[Issue]{
+				TotalCount: 2,
+				Items: []Issue{
+					{Number: 1, RepositoryURL: "https://api.github.com/repos/owner/repo1", Title: "Issue 1"},
+					{Number: 2, RepositoryURL: "https://api.github.com/repos/owner/repo2", Title: "Issue 2"},
+				},
 			},
+
 			expected: 2,
 		},
 		{
-			name:     "empty list",
-			input:    []Issue{},
+			name: "empty list",
+			input: gh.SearchResult[Issue]{
+				TotalCount: 0,
+				Items:      []Issue{},
+			},
 			expected: 0,
 		},
 		{
 			name: "single issue",
-			input: []Issue{
-				{Number: 42, RepositoryURL: "https://api.github.com/repos/owner/repo", Title: "Solo Issue"},
+			input: gh.SearchResult[Issue]{
+				TotalCount: 1,
+				Items: []Issue{
+					{Number: 42, RepositoryURL: "https://api.github.com/repos/owner/repo", Title: "Solo Issue"},
+				},
 			},
 			expected: 1,
 		},
@@ -150,7 +160,7 @@ func TestIssueFromNode(t *testing.T) {
 	node.Author.Login = "testuser"
 	node.Repository.NameWithOwner = "owner/repo"
 
-	issue := issueFromNode(node)
+	issue := FromGraphQL(node)
 
 	if issue.Number != 42 {
 		t.Errorf("Number = %d, want 42", issue.Number)

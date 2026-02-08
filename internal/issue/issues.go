@@ -29,12 +29,12 @@ func (i *Issue) RepositoryFullName() string {
 }
 
 type GroupedIssues struct {
-	Created      []Issue
-	Assigned     []Issue
-	Participated []Issue
+	Created      gh.SearchResult[Issue]
+	Assigned     gh.SearchResult[Issue]
+	Participated gh.SearchResult[Issue]
 }
 
-func issueFromNode(node gh.IssueSearchNode) Issue {
+func FromGraphQL(node gh.IssueSearchNode) Issue {
 	return Issue{
 		Number:        node.Number,
 		User:          gh.User{Login: node.Author.Login},
@@ -47,23 +47,31 @@ func issueFromNode(node gh.IssueSearchNode) Issue {
 	}
 }
 
-func issuesFromNodes(nodes []gh.IssueSearchNode) []Issue {
+func FromGraphQLNodes(nodes []gh.IssueSearchNode) []Issue {
 	issues := make([]Issue, len(nodes))
 	for i, node := range nodes {
-		issues[i] = issueFromNode(node)
+		issues[i] = FromGraphQL(node)
 	}
 	return issues
 }
 
 func SearchIssues(client *api.GraphQLClient, username string) (*GroupedIssues, error) {
-	results, err := gh.SearchIssuesGraphQL(client, username)
+	results, err := gh.SearchIssues(client, username)
 	if err != nil {
 		return nil, err
 	}
 
 	return &GroupedIssues{
-		Created:      issuesFromNodes(results["created"]),
-		Assigned:     issuesFromNodes(results["assigned"]),
-		Participated: issuesFromNodes(results["participated"]),
+		Created:      toSearchResult(results.Created),
+		Assigned:     toSearchResult(results.Assigned),
+		Participated: toSearchResult(results.Participated),
 	}, nil
+}
+
+func toSearchResult(nodes []gh.IssueSearchNode) gh.SearchResult[Issue] {
+	issues := FromGraphQLNodes(nodes)
+	return gh.SearchResult[Issue]{
+		TotalCount: len(issues),
+		Items:      issues,
+	}
 }

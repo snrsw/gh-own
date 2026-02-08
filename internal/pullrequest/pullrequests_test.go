@@ -296,23 +296,3 @@ func TestFromGraphQLNodes(t *testing.T) {
 		t.Errorf("prs[1].CIStatus = %v, want %v", prs[1].CIStatus, cistatus.CIStatusFailure)
 	}
 }
-
-func TestBuildConditions(t *testing.T) {
-	conditions := BuildConditions("testuser")
-
-	if len(conditions) != 4 {
-		t.Fatalf("BuildConditions returned %d conditions, want 4", len(conditions))
-	}
-
-	names := make(map[string]bool)
-	for _, c := range conditions {
-		names[c.Name] = true
-	}
-
-	expectedNames := []string{"created", "assigned", "participated", "review-requested"}
-	for _, name := range expectedNames {
-		if !names[name] {
-			t.Errorf("BuildConditions missing condition %q", name)
-		}
-	}
-}

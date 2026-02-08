@@ -6,14 +6,15 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/ui"
 )
 
 func (o *GroupedIssues) View() error {
 	m := ui.NewModel([]ui.Tab{
-		ui.NewTab("Created", ui.CreateList(o.issueItems(o.Created))),
-		ui.NewTab("Participated", ui.CreateList(o.issueItems(o.Participated))),
-		ui.NewTab("Assigned", ui.CreateList(o.issueItems(o.Assigned))),
+		ui.NewTab(fmt.Sprintf("Created (%d)", o.Created.TotalCount), ui.CreateList(o.issueItems(o.Created))),
+		ui.NewTab(fmt.Sprintf("Participated (%d)", o.Participated.TotalCount), ui.CreateList(o.issueItems(o.Participated))),
+		ui.NewTab(fmt.Sprintf("Assigned (%d)", o.Assigned.TotalCount), ui.CreateList(o.issueItems(o.Assigned))),
 	})
 
 	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
@@ -29,9 +30,9 @@ func (i Issue) toItem() ui.Item {
 	)
 }
 
-func (o *GroupedIssues) issueItems(issues []Issue) []list.Item {
-	items := make([]list.Item, 0, len(issues))
-	for _, issue := range issues {
+func (o *GroupedIssues) issueItems(issues gh.SearchResult[Issue]) []list.Item {
+	items := make([]list.Item, 0, len(issues.Items))
+	for _, issue := range issues.Items {
 		items = append(items, issue.toItem())
 	}
 	return items
