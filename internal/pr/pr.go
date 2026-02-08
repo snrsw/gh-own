@@ -60,8 +60,8 @@ type GroupedPullRequests struct {
 	Participated    gh.SearchResult[PullRequest]
 }
 
-func SearchPullRequests(client *api.GraphQLClient, username string) (*GroupedPullRequests, error) {
-	results, err := gh.SearchPRs(client, username)
+func SearchPullRequests(client *api.GraphQLClient, username string, teams []string) (*GroupedPullRequests, error) {
+	results, err := gh.SearchPRs(client, username, teams)
 	if err != nil {
 		return nil, err
 	}

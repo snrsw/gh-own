@@ -18,12 +18,22 @@ var issueCmd = &cobra.Command{
 			return err
 		}
 
+		restClient, err := api.DefaultRESTClient()
+		if err != nil {
+			return err
+		}
+
+		teams, err := gh.GetTeamSlugs(restClient)
+		if err != nil {
+			return err
+		}
+
 		client, err := api.DefaultGraphQLClient()
 		if err != nil {
 			return err
 		}
 
-		issues, err := issue.SearchIssues(client, username)
+		issues, err := issue.SearchIssues(client, username, teams)
 		if err != nil {
 			return err
 		}
