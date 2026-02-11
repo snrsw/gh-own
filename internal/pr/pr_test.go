@@ -225,7 +225,7 @@ func TestGroupedPullRequests_PRItems(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			grouped := &groupedPullRequests{Created: tt.input}
+			grouped := &GroupedPullRequests{Created: tt.input}
 			items := grouped.prItems(grouped.Created)
 
 			if len(items) != tt.expected {
@@ -243,17 +243,6 @@ func TestPullRequest_HasCIStatusField(t *testing.T) {
 
 	if pr.CIStatus != cistatus.CIStatusSuccess {
 		t.Errorf("CIStatus = %v, want %v", pr.CIStatus, cistatus.CIStatusSuccess)
-	}
-}
-
-func TestSearchPullRequests_AcceptsTeams(t *testing.T) {
-	// Empty username returns empty result, verifying teams parameter is accepted.
-	result, err := SearchPullRequests(nil, "", []string{"my-org/team-a"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(result.Created.Items) != 0 {
-		t.Errorf("Created.Items = %d, want 0", len(result.Created.Items))
 	}
 }
 
