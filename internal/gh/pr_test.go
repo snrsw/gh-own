@@ -1,7 +1,6 @@
 package gh
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/snrsw/gh-own/internal/cistatus"
@@ -82,37 +81,14 @@ func TestSearchPRs_EmptyUsername(t *testing.T) {
 	}
 }
 
-func TestPRSearchQuery_ContainsAliases(t *testing.T) {
-	query := prSearchQuery
-
-	if query == "" {
-		t.Fatal("prSearchQuery is empty")
-	}
-
-	requiredParts := []string{
-		"created: search",
-		"assigned: search",
-		"participated: search",
-		"reviewRequested: search",
-		"... on PullRequest",
-		"statusCheckRollup",
-	}
-
-	for _, part := range requiredParts {
-		if !strings.Contains(query, part) {
-			t.Errorf("prSearchQuery should contain %q", part)
-		}
-	}
-}
-
 func TestBuildPRSearchVariables(t *testing.T) {
 	vars := buildPRSearchVariables("testuser", nil)
 
 	expected := map[string]string{
-		"created":         "is:pr is:open author:testuser",
-		"assigned":        "is:pr is:open assignee:testuser",
-		"participated":    "is:pr is:open (mentions:testuser OR commenter:testuser)",
-		"reviewRequested": "is:pr is:open review-requested:testuser",
+		"created":             "is:pr is:open author:testuser",
+		"assigned":            "is:pr is:open assignee:testuser",
+		"participatedUser":    "is:pr is:open (mentions:testuser OR commenter:testuser)",
+		"reviewRequestedUser": "is:pr is:open review-requested:testuser",
 	}
 
 	for key, want := range expected {
@@ -126,43 +102,60 @@ func TestBuildPRSearchVariables(t *testing.T) {
 		}
 	}
 }
-func TestBuildPRSearchVariables_WithTeams_ReviewRequested(t *testing.T) {
+func TestBuildPRSearchVariables_WithTeam_ReviewRequested(t *testing.T) {
 	vars := buildPRSearchVariables("testuser", []string{"my-org/team-a"})
 
-	got, ok := vars["reviewRequested"]
+	got, ok := vars["reviewRequestedTeam0"]
 	if !ok {
-		t.Fatal("missing reviewRequested variable")
+		t.Fatal("missing reviewRequestedTeam0 variable")
 	}
-	want := "is:pr is:open (review-requested:testuser OR team-review-requested:my-org/team-a)"
+	want := "is:pr is:open team-review-requested:my-org/team-a"
 	if got != want {
 		t.Errorf("reviewRequested = %q, want %q", got, want)
 	}
 }
 
-func TestBuildPRSearchVariables_WithTeams_Participated(t *testing.T) {
-	vars := buildPRSearchVariables("testuser", []string{"my-org/team-a"})
+func TestBuildPRSearchVariables_WithTeams_ReviewRequested(t *testing.T) {
+	vars := buildPRSearchVariables("testuser", []string{"my-org/team-a", "my-org/team-b"})
 
-	got, ok := vars["participated"]
+	got, ok := vars["reviewRequestedTeam0"]
 	if !ok {
-		t.Fatal("missing participated variable")
+		t.Fatal("missing reviewRequestedTeam0 variable")
 	}
-	want := "is:pr is:open (mentions:testuser OR commenter:testuser OR team:my-org/team-a)"
+	want := "is:pr is:open team-review-requested:my-org/team-a"
 	if got != want {
-		t.Errorf("participated = %q, want %q", got, want)
+		t.Errorf("reviewRequestedTeam0 = %q, want %q", got, want)
+	}
+
+	got, ok = vars["reviewRequestedTeam1"]
+	if !ok {
+		t.Fatal("missing reviewRequestedTeam1 variable")
+	}
+	want = "is:pr is:open team-review-requested:my-org/team-b"
+	if got != want {
+		t.Errorf("reviewRequestedTeam1 = %q, want %q", got, want)
 	}
 }
 
 func TestBuildPRSearchVariables_MultipleTeams(t *testing.T) {
-	vars := buildPRSearchVariables("testuser", []string{"org-a/team-1", "org-b/team-2"})
+	vars := buildPRSearchVariables("testuser", []string{"my-org/team-a"})
 
-	wantReview := "is:pr is:open (review-requested:testuser OR team-review-requested:org-a/team-1 OR team-review-requested:org-b/team-2)"
-	if got := vars["reviewRequested"]; got != wantReview {
-		t.Errorf("reviewRequested = %q, want %q", got, wantReview)
+	got, ok := vars["participatedUser"]
+	if !ok {
+		t.Fatal("missing participatedUser variable")
+	}
+	want := "is:pr is:open (mentions:testuser OR commenter:testuser)"
+	if got != want {
+		t.Errorf("participatedUser = %q, want %q", got, want)
 	}
 
-	wantParticipated := "is:pr is:open (mentions:testuser OR commenter:testuser OR team:org-a/team-1 OR team:org-b/team-2)"
-	if got := vars["participated"]; got != wantParticipated {
-		t.Errorf("participated = %q, want %q", got, wantParticipated)
+	got, ok = vars["participatedTeam0"]
+	if !ok {
+		t.Fatal("missing participatedTeam0 variable")
+	}
+	want = "is:pr is:open team:my-org/team-a"
+	if got != want {
+		t.Errorf("participated = %q, want %q", got, want)
 	}
 }
 
@@ -172,8 +165,8 @@ func TestBuildPRSearchVariables_EmptyTeams(t *testing.T) {
 	expected := map[string]string{
 		"created":         "is:pr is:open author:testuser",
 		"assigned":        "is:pr is:open assignee:testuser",
-		"participated":    "is:pr is:open (mentions:testuser OR commenter:testuser)",
-		"reviewRequested": "is:pr is:open review-requested:testuser",
+		"participatedUser":    "is:pr is:open (mentions:testuser OR commenter:testuser)",
+		"reviewRequestedUser": "is:pr is:open review-requested:testuser",
 	}
 
 	for key, want := range expected {
