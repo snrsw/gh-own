@@ -53,12 +53,12 @@ func TestPullRequest_RepositoryFullName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pr := &PullRequest{
+			pr := &pullRequest{
 				RepositoryURL: tt.repositoryURL,
 			}
-			result := pr.RepositoryFullName()
+			result := pr.repositoryFullName()
 			if result != tt.expected {
-				t.Errorf("PullRequest.RepositoryFullName() = %q, want %q", result, tt.expected)
+				t.Errorf("PullRequest.repositoryFullName() = %q, want %q", result, tt.expected)
 			}
 		})
 	}
@@ -67,13 +67,13 @@ func TestPullRequest_RepositoryFullName(t *testing.T) {
 func TestPullRequest_ToItem(t *testing.T) {
 	tests := []struct {
 		name          string
-		pr            PullRequest
+		pr            pullRequest
 		expectedTitle string
 		descContains  []string
 	}{
 		{
 			name: "regular PR",
-			pr: PullRequest{
+			pr: pullRequest{
 				Number:        123,
 				User:          gh.User{Login: "contributor"},
 				RepositoryURL: "https://api.github.com/repos/owner/repo",
@@ -86,7 +86,7 @@ func TestPullRequest_ToItem(t *testing.T) {
 		},
 		{
 			name: "draft PR",
-			pr: PullRequest{
+			pr: pullRequest{
 				Number:        456,
 				User:          gh.User{Login: "author"},
 				RepositoryURL: "https://api.github.com/repos/org/project",
@@ -99,7 +99,7 @@ func TestPullRequest_ToItem(t *testing.T) {
 		},
 		{
 			name: "PR with CI status success",
-			pr: PullRequest{
+			pr: pullRequest{
 				Number:        789,
 				User:          gh.User{Login: "dev"},
 				RepositoryURL: "https://api.github.com/repos/owner/repo",
@@ -113,7 +113,7 @@ func TestPullRequest_ToItem(t *testing.T) {
 		},
 		{
 			name: "PR with CI status failure",
-			pr: PullRequest{
+			pr: pullRequest{
 				Number:        101,
 				User:          gh.User{Login: "dev"},
 				RepositoryURL: "https://api.github.com/repos/owner/repo",
@@ -189,14 +189,14 @@ func TestRenderPRNumber(t *testing.T) {
 func TestGroupedPullRequests_PRItems(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    gh.SearchResult[PullRequest]
+		input    gh.SearchResult[pullRequest]
 		expected int
 	}{
 		{
 			name: "multiple PRs",
-			input: gh.SearchResult[PullRequest]{
+			input: gh.SearchResult[pullRequest]{
 				TotalCount: 2,
-				Items: []PullRequest{
+				Items: []pullRequest{
 					{Number: 1, RepositoryURL: "https://api.github.com/repos/owner/repo1", Title: "PR 1"},
 					{Number: 2, RepositoryURL: "https://api.github.com/repos/owner/repo2", Title: "PR 2"},
 				},
@@ -205,17 +205,17 @@ func TestGroupedPullRequests_PRItems(t *testing.T) {
 		},
 		{
 			name: "empty list",
-			input: gh.SearchResult[PullRequest]{
+			input: gh.SearchResult[pullRequest]{
 				TotalCount: 0,
-				Items:      []PullRequest{},
+				Items:      []pullRequest{},
 			},
 			expected: 0,
 		},
 		{
 			name: "single PR",
-			input: gh.SearchResult[PullRequest]{
+			input: gh.SearchResult[pullRequest]{
 				TotalCount: 1,
-				Items: []PullRequest{
+				Items: []pullRequest{
 					{Number: 42, RepositoryURL: "https://api.github.com/repos/owner/repo", Title: "Solo PR"},
 				},
 			},
@@ -225,7 +225,7 @@ func TestGroupedPullRequests_PRItems(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			grouped := &GroupedPullRequests{Created: tt.input}
+			grouped := &groupedPullRequests{Created: tt.input}
 			items := grouped.prItems(grouped.Created)
 
 			if len(items) != tt.expected {
@@ -236,7 +236,7 @@ func TestGroupedPullRequests_PRItems(t *testing.T) {
 }
 
 func TestPullRequest_HasCIStatusField(t *testing.T) {
-	pr := PullRequest{
+	pr := pullRequest{
 		Number:   123,
 		CIStatus: cistatus.CIStatusSuccess,
 	}
@@ -270,7 +270,7 @@ func TestFromGraphQL(t *testing.T) {
 	node.Author.Login = "testuser"
 	node.Repository.NameWithOwner = "owner/repo"
 
-	pr := FromGraphQL(node)
+	pr := fromGraphQL(node)
 
 	if pr.Number != 123 {
 		t.Errorf("Number = %d, want 123", pr.Number)
@@ -295,7 +295,7 @@ func TestFromGraphQLNodes(t *testing.T) {
 		{Number: 2, Title: "PR 2", StatusState: "FAILURE"},
 	}
 
-	prs := FromGraphQLNodes(nodes)
+	prs := fromGraphQLNodes(nodes)
 
 	if len(prs) != 2 {
 		t.Fatalf("FromGraphQLNodes returned %d items, want 2", len(prs))
