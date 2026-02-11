@@ -1,7 +1,9 @@
 package gh
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/cistatus"
@@ -31,9 +33,7 @@ func (p *PRSearchNode) RepositoryURL() string {
 	return fmt.Sprintf("https://api.github.com/repos/%s", p.Repository.NameWithOwner)
 }
 
-const prSearchQuery = `
-query($created: String!, $assigned: String!, $participated: String!, $reviewRequested: String!) {
-  created: search(query: $created, type: ISSUE, first: 50) {
+const prSearchFragment = `{
     nodes {
       ... on PullRequest {
         number
@@ -53,72 +53,25 @@ query($created: String!, $assigned: String!, $participated: String!, $reviewRequ
         }
       }
     }
-  }
-  assigned: search(query: $assigned, type: ISSUE, first: 50) {
-    nodes {
-      ... on PullRequest {
-        number
-        title
-        url
-        isDraft
-        updatedAt
-        createdAt
-        author { login }
-        repository { nameWithOwner }
-        commits(last: 1) {
-          nodes {
-            commit {
-              statusCheckRollup { state }
-            }
-          }
-        }
-      }
-    }
-  }
-  participated: search(query: $participated, type: ISSUE, first: 50) {
-    nodes {
-      ... on PullRequest {
-        number
-        title
-        url
-        isDraft
-        updatedAt
-        createdAt
-        author { login }
-        repository { nameWithOwner }
-        commits(last: 1) {
-          nodes {
-            commit {
-              statusCheckRollup { state }
-            }
-          }
-        }
-      }
-    }
-  }
-  reviewRequested: search(query: $reviewRequested, type: ISSUE, first: 50) {
-    nodes {
-      ... on PullRequest {
-        number
-        title
-        url
-        isDraft
-        updatedAt
-        createdAt
-        author { login }
-        repository { nameWithOwner }
-        commits(last: 1) {
-          nodes {
-            commit {
-              statusCheckRollup { state }
-            }
-          }
-        }
-      }
-    }
-  }
+  }`
+
+func buildPRSearchQuery(teams []string) string {
+	vars := []string{"created", "assigned", "participatedUser", "reviewRequestedUser"}
+
+	for i := range teams {
+		vars = append(vars, fmt.Sprintf("reviewRequestedTeam%d", i))
+		vars = append(vars, fmt.Sprintf("participatedTeam%d", i))
+	}
+
+	params := ""
+	body := ""
+	for _, v := range vars {
+		params += fmt.Sprintf("$%s: String!", v)
+		body += fmt.Sprintf("  %s: search(query: $%s, type: ISSUE, first: 50) %s\n", v, v, prSearchFragment)
+	}
+
+	return fmt.Sprintf("query(%s) {\n%s}", params, body)
 }
-`
 
 type prSearchRawNode struct {
 	Number    int    `json:"number"`
@@ -170,46 +123,37 @@ func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
 	return nodes
 }
 
-func buildPRSearchVariables(username string, teams []string) map[string]interface{} {
-	reviewRequested := fmt.Sprintf("is:pr is:open review-requested:%s", username)
-	if len(teams) > 0 {
-		parts := fmt.Sprintf("review-requested:%s", username)
-		for _, team := range teams {
-			parts += fmt.Sprintf(" OR team-review-requested:%s", team)
+func deduplicatePRNodes(nodes []PRSearchNode) []PRSearchNode {
+	seen := make(map[string]bool)
+	result := make([]PRSearchNode, 0, len(nodes))
+	for _, n := range nodes {
+		if seen[n.URL] {
+			continue
 		}
-		reviewRequested = fmt.Sprintf("is:pr is:open (%s)", parts)
+		seen[n.URL] = true
+		result = append(result, n)
 	}
-
-	participated := fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username)
-	if len(teams) > 0 {
-		parts := fmt.Sprintf("mentions:%s OR commenter:%s", username, username)
-		for _, team := range teams {
-			parts += fmt.Sprintf(" OR team:%s", team)
-		}
-		participated = fmt.Sprintf("is:pr is:open (%s)", parts)
-	}
-
-	return map[string]interface{}{
-		"created":         fmt.Sprintf("is:pr is:open author:%s", username),
-		"assigned":        fmt.Sprintf("is:pr is:open assignee:%s", username),
-		"participated":    participated,
-		"reviewRequested": reviewRequested,
-	}
+	return result
 }
 
-type prBatchedSearchResult struct {
-	Created struct {
-		Nodes []prSearchRawNode `json:"nodes"`
-	} `json:"created"`
-	Assigned struct {
-		Nodes []prSearchRawNode `json:"nodes"`
-	} `json:"assigned"`
-	Participated struct {
-		Nodes []prSearchRawNode `json:"nodes"`
-	} `json:"participated"`
-	ReviewRequested struct {
-		Nodes []prSearchRawNode `json:"nodes"`
-	} `json:"reviewRequested"`
+func buildPRSearchVariables(username string, teams []string) map[string]interface{} {
+	vars := map[string]interface{}{
+		"created":         fmt.Sprintf("is:pr is:open author:%s", username),
+		"assigned":        fmt.Sprintf("is:pr is:open assignee:%s", username),
+		"participatedUser":    fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username),
+		"reviewRequestedUser": fmt.Sprintf("is:pr is:open review-requested:%s", username),
+	}
+
+	if len(teams) == 0 {
+		return vars
+	}
+
+	for i, team := range teams {
+		vars[fmt.Sprintf("reviewRequestedTeam%d", i)] = fmt.Sprintf("is:pr is:open team-review-requested:%s", team)
+		vars[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:pr is:open team:%s", team)
+	}
+
+	return vars
 }
 
 type PRSearchResult struct {
@@ -219,6 +163,36 @@ type PRSearchResult struct {
 	ReviewRequested []PRSearchNode
 }
 
+func parsePRSearchResult(raw map[string]json.RawMessage) (*PRSearchResult, error) {
+	parsed := make(map[string][]PRSearchNode)
+	for key, data := range raw {
+		var result struct {
+			Nodes []prSearchRawNode `json:"nodes"`
+		}
+		if err := json.Unmarshal(data, &result); err != nil {
+			return nil, fmt.Errorf("failed to parse PR search result for %s: %w", key, err)
+		}
+		parsed[key] = parsePRSearchNodes(result.Nodes)
+	}
+
+	var paticipated, reviewRequested []PRSearchNode
+	for key, nodes := range parsed {
+		switch {
+		case strings.HasPrefix(key, "participated"):
+			paticipated = append(paticipated, nodes...)
+		case strings.HasPrefix(key, "reviewRequested"):
+			reviewRequested = append(reviewRequested, nodes...)
+		}
+	}
+
+	return &PRSearchResult{
+		Created:         parsed["created"],
+		Assigned:        parsed["assigned"],
+		Participated:    deduplicatePRNodes(paticipated),
+		ReviewRequested: deduplicatePRNodes(reviewRequested),
+	}, nil
+}
+
 func SearchPRs(client *api.GraphQLClient, username string, teams []string) (*PRSearchResult, error) {
 	if username == "" {
 		return &PRSearchResult{}, nil
@@ -226,15 +200,10 @@ func SearchPRs(client *api.GraphQLClient, username string, teams []string) (*PRS
 
 	variables := buildPRSearchVariables(username, teams)
 
-	var result prBatchedSearchResult
-	if err := client.Do(prSearchQuery, variables, &result); err != nil {
+	var result map[string]json.RawMessage
+	if err := client.Do(buildPRSearchQuery(teams), variables, &result); err != nil {
 		return nil, fmt.Errorf("failed to search pull requests: %w", err)
 	}
 
-	return &PRSearchResult{
-		Created:         parsePRSearchNodes(result.Created.Nodes),
-		Assigned:        parsePRSearchNodes(result.Assigned.Nodes),
-		Participated:    parsePRSearchNodes(result.Participated.Nodes),
-		ReviewRequested: parsePRSearchNodes(result.ReviewRequested.Nodes),
-	}, nil
+	return parsePRSearchResult(result)
 }
