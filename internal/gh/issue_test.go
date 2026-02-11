@@ -1,7 +1,6 @@
 package gh
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -85,37 +84,47 @@ func TestSearchIssues_EmptyUsername(t *testing.T) {
 	}
 }
 
-func TestIssueSearchQuery_ContainsAliases(t *testing.T) {
-	query := issueSearchQuery
-
-	if query == "" {
-		t.Fatal("issueSearchQuery is empty")
-	}
-
-	requiredParts := []string{
-		"created: search",
-		"assigned: search",
-		"participated: search",
-		"... on Issue",
-	}
-
-	for _, part := range requiredParts {
-		if !strings.Contains(query, part) {
-			t.Errorf("issueSearchQuery should contain %q", part)
-		}
-	}
-}
-
 func TestBuildIssueSearchVariables_WithTeams_Participated(t *testing.T) {
 	vars := buildIssueSearchVariables("testuser", []string{"my-org/team-a"})
 
-	got, ok := vars["participated"]
+	got, ok := vars["participatedUser"]
 	if !ok {
-		t.Fatal("missing participated variable")
+		t.Fatal("missing participatedUser variable")
 	}
-	want := "is:issue is:open (involves:testuser OR team:my-org/team-a) -author:testuser -assignee:testuser"
+	want := "is:issue is:open involves:testuser -author:testuser -assignee:testuser"
 	if got != want {
 		t.Errorf("participated = %q, want %q", got, want)
+	}
+
+	got, ok = vars["participatedTeam0"]
+	if !ok {
+		t.Fatal("missing participatedTeam0 variable")
+	}
+	want = "is:issue is:open team:my-org/team-a"
+	if got != want {
+		t.Errorf("participatedTeam0 = %q, want %q", got, want)
+	}
+}
+
+func TestBuildIssueSearchVariables_WithMultipleTeams_Participated(t *testing.T) {
+	vars := buildIssueSearchVariables("testuser", []string{"my-org/team-a", "my-org/team-b"})
+
+	got, ok := vars["participatedTeam0"]
+	if !ok {
+		t.Fatal("missing participatedTeam0 variable")
+	}
+	want := "is:issue is:open team:my-org/team-a"
+	if got != want {
+		t.Errorf("participatedTeam0 = %q, want %q", got, want)
+	}
+
+	got, ok = vars["participatedTeam1"]
+	if !ok {
+		t.Fatal("missing participatedTeam1 variable")
+	}
+	want = "is:issue is:open team:my-org/team-b"
+	if got != want {
+		t.Errorf("participatedTeam1 = %q, want %q", got, want)
 	}
 }
 
@@ -123,9 +132,9 @@ func TestBuildIssueSearchVariables_EmptyTeams(t *testing.T) {
 	vars := buildIssueSearchVariables("testuser", []string{})
 
 	expected := map[string]string{
-		"created":      "is:issue is:open author:testuser",
-		"assigned":     "is:issue is:open assignee:testuser",
-		"participated": "is:issue is:open involves:testuser -author:testuser -assignee:testuser",
+		"created":          "is:issue is:open author:testuser",
+		"assigned":         "is:issue is:open assignee:testuser",
+		"participatedUser": "is:issue is:open involves:testuser -author:testuser -assignee:testuser",
 	}
 
 	for key, want := range expected {
