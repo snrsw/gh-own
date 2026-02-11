@@ -8,11 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type searchResult struct {
-	res *gh.PRSearchResult
-	err error
-}
-
 var prCmd = &cobra.Command{
 	Use:   "pr",
 	Short: "GitHub CLI extension to list your owned pull requests.",
@@ -33,26 +28,26 @@ var prCmd = &cobra.Command{
 			return err
 		}
 
-		userCh := make(chan searchResult, 1)
+		userCh := make(chan result[*gh.PRSearchResult], 1)
 		go func() {
 			prs, err := gh.SearchPRs(client, username)
-			userCh <- searchResult{res: prs, err: err}
+			userCh <- result[*gh.PRSearchResult]{v: prs, err: err}
 		}()
 
-		teamCh := make(chan searchResult, 1)
+		teamCh := make(chan result[*gh.PRSearchResult], 1)
 		go func() {
 			teams, err := gh.GetTeamSlugs(restClient)
 			if err != nil {
-				teamCh <- searchResult{res: nil, err: err}
+				teamCh <- result[*gh.PRSearchResult]{v: nil, err: err}
 				return
 			}
 
 			prs, err := gh.SearchPRsTeams(client, username, teams)
 			if err != nil {
-				teamCh <- searchResult{res: nil, err: err}
+				teamCh <- result[*gh.PRSearchResult]{v: nil, err: err}
 				return
 			}
-			teamCh <- searchResult{res: prs, err: err}
+			teamCh <- result[*gh.PRSearchResult]{v: prs, err: err}
 		}()
 
 		userResult := <-userCh
@@ -65,7 +60,7 @@ var prCmd = &cobra.Command{
 			return teamResult.err
 		}
 
-		prs := gh.MergeSearchResults(userResult.res, teamResult.res)
+		prs := gh.MergeSearchPRsResults(userResult.v, teamResult.v)
 		prg := pr.NewGroupedPullRequests(prs)
 
 		return prg.View()

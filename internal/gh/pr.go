@@ -59,7 +59,7 @@ type PRSearchResult struct {
 	ReviewRequested []PRSearchNode
 }
 
-func MergeSearchResults(a, b *PRSearchResult) *PRSearchResult {
+func MergeSearchPRsResults(a, b *PRSearchResult) *PRSearchResult {
 	merged := &PRSearchResult{
 		Created:         append(a.Created, b.Created...),
 		Assigned:        append(a.Assigned, b.Assigned...),
