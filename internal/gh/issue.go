@@ -8,6 +8,108 @@ import (
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 
+func SearchIssues(client *api.GraphQLClient, username string, teams []string) (*issueSearchResult, error) {
+	if username == "" {
+		return &issueSearchResult{}, nil
+	}
+
+	variables := buildIssueSearchVariables(username, teams)
+
+	var result map[string]json.RawMessage
+	if err := client.Do(buildIssueSearchQuery(teams), variables, &result); err != nil {
+		return nil, fmt.Errorf("failed to search issues: %w", err)
+	}
+
+	return parseIssueSearchResult(result)
+}
+
+type issueSearchResult struct {
+	Created      []IssueSearchNode
+	Assigned     []IssueSearchNode
+	Participated []IssueSearchNode
+}
+
+func buildIssueSearchVariables(username string, teams []string) map[string]interface{} {
+	vars := map[string]interface{}{
+		"created":          fmt.Sprintf("is:issue is:open author:%s", username),
+		"assigned":         fmt.Sprintf("is:issue is:open assignee:%s", username),
+		"participatedUser": fmt.Sprintf("is:issue is:open involves:%s -author:%s -assignee:%s", username, username, username),
+	}
+
+	if len(teams) == 0 {
+		return vars
+	}
+
+	for i, team := range teams {
+		vars[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:issue is:open team:%s", team)
+	}
+
+	return vars
+}
+
+func buildIssueSearchQuery(teams []string) string {
+	vars := []string{
+		"created",
+		"assigned",
+		"participatedUser",
+	}
+
+	for i := range teams {
+		vars = append(vars, fmt.Sprintf("participatedTeam%d", i))
+	}
+
+	params := ""
+	body := ""
+	for _, v := range vars {
+		params += fmt.Sprintf("$%s: String!", v)
+		body += fmt.Sprintf("  %s: search(query: $%s, type: ISSUE, first: 50) %s\n", v, v, issueSearchFragment)
+	}
+
+	return fmt.Sprintf("query(%s) {\n%s}", params, body)
+}
+
+const issueSearchFragment = `{
+    nodes {
+      ... on Issue {
+        number
+        title
+        url
+        state
+        updatedAt
+        createdAt
+        author { login }
+        repository { nameWithOwner }
+      }
+    }
+  }`
+
+func parseIssueSearchResult(raw map[string]json.RawMessage) (*issueSearchResult, error) {
+	parsed := make(map[string][]IssueSearchNode)
+	for key, data := range raw {
+		var result struct {
+			Nodes []issueSearchRawNode `json:"nodes"`
+		}
+		if err := json.Unmarshal(data, &result); err != nil {
+			return nil, fmt.Errorf("failed to parse issue search result for %s: %w", key, err)
+		}
+		parsed[key] = parseIssueSearchNodes(result.Nodes)
+	}
+
+	var paticipated []IssueSearchNode
+	for key, nodes := range parsed {
+		switch {
+		case strings.HasPrefix(key, "participated"):
+			paticipated = append(paticipated, nodes...)
+		}
+	}
+
+	return &issueSearchResult{
+		Created:      parsed["created"],
+		Assigned:     parsed["assigned"],
+		Participated: deduplicateIssueNodes(paticipated),
+	}, nil
+}
+
 type IssueSearchNode struct {
 	Number    int
 	Title     string
@@ -63,66 +165,6 @@ func parseIssueSearchNodes(rawNodes []issueSearchRawNode) []IssueSearchNode {
 	return nodes
 }
 
-const issueSearchFragment = `{
-    nodes {
-      ... on Issue {
-        number
-        title
-        url
-        state
-        updatedAt
-        createdAt
-        author { login }
-        repository { nameWithOwner }
-      }
-    }
-  }`
-
-func buildIssueSearchQuery(teams []string) string {
-	vars := []string{
-		"created",
-		"assigned",
-		"participatedUser",
-	}
-
-	for i := range teams {
-		vars = append(vars, fmt.Sprintf("participatedTeam%d", i))
-	}
-
-	params := ""
-	body := ""
-	for _, v := range vars {
-		params += fmt.Sprintf("$%s: String!", v)
-		body += fmt.Sprintf("  %s: search(query: $%s, type: ISSUE, first: 50) %s\n", v, v, issueSearchFragment)
-	}
-
-	return fmt.Sprintf("query(%s) {\n%s}", params, body)
-}
-
-func buildIssueSearchVariables(username string, teams []string) map[string]interface{} {
-	vars := map[string]interface{}{
-		"created":          fmt.Sprintf("is:issue is:open author:%s", username),
-		"assigned":         fmt.Sprintf("is:issue is:open assignee:%s", username),
-		"participatedUser": fmt.Sprintf("is:issue is:open involves:%s -author:%s -assignee:%s", username, username, username),
-	}
-
-	if len(teams) == 0 {
-		return vars
-	}
-
-	for i, team := range teams {
-		vars[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:issue is:open team:%s", team)
-	}
-
-	return vars
-}
-
-type IssueSearchResult struct {
-	Created      []IssueSearchNode
-	Assigned     []IssueSearchNode
-	Participated []IssueSearchNode
-}
-
 func deduplicateIssueNodes(nodes []IssueSearchNode) []IssueSearchNode {
 	seen := make(map[string]bool)
 	result := make([]IssueSearchNode, 0, len(nodes))
@@ -134,46 +176,4 @@ func deduplicateIssueNodes(nodes []IssueSearchNode) []IssueSearchNode {
 		result = append(result, n)
 	}
 	return result
-}
-
-func parseIssueSearchResult(raw map[string]json.RawMessage) (*IssueSearchResult, error) {
-	parsed := make(map[string][]IssueSearchNode)
-	for key, data := range raw {
-		var result struct {
-			Nodes []issueSearchRawNode `json:"nodes"`
-		}
-		if err := json.Unmarshal(data, &result); err != nil {
-			return nil, fmt.Errorf("failed to parse issue search result for %s: %w", key, err)
-		}
-		parsed[key] = parseIssueSearchNodes(result.Nodes)
-	}
-
-	var paticipated []IssueSearchNode
-	for key, nodes := range parsed {
-		switch {
-		case strings.HasPrefix(key, "participated"):
-			paticipated = append(paticipated, nodes...)
-		}
-	}
-
-	return &IssueSearchResult{
-		Created:      parsed["created"],
-		Assigned:     parsed["assigned"],
-		Participated: deduplicateIssueNodes(paticipated),
-	}, nil
-}
-
-func SearchIssues(client *api.GraphQLClient, username string, teams []string) (*IssueSearchResult, error) {
-	if username == "" {
-		return &IssueSearchResult{}, nil
-	}
-
-	variables := buildIssueSearchVariables(username, teams)
-
-	var result map[string]json.RawMessage
-	if err := client.Do(buildIssueSearchQuery(teams), variables, &result); err != nil {
-		return nil, fmt.Errorf("failed to search issues: %w", err)
-	}
-
-	return parseIssueSearchResult(result)
 }

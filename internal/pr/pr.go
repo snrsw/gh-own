@@ -9,7 +9,28 @@ import (
 	"github.com/snrsw/gh-own/internal/gh"
 )
 
-type PullRequest struct {
+func SearchPullRequests(client *api.GraphQLClient, username string, teams []string) (*groupedPullRequests, error) {
+	results, err := gh.SearchPRs(client, username, teams)
+	if err != nil {
+		return nil, err
+	}
+
+	return &groupedPullRequests{
+		Created:         toSearchResult(results.Created),
+		Assigned:        toSearchResult(results.Assigned),
+		ReviewRequested: toSearchResult(results.ReviewRequested),
+		Participated:    toSearchResult(results.Participated),
+	}, nil
+}
+
+type groupedPullRequests struct {
+	Created         gh.SearchResult[pullRequest]
+	Assigned        gh.SearchResult[pullRequest]
+	ReviewRequested gh.SearchResult[pullRequest]
+	Participated    gh.SearchResult[pullRequest]
+}
+
+type pullRequest struct {
 	Number        int               `json:"number"`
 	User          gh.User           `json:"user"`
 	RepositoryURL string            `json:"repository_url"`
@@ -22,7 +43,7 @@ type PullRequest struct {
 	CIStatus      cistatus.CIStatus `json:"-"`
 }
 
-func (p *PullRequest) RepositoryFullName() string {
+func (p *pullRequest) repositoryFullName() string {
 	// Format: "https://api.github.com/repos/owner/repo"
 	parts := strings.Split(p.RepositoryURL, "/")
 	if len(parts) < 5 {
@@ -31,8 +52,24 @@ func (p *PullRequest) RepositoryFullName() string {
 	return parts[len(parts)-2] + "/" + parts[len(parts)-1]
 }
 
-func FromGraphQL(node gh.PRSearchNode) PullRequest {
-	return PullRequest{
+func toSearchResult(nodes []gh.PRSearchNode) gh.SearchResult[pullRequest] {
+	prs := fromGraphQLNodes(nodes)
+	return gh.SearchResult[pullRequest]{
+		TotalCount: len(prs),
+		Items:      prs,
+	}
+}
+
+func fromGraphQLNodes(nodes []gh.PRSearchNode) []pullRequest {
+	prs := make([]pullRequest, len(nodes))
+	for i, node := range nodes {
+		prs[i] = fromGraphQL(node)
+	}
+	return prs
+}
+
+func fromGraphQL(node gh.PRSearchNode) pullRequest {
+	return pullRequest{
 		Number:        node.Number,
 		User:          gh.User{Login: node.Author.Login},
 		RepositoryURL: node.RepositoryURL(),
@@ -42,42 +79,5 @@ func FromGraphQL(node gh.PRSearchNode) PullRequest {
 		UpdatedAt:     node.UpdatedAt,
 		CreatedAt:     node.CreatedAt,
 		CIStatus:      node.CIStatus(),
-	}
-}
-
-func FromGraphQLNodes(nodes []gh.PRSearchNode) []PullRequest {
-	prs := make([]PullRequest, len(nodes))
-	for i, node := range nodes {
-		prs[i] = FromGraphQL(node)
-	}
-	return prs
-}
-
-type GroupedPullRequests struct {
-	Created         gh.SearchResult[PullRequest]
-	Assigned        gh.SearchResult[PullRequest]
-	ReviewRequested gh.SearchResult[PullRequest]
-	Participated    gh.SearchResult[PullRequest]
-}
-
-func SearchPullRequests(client *api.GraphQLClient, username string, teams []string) (*GroupedPullRequests, error) {
-	results, err := gh.SearchPRs(client, username, teams)
-	if err != nil {
-		return nil, err
-	}
-
-	return &GroupedPullRequests{
-		Created:         toSearchResult(results.Created),
-		Assigned:        toSearchResult(results.Assigned),
-		ReviewRequested: toSearchResult(results.ReviewRequested),
-		Participated:    toSearchResult(results.Participated),
-	}, nil
-}
-
-func toSearchResult(nodes []gh.PRSearchNode) gh.SearchResult[PullRequest] {
-	prs := FromGraphQLNodes(nodes)
-	return gh.SearchResult[PullRequest]{
-		TotalCount: len(prs),
-		Items:      prs,
 	}
 }

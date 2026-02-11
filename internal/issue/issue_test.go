@@ -52,19 +52,19 @@ func TestIssue_RepositoryFullName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			issue := &Issue{
+			issue := &issue{
 				RepositoryURL: tt.repositoryURL,
 			}
-			result := issue.RepositoryFullName()
+			result := issue.repositoryFullName()
 			if result != tt.expected {
-				t.Errorf("Issue.RepositoryFullName() = %q, want %q", result, tt.expected)
+				t.Errorf("Issue.repositoryFullName() = %q, want %q", result, tt.expected)
 			}
 		})
 	}
 }
 
 func TestIssue_ToItem(t *testing.T) {
-	issue := Issue{
+	_issue := issue{
 		Number:        42,
 		User:          gh.User{Login: "testuser"},
 		RepositoryURL: "https://api.github.com/repos/owner/repo",
@@ -75,7 +75,7 @@ func TestIssue_ToItem(t *testing.T) {
 		CreatedAt:     "2024-03-10T08:00:00Z",
 	}
 
-	item := issue.toItem()
+	item := _issue.toItem()
 
 	// Verify title format: "owner/repo Title"
 	expectedTitle := "owner/repo Fix the bug"
@@ -101,14 +101,14 @@ func TestIssue_ToItem(t *testing.T) {
 func TestGroupedIssues_IssueItems(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    gh.SearchResult[Issue]
+		input    gh.SearchResult[issue]
 		expected int
 	}{
 		{
 			name: "multiple issues",
-			input: gh.SearchResult[Issue]{
+			input: gh.SearchResult[issue]{
 				TotalCount: 2,
-				Items: []Issue{
+				Items: []issue{
 					{Number: 1, RepositoryURL: "https://api.github.com/repos/owner/repo1", Title: "Issue 1"},
 					{Number: 2, RepositoryURL: "https://api.github.com/repos/owner/repo2", Title: "Issue 2"},
 				},
@@ -118,17 +118,17 @@ func TestGroupedIssues_IssueItems(t *testing.T) {
 		},
 		{
 			name: "empty list",
-			input: gh.SearchResult[Issue]{
+			input: gh.SearchResult[issue]{
 				TotalCount: 0,
-				Items:      []Issue{},
+				Items:      []issue{},
 			},
 			expected: 0,
 		},
 		{
 			name: "single issue",
-			input: gh.SearchResult[Issue]{
+			input: gh.SearchResult[issue]{
 				TotalCount: 1,
-				Items: []Issue{
+				Items: []issue{
 					{Number: 42, RepositoryURL: "https://api.github.com/repos/owner/repo", Title: "Solo Issue"},
 				},
 			},
@@ -138,7 +138,7 @@ func TestGroupedIssues_IssueItems(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			grouped := &GroupedIssues{Created: tt.input}
+			grouped := &groupedIssues{Created: tt.input}
 			items := grouped.issueItems(grouped.Created)
 
 			if len(items) != tt.expected {
@@ -170,7 +170,7 @@ func TestIssueFromNode(t *testing.T) {
 	node.Author.Login = "testuser"
 	node.Repository.NameWithOwner = "owner/repo"
 
-	issue := FromGraphQL(node)
+	issue := fromGraphQL(node)
 
 	if issue.Number != 42 {
 		t.Errorf("Number = %d, want 42", issue.Number)
