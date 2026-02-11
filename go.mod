@@ -9,7 +9,6 @@ require (
 	github.com/charmbracelet/x/ansi v0.10.1
 	github.com/cli/go-gh/v2 v2.5.0
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/sync v0.11.0
 )
 
 require (
