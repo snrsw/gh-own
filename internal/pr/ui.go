@@ -12,7 +12,7 @@ import (
 	"github.com/snrsw/gh-own/internal/ui"
 )
 
-func (o *groupedPullRequests) View() error {
+func (o *GroupedPullRequests) View() error {
 	m := ui.NewModel([]ui.Tab{
 		ui.NewTab(fmt.Sprintf("Created (%d)", o.Created.TotalCount), ui.CreateList(o.prItems(o.Created))),
 		ui.NewTab(fmt.Sprintf("Participated (%d)", o.Participated.TotalCount), ui.CreateList(o.prItems(o.Participated))),
@@ -39,7 +39,7 @@ func (p pullRequest) toItem() ui.Item {
 	)
 }
 
-func (o *groupedPullRequests) prItems(prs gh.SearchResult[pullRequest]) []list.Item {
+func (o *GroupedPullRequests) prItems(prs gh.SearchResult[pullRequest]) []list.Item {
 	items := make([]list.Item, 0, len(prs.Items))
 	for _, pr := range prs.Items {
 		items = append(items, pr.toItem())

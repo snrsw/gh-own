@@ -23,21 +23,46 @@ var issueCmd = &cobra.Command{
 			return err
 		}
 
-		teams, err := gh.GetTeamSlugs(restClient)
-		if err != nil {
-			return err
-		}
-
 		client, err := api.DefaultGraphQLClient()
 		if err != nil {
 			return err
 		}
 
-		issues, err := issue.SearchIssues(client, username, teams)
-		if err != nil {
-			return err
+		userCh := make(chan result[*gh.IssueSearchResult], 1)
+		go func() {
+			issues, err := gh.SearchIssues(client, username)
+			userCh <- result[*gh.IssueSearchResult]{v: issues, err: err}
+		}()
+
+		teamCh := make(chan result[*gh.IssueSearchResult], 1)
+		go func() {
+			teams, err := gh.GetTeamSlugs(restClient)
+			if err != nil {
+				teamCh <- result[*gh.IssueSearchResult]{v: nil, err: err}
+				return
+			}
+
+			issues, err := gh.SearchIssuesTeams(client, username, teams)
+			if err != nil {
+				teamCh <- result[*gh.IssueSearchResult]{v: nil, err: err}
+				return
+			}
+			teamCh <- result[*gh.IssueSearchResult]{v: issues, err: err}
+		}()
+
+		userResult := <-userCh
+		if userResult.err != nil {
+			return userResult.err
 		}
 
-		return issues.View()
+		teamResult := <-teamCh
+		if teamResult.err != nil {
+			return teamResult.err
+		}
+
+		issues := gh.MergeSearchIssuesResults(userResult.v, teamResult.v)
+		ig := issue.NewGroupedIssues(issues)
+
+		return ig.View()
 	},
 }

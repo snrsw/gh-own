@@ -45,23 +45,8 @@ func TestPRSearchNode_RepositoryURL(t *testing.T) {
 	}
 }
 
-func TestSearchPRs_EmptyUsernameWithTeams(t *testing.T) {
-	results, err := SearchPRs(nil, "", []string{"my-org/team-a"})
-
-	if err != nil {
-		t.Errorf("SearchPRs with empty username returned error: %v", err)
-	}
-
-	if len(results.Created) != 0 {
-		t.Errorf("SearchPRs with empty username returned %d created, want 0", len(results.Created))
-	}
-	if len(results.ReviewRequested) != 0 {
-		t.Errorf("SearchPRs with empty username returned %d reviewRequested, want 0", len(results.ReviewRequested))
-	}
-}
-
 func TestSearchPRs_EmptyUsername(t *testing.T) {
-	results, err := SearchPRs(nil, "", nil)
+	results, err := SearchPRs(nil, "")
 
 	if err != nil {
 		t.Errorf("SearchPRs with empty username returned error: %v", err)
@@ -81,103 +66,18 @@ func TestSearchPRs_EmptyUsername(t *testing.T) {
 	}
 }
 
-func TestBuildPRSearchVariables(t *testing.T) {
-	vars := buildPRSearchVariables("testuser", nil)
+func TestSearchPRs_EmptyUsernameWithTeams(t *testing.T) {
+	results, err := SearchPRsTeams(nil, "", []string{"my-org/team-a"})
 
-	expected := map[string]string{
-		"created":             "is:pr is:open author:testuser",
-		"assigned":            "is:pr is:open assignee:testuser",
-		"participatedUser":    "is:pr is:open (mentions:testuser OR commenter:testuser)",
-		"reviewRequestedUser": "is:pr is:open review-requested:testuser",
+	if err != nil {
+		t.Errorf("SearchPRs with empty username returned error: %v", err)
 	}
 
-	for key, want := range expected {
-		got, ok := vars[key]
-		if !ok {
-			t.Errorf("missing variable %q", key)
-			continue
-		}
-		if got != want {
-			t.Errorf("%s = %q, want %q", key, got, want)
-		}
+	if len(results.Created) != 0 {
+		t.Errorf("SearchPRs with empty username returned %d created, want 0", len(results.Created))
 	}
-}
-func TestBuildPRSearchVariables_WithTeam_ReviewRequested(t *testing.T) {
-	vars := buildPRSearchVariables("testuser", []string{"my-org/team-a"})
-
-	got, ok := vars["reviewRequestedTeam0"]
-	if !ok {
-		t.Fatal("missing reviewRequestedTeam0 variable")
-	}
-	want := "is:pr is:open team-review-requested:my-org/team-a"
-	if got != want {
-		t.Errorf("reviewRequested = %q, want %q", got, want)
-	}
-}
-
-func TestBuildPRSearchVariables_WithTeams_ReviewRequested(t *testing.T) {
-	vars := buildPRSearchVariables("testuser", []string{"my-org/team-a", "my-org/team-b"})
-
-	got, ok := vars["reviewRequestedTeam0"]
-	if !ok {
-		t.Fatal("missing reviewRequestedTeam0 variable")
-	}
-	want := "is:pr is:open team-review-requested:my-org/team-a"
-	if got != want {
-		t.Errorf("reviewRequestedTeam0 = %q, want %q", got, want)
-	}
-
-	got, ok = vars["reviewRequestedTeam1"]
-	if !ok {
-		t.Fatal("missing reviewRequestedTeam1 variable")
-	}
-	want = "is:pr is:open team-review-requested:my-org/team-b"
-	if got != want {
-		t.Errorf("reviewRequestedTeam1 = %q, want %q", got, want)
-	}
-}
-
-func TestBuildPRSearchVariables_MultipleTeams(t *testing.T) {
-	vars := buildPRSearchVariables("testuser", []string{"my-org/team-a"})
-
-	got, ok := vars["participatedUser"]
-	if !ok {
-		t.Fatal("missing participatedUser variable")
-	}
-	want := "is:pr is:open (mentions:testuser OR commenter:testuser)"
-	if got != want {
-		t.Errorf("participatedUser = %q, want %q", got, want)
-	}
-
-	got, ok = vars["participatedTeam0"]
-	if !ok {
-		t.Fatal("missing participatedTeam0 variable")
-	}
-	want = "is:pr is:open team:my-org/team-a"
-	if got != want {
-		t.Errorf("participated = %q, want %q", got, want)
-	}
-}
-
-func TestBuildPRSearchVariables_EmptyTeams(t *testing.T) {
-	vars := buildPRSearchVariables("testuser", []string{})
-
-	expected := map[string]string{
-		"created":         "is:pr is:open author:testuser",
-		"assigned":        "is:pr is:open assignee:testuser",
-		"participatedUser":    "is:pr is:open (mentions:testuser OR commenter:testuser)",
-		"reviewRequestedUser": "is:pr is:open review-requested:testuser",
-	}
-
-	for key, want := range expected {
-		got, ok := vars[key]
-		if !ok {
-			t.Errorf("missing variable %q", key)
-			continue
-		}
-		if got != want {
-			t.Errorf("%s = %q, want %q", key, got, want)
-		}
+	if len(results.ReviewRequested) != 0 {
+		t.Errorf("SearchPRs with empty username returned %d reviewRequested, want 0", len(results.ReviewRequested))
 	}
 }
 

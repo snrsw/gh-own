@@ -4,27 +4,21 @@ package issue
 import (
 	"strings"
 
-	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/gh"
 )
 
-func SearchIssues(client *api.GraphQLClient, username string, teams []string) (*groupedIssues, error) {
-	results, err := gh.SearchIssues(client, username, teams)
-	if err != nil {
-		return nil, err
-	}
-
-	return &groupedIssues{
-		Created:      toSearchResult(results.Created),
-		Assigned:     toSearchResult(results.Assigned),
-		Participated: toSearchResult(results.Participated),
-	}, nil
-}
-
-type groupedIssues struct {
+type GroupedIssues struct {
 	Created      gh.SearchResult[issue]
 	Assigned     gh.SearchResult[issue]
 	Participated gh.SearchResult[issue]
+}
+
+func NewGroupedIssues(ghResult *gh.IssueSearchResult) *GroupedIssues {
+	return &GroupedIssues{
+		Created:      toSearchResult(ghResult.Created),
+		Assigned:     toSearchResult(ghResult.Assigned),
+		Participated: toSearchResult(ghResult.Participated),
+	}
 }
 
 type issue struct {

@@ -4,30 +4,24 @@ package pr
 import (
 	"strings"
 
-	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/cistatus"
 	"github.com/snrsw/gh-own/internal/gh"
 )
 
-func SearchPullRequests(client *api.GraphQLClient, username string, teams []string) (*groupedPullRequests, error) {
-	results, err := gh.SearchPRs(client, username, teams)
-	if err != nil {
-		return nil, err
-	}
-
-	return &groupedPullRequests{
-		Created:         toSearchResult(results.Created),
-		Assigned:        toSearchResult(results.Assigned),
-		ReviewRequested: toSearchResult(results.ReviewRequested),
-		Participated:    toSearchResult(results.Participated),
-	}, nil
-}
-
-type groupedPullRequests struct {
+type GroupedPullRequests struct {
 	Created         gh.SearchResult[pullRequest]
 	Assigned        gh.SearchResult[pullRequest]
 	ReviewRequested gh.SearchResult[pullRequest]
 	Participated    gh.SearchResult[pullRequest]
+}
+
+func NewGroupedPullRequests(ghResult *gh.PRSearchResult) *GroupedPullRequests {
+	return &GroupedPullRequests{
+		Created:         toSearchResult(ghResult.Created),
+		Assigned:        toSearchResult(ghResult.Assigned),
+		ReviewRequested: toSearchResult(ghResult.ReviewRequested),
+		Participated:    toSearchResult(ghResult.Participated),
+	}
 }
 
 type pullRequest struct {

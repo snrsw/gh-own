@@ -8,6 +8,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type result[T any] struct {
+	v   T
+	err error
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "gh-own",
 	Short: "GitHub CLI extension to list your owned pull requests and issues.",

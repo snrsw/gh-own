@@ -138,23 +138,13 @@ func TestGroupedIssues_IssueItems(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			grouped := &groupedIssues{Created: tt.input}
+			grouped := &GroupedIssues{Created: tt.input}
 			items := grouped.issueItems(grouped.Created)
 
 			if len(items) != tt.expected {
 				t.Errorf("issueItems() returned %d items, want %d", len(items), tt.expected)
 			}
 		})
-	}
-}
-
-func TestSearchIssues_AcceptsTeams(t *testing.T) {
-	result, err := SearchIssues(nil, "", []string{"my-org/team-a"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(result.Created.Items) != 0 {
-		t.Errorf("Created.Items = %d, want 0", len(result.Created.Items))
 	}
 }
 

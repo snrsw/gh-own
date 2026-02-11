@@ -9,50 +9,81 @@ import (
 	"github.com/snrsw/gh-own/internal/cistatus"
 )
 
-func SearchPRs(client *api.GraphQLClient, username string, teams []string) (*prSearchResult, error) {
+func SearchPRs(client *api.GraphQLClient, username string) (*PRSearchResult, error) {
 	if username == "" {
-		return &prSearchResult{}, nil
+		return &PRSearchResult{}, nil
 	}
 
-	variables := buildPRSearchVariables(username, teams)
+	variables := map[string]interface{}{
+		"created":             fmt.Sprintf("is:pr is:open author:%s", username),
+		"assigned":            fmt.Sprintf("is:pr is:open assignee:%s", username),
+		"participatedUser":    fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username),
+		"reviewRequestedUser": fmt.Sprintf("is:pr is:open review-requested:%s", username),
+	}
 
 	var result map[string]json.RawMessage
-	if err := client.Do(buildPRSearchQuery(teams), variables, &result); err != nil {
+	if err := client.Do(buildPRSearchQuery(), variables, &result); err != nil {
 		return nil, fmt.Errorf("failed to search pull requests: %w", err)
 	}
 
 	return parsePRSearchResult(result)
 }
 
-type prSearchResult struct {
+func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string) (*PRSearchResult, error) {
+	if username == "" {
+		return &PRSearchResult{}, nil
+	}
+
+	if len(teams) == 0 {
+		return &PRSearchResult{}, nil
+	}
+
+	variables := map[string]interface{}{}
+	for i, team := range teams {
+		variables[fmt.Sprintf("reviewRequestedTeam%d", i)] = fmt.Sprintf("is:pr is:open team-review-requested:%s", team)
+		variables[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:pr is:open team:%s", team)
+	}
+
+	var result map[string]json.RawMessage
+	if err := client.Do(buildPRSearchQueryTeams(teams), variables, &result); err != nil {
+		return nil, fmt.Errorf("failed to search pull requests: %w", err)
+	}
+
+	return parsePRSearchResult(result)
+}
+
+type PRSearchResult struct {
 	Created         []PRSearchNode
 	Assigned        []PRSearchNode
 	Participated    []PRSearchNode
 	ReviewRequested []PRSearchNode
 }
 
-func buildPRSearchVariables(username string, teams []string) map[string]interface{} {
-	vars := map[string]interface{}{
-		"created":         fmt.Sprintf("is:pr is:open author:%s", username),
-		"assigned":        fmt.Sprintf("is:pr is:open assignee:%s", username),
-		"participatedUser":    fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username),
-		"reviewRequestedUser": fmt.Sprintf("is:pr is:open review-requested:%s", username),
+func MergeSearchPRsResults(a, b *PRSearchResult) *PRSearchResult {
+	merged := &PRSearchResult{
+		Created:         append(a.Created, b.Created...),
+		Assigned:        append(a.Assigned, b.Assigned...),
+		Participated:    append(a.Participated, b.Participated...),
+		ReviewRequested: append(a.ReviewRequested, b.ReviewRequested...),
 	}
-
-	if len(teams) == 0 {
-		return vars
-	}
-
-	for i, team := range teams {
-		vars[fmt.Sprintf("reviewRequestedTeam%d", i)] = fmt.Sprintf("is:pr is:open team-review-requested:%s", team)
-		vars[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:pr is:open team:%s", team)
-	}
-
-	return vars
+	return merged
 }
 
-func buildPRSearchQuery(teams []string) string {
+func buildPRSearchQuery() string {
 	vars := []string{"created", "assigned", "participatedUser", "reviewRequestedUser"}
+
+	params := ""
+	body := ""
+	for _, v := range vars {
+		params += fmt.Sprintf("$%s: String!", v)
+		body += fmt.Sprintf("  %s: search(query: $%s, type: ISSUE, first: 50) %s\n", v, v, prSearchFragment)
+	}
+
+	return fmt.Sprintf("query(%s) {\n%s}", params, body)
+}
+
+func buildPRSearchQueryTeams(teams []string) string {
+	vars := []string{}
 
 	for i := range teams {
 		vars = append(vars, fmt.Sprintf("reviewRequestedTeam%d", i))
@@ -91,7 +122,7 @@ const prSearchFragment = `{
     }
   }`
 
-func parsePRSearchResult(raw map[string]json.RawMessage) (*prSearchResult, error) {
+func parsePRSearchResult(raw map[string]json.RawMessage) (*PRSearchResult, error) {
 	parsed := make(map[string][]PRSearchNode)
 	for key, data := range raw {
 		var result struct {
@@ -113,14 +144,13 @@ func parsePRSearchResult(raw map[string]json.RawMessage) (*prSearchResult, error
 		}
 	}
 
-	return &prSearchResult{
+	return &PRSearchResult{
 		Created:         parsed["created"],
 		Assigned:        parsed["assigned"],
 		Participated:    deduplicatePRNodes(paticipated),
 		ReviewRequested: deduplicatePRNodes(reviewRequested),
 	}, nil
 }
-
 
 type PRSearchNode struct {
 	Number      int

@@ -10,7 +10,7 @@ import (
 	"github.com/snrsw/gh-own/internal/ui"
 )
 
-func (o *groupedIssues) View() error {
+func (o *GroupedIssues) View() error {
 	m := ui.NewModel([]ui.Tab{
 		ui.NewTab(fmt.Sprintf("Created (%d)", o.Created.TotalCount), ui.CreateList(o.issueItems(o.Created))),
 		ui.NewTab(fmt.Sprintf("Participated (%d)", o.Participated.TotalCount), ui.CreateList(o.issueItems(o.Participated))),
@@ -30,7 +30,7 @@ func (i issue) toItem() ui.Item {
 	)
 }
 
-func (o *groupedIssues) issueItems(issues gh.SearchResult[issue]) []list.Item {
+func (o *GroupedIssues) issueItems(issues gh.SearchResult[issue]) []list.Item {
 	items := make([]list.Item, 0, len(issues.Items))
 	for _, issue := range issues.Items {
 		items = append(items, issue.toItem())
