@@ -2,6 +2,13 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.0.6](https://github.com/snrsw/gh-own/compare/0.0.5...0.0.6) - 2026-02-11
+### Other Changes
+- Improve README with cross-repo scope and feature breakdown by @snrsw in https://github.com/snrsw/gh-own/pull/22
+- Refactor team search to use dynamic per-team GraphQL queries by @snrsw in https://github.com/snrsw/gh-own/pull/24
+- Refactor: unexport types and move public APIs to top of files by @snrsw in https://github.com/snrsw/gh-own/pull/25
+- Parallelize user and team queries to improve performance by @snrsw in https://github.com/snrsw/gh-own/pull/26
+
 ## [0.0.5](https://github.com/snrsw/gh-own/compare/0.0.4...0.0.5) - 2026-02-08
 ### Other Changes
 - Update TUI styling and help bar by @snrsw in https://github.com/snrsw/gh-own/pull/18
