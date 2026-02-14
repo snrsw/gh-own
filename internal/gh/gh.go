@@ -2,6 +2,7 @@
 package gh
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/cli/go-gh/v2/pkg/api"
@@ -56,4 +57,50 @@ func parseTeamSlugs(teams []teamResponse) []string {
 		slugs[i] = t.Organization.Login + "/" + t.Slug
 	}
 	return slugs
+}
+
+func searchOne[T any](
+	client *api.GraphQLClient,
+	gql string,
+	search string,
+	parse func(json.RawMessage) ([]T, error),
+) ([]T, error) {
+	vars := map[string]interface{}{"q": search}
+
+	var raw map[string]json.RawMessage
+	if err := client.Do(gql, vars, &raw); err != nil {
+		return nil, err
+	}
+	return parse(raw["result"])
+}
+
+func Search[T any](
+	client *api.GraphQLClient,
+	gql string,
+	entries map[string]string,
+	parse func(json.RawMessage) ([]T, error),
+) (map[string][]T, error) {
+	type result struct {
+		key   string
+		nodes []T
+		err   error
+	}
+
+	ch := make(chan result, len(entries))
+	for key, search := range entries {
+		go func(key, search string) {
+			nodes, err := searchOne(client, gql, search, parse)
+			ch <- result{key: key, nodes: nodes, err: err}
+		}(key, search)
+	}
+
+	merged := make(map[string][]T, len(entries))
+	for range entries {
+		r := <-ch
+		if r.err != nil {
+			return nil, r.err
+		}
+		merged[r.key] = r.nodes
+	}
+	return merged, nil
 }

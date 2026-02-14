@@ -13,18 +13,18 @@ func SearchIssues(client *api.GraphQLClient, username string) (*IssueSearchResul
 		return &IssueSearchResult{}, nil
 	}
 
-	variables := map[string]interface{}{
+	entries := map[string]string{
 		"created":          fmt.Sprintf("is:issue is:open author:%s", username),
 		"assigned":         fmt.Sprintf("is:issue is:open assignee:%s", username),
 		"participatedUser": fmt.Sprintf("is:issue is:open involves:%s -author:%s -assignee:%s", username, username, username),
 	}
 
-	var result map[string]json.RawMessage
-	if err := client.Do(buildIssueSearchQuery(), variables, &result); err != nil {
-		return nil, fmt.Errorf("failed to search issues: %w", err)
+	raw, err := Search(client, issueSearchQuery, entries, parseIssueSearchJSON)
+	if err != nil {
+		return nil, err
 	}
 
-	return parseIssueSearchResult(result)
+	return parseIssueSearchResult(raw)
 }
 
 func SearchIssuesTeams(client *api.GraphQLClient, username string, teams []string) (*IssueSearchResult, error) {
@@ -36,17 +36,17 @@ func SearchIssuesTeams(client *api.GraphQLClient, username string, teams []strin
 		return &IssueSearchResult{}, nil
 	}
 
-	variables := map[string]interface{}{}
+	entries := map[string]string{}
 	for i, team := range teams {
-		variables[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:issue is:open team:%s", team)
+		entries[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:issue is:open team:%s", team)
 	}
 
-	var result map[string]json.RawMessage
-	if err := client.Do(buildIssueSearchQueryTeams(teams), variables, &result); err != nil {
-		return nil, fmt.Errorf("failed to search issues: %w", err)
+	raw, err := Search(client, issueSearchQuery, entries, parseIssueSearchJSON)
+	if err != nil {
+		return nil, err
 	}
 
-	return parseIssueSearchResult(result)
+	return parseIssueSearchResult(raw)
 }
 
 type IssueSearchResult struct {
@@ -64,79 +64,46 @@ func MergeSearchIssuesResults(a, b *IssueSearchResult) *IssueSearchResult {
 	return merged
 }
 
-func buildIssueSearchQuery() string {
-	vars := []string{
-		"created",
-		"assigned",
-		"participatedUser",
+func parseIssueSearchJSON(data json.RawMessage) ([]IssueSearchNode, error) {
+	var sr struct {
+		Nodes []issueSearchRawNode `json:"nodes"`
 	}
-
-	params := ""
-	body := ""
-	for _, v := range vars {
-		params += fmt.Sprintf("$%s: String!", v)
-		body += fmt.Sprintf("  %s: search(query: $%s, type: ISSUE, first: 50) %s\n", v, v, issueSearchFragment)
+	if err := json.Unmarshal(data, &sr); err != nil {
+		return nil, err
 	}
-
-	return fmt.Sprintf("query(%s) {\n%s}", params, body)
+	return parseIssueSearchNodes(sr.Nodes), nil
 }
 
-func buildIssueSearchQueryTeams(teams []string) string {
-	vars := []string{}
-
-	for i := range teams {
-		vars = append(vars, fmt.Sprintf("participatedTeam%d", i))
-	}
-
-	params := ""
-	body := ""
-	for _, v := range vars {
-		params += fmt.Sprintf("$%s: String!", v)
-		body += fmt.Sprintf("  %s: search(query: $%s, type: ISSUE, first: 50) %s\n", v, v, issueSearchFragment)
-	}
-
-	return fmt.Sprintf("query(%s) {\n%s}", params, body)
-}
-
-const issueSearchFragment = `{
-    nodes {
-      ... on Issue {
-        number
-        title
-        url
-        state
-        updatedAt
-        createdAt
-        author { login }
-        repository { nameWithOwner }
-      }
-    }
-  }`
-
-func parseIssueSearchResult(raw map[string]json.RawMessage) (*IssueSearchResult, error) {
-	parsed := make(map[string][]IssueSearchNode)
-	for key, data := range raw {
-		var result struct {
-			Nodes []issueSearchRawNode `json:"nodes"`
+const issueSearchQuery = `query($q: String!) {
+	result: search(query: $q, type: ISSUE, first: 50) {
+		nodes {
+		... on Issue {
+			number
+			title
+			url
+			state
+			updatedAt
+			createdAt
+			author { login }
+				repository { nameWithOwner }
+			}
 		}
-		if err := json.Unmarshal(data, &result); err != nil {
-			return nil, fmt.Errorf("failed to parse issue search result for %s: %w", key, err)
-		}
-		parsed[key] = parseIssueSearchNodes(result.Nodes)
 	}
+}`
 
-	var paticipated []IssueSearchNode
+func parseIssueSearchResult(parsed map[string][]IssueSearchNode) (*IssueSearchResult, error) {
+	var participated []IssueSearchNode
 	for key, nodes := range parsed {
 		switch {
 		case strings.HasPrefix(key, "participated"):
-			paticipated = append(paticipated, nodes...)
+			participated = append(participated, nodes...)
 		}
 	}
 
 	return &IssueSearchResult{
 		Created:      parsed["created"],
 		Assigned:     parsed["assigned"],
-		Participated: deduplicateIssueNodes(paticipated),
+		Participated: deduplicateIssueNodes(participated),
 	}, nil
 }
 

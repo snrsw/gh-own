@@ -14,19 +14,19 @@ func SearchPRs(client *api.GraphQLClient, username string) (*PRSearchResult, err
 		return &PRSearchResult{}, nil
 	}
 
-	variables := map[string]interface{}{
+	entries := map[string]string{
 		"created":             fmt.Sprintf("is:pr is:open author:%s", username),
 		"assigned":            fmt.Sprintf("is:pr is:open assignee:%s", username),
 		"participatedUser":    fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username),
 		"reviewRequestedUser": fmt.Sprintf("is:pr is:open review-requested:%s", username),
 	}
 
-	var result map[string]json.RawMessage
-	if err := client.Do(buildPRSearchQuery(), variables, &result); err != nil {
-		return nil, fmt.Errorf("failed to search pull requests: %w", err)
+	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
+	if err != nil {
+		return nil, err
 	}
 
-	return parsePRSearchResult(result)
+	return parsePRSearchResult(raw)
 }
 
 func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string) (*PRSearchResult, error) {
@@ -38,18 +38,18 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string) 
 		return &PRSearchResult{}, nil
 	}
 
-	variables := map[string]interface{}{}
+	entries := make(map[string]string, len(teams)*2)
 	for i, team := range teams {
-		variables[fmt.Sprintf("reviewRequestedTeam%d", i)] = fmt.Sprintf("is:pr is:open team-review-requested:%s", team)
-		variables[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:pr is:open team:%s", team)
+		entries[fmt.Sprintf("reviewRequestedTeam%d", i)] = fmt.Sprintf("is:pr is:open team-review-requested:%s", team)
+		entries[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:pr is:open team:%s", team)
 	}
 
-	var result map[string]json.RawMessage
-	if err := client.Do(buildPRSearchQueryTeams(teams), variables, &result); err != nil {
-		return nil, fmt.Errorf("failed to search pull requests: %w", err)
+	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
+	if err != nil {
+		return nil, err
 	}
 
-	return parsePRSearchResult(result)
+	return parsePRSearchResult(raw)
 }
 
 type PRSearchResult struct {
@@ -69,76 +69,46 @@ func MergeSearchPRsResults(a, b *PRSearchResult) *PRSearchResult {
 	return merged
 }
 
-func buildPRSearchQuery() string {
-	vars := []string{"created", "assigned", "participatedUser", "reviewRequestedUser"}
-
-	params := ""
-	body := ""
-	for _, v := range vars {
-		params += fmt.Sprintf("$%s: String!", v)
-		body += fmt.Sprintf("  %s: search(query: $%s, type: ISSUE, first: 50) %s\n", v, v, prSearchFragment)
+func parsePRSearchJSON(data json.RawMessage) ([]PRSearchNode, error) {
+	var sr struct {
+		Nodes []prSearchRawNode `json:"nodes"`
 	}
-
-	return fmt.Sprintf("query(%s) {\n%s}", params, body)
+	if err := json.Unmarshal(data, &sr); err != nil {
+		return nil, err
+	}
+	return parsePRSearchNodes(sr.Nodes), nil
 }
 
-func buildPRSearchQueryTeams(teams []string) string {
-	vars := []string{}
-
-	for i := range teams {
-		vars = append(vars, fmt.Sprintf("reviewRequestedTeam%d", i))
-		vars = append(vars, fmt.Sprintf("participatedTeam%d", i))
-	}
-
-	params := ""
-	body := ""
-	for _, v := range vars {
-		params += fmt.Sprintf("$%s: String!", v)
-		body += fmt.Sprintf("  %s: search(query: $%s, type: ISSUE, first: 50) %s\n", v, v, prSearchFragment)
-	}
-
-	return fmt.Sprintf("query(%s) {\n%s}", params, body)
-}
-
-const prSearchFragment = `{
-    nodes {
-      ... on PullRequest {
-        number
-        title
-        url
-        isDraft
-        updatedAt
-        createdAt
-        author { login }
-        repository { nameWithOwner }
-        commits(last: 1) {
-          nodes {
-            commit {
-              statusCheckRollup { state }
-            }
-          }
-        }
-      }
-    }
-  }`
-
-func parsePRSearchResult(raw map[string]json.RawMessage) (*PRSearchResult, error) {
-	parsed := make(map[string][]PRSearchNode)
-	for key, data := range raw {
-		var result struct {
-			Nodes []prSearchRawNode `json:"nodes"`
+const prSearchQuery = `query($q: String!) {
+	result: search(query: $q, type: ISSUE, first: 50) {
+		nodes {
+			... on PullRequest {
+				number
+				title
+				url
+				isDraft
+				updatedAt
+				createdAt
+				author { login }
+				repository { nameWithOwner }
+				commits(last: 1) {
+					nodes {
+						commit {
+							statusCheckRollup { state }
+						}
+					}
+				}
+			}
 		}
-		if err := json.Unmarshal(data, &result); err != nil {
-			return nil, fmt.Errorf("failed to parse PR search result for %s: %w", key, err)
-		}
-		parsed[key] = parsePRSearchNodes(result.Nodes)
 	}
+}`
 
-	var paticipated, reviewRequested []PRSearchNode
+func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, error) {
+	var participated, reviewRequested []PRSearchNode
 	for key, nodes := range parsed {
 		switch {
 		case strings.HasPrefix(key, "participated"):
-			paticipated = append(paticipated, nodes...)
+			participated = append(participated, nodes...)
 		case strings.HasPrefix(key, "reviewRequested"):
 			reviewRequested = append(reviewRequested, nodes...)
 		}
@@ -147,7 +117,7 @@ func parsePRSearchResult(raw map[string]json.RawMessage) (*PRSearchResult, error
 	return &PRSearchResult{
 		Created:         parsed["created"],
 		Assigned:        parsed["assigned"],
-		Participated:    deduplicatePRNodes(paticipated),
+		Participated:    deduplicatePRNodes(participated),
 		ReviewRequested: deduplicatePRNodes(reviewRequested),
 	}, nil
 }
