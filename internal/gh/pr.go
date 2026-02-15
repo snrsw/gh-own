@@ -15,10 +15,10 @@ func SearchPRs(client *api.GraphQLClient, username string) (*PRSearchResult, err
 	}
 
 	entries := map[string]string{
-		"created":             fmt.Sprintf("is:pr is:open author:%s", username),
-		"assigned":            fmt.Sprintf("is:pr is:open assignee:%s", username),
-		"participatedUser":    fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username),
-		"reviewRequested": fmt.Sprintf("is:pr is:open review-requested:%s", username),
+		"created":          fmt.Sprintf("is:pr is:open author:%s", username),
+		"assigned":         fmt.Sprintf("is:pr is:open assignee:%s", username),
+		"participatedUser": fmt.Sprintf("is:pr is:open involves:%s -author:%s -assignee:%s -review-requested:%s", username, username, username, username),
+		"reviewRequested":  fmt.Sprintf("is:pr is:open review-requested:%s", username),
 	}
 
 	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
