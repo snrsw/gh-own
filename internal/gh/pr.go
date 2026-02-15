@@ -18,7 +18,7 @@ func SearchPRs(client *api.GraphQLClient, username string) (*PRSearchResult, err
 		"created":             fmt.Sprintf("is:pr is:open author:%s", username),
 		"assigned":            fmt.Sprintf("is:pr is:open assignee:%s", username),
 		"participatedUser":    fmt.Sprintf("is:pr is:open (mentions:%s OR commenter:%s)", username, username),
-		"reviewRequestedUser": fmt.Sprintf("is:pr is:open review-requested:%s", username),
+		"reviewRequested": fmt.Sprintf("is:pr is:open review-requested:%s", username),
 	}
 
 	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
@@ -38,9 +38,8 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string) 
 		return &PRSearchResult{}, nil
 	}
 
-	entries := make(map[string]string, len(teams)*2)
+	entries := make(map[string]string, len(teams))
 	for i, team := range teams {
-		entries[fmt.Sprintf("reviewRequestedTeam%d", i)] = fmt.Sprintf("is:pr is:open team-review-requested:%s", team)
 		entries[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:pr is:open team:%s", team)
 	}
 
@@ -104,13 +103,11 @@ const prSearchQuery = `query($q: String!) {
 }`
 
 func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, error) {
-	var participated, reviewRequested []PRSearchNode
+	var participated []PRSearchNode
 	for key, nodes := range parsed {
 		switch {
 		case strings.HasPrefix(key, "participated"):
 			participated = append(participated, nodes...)
-		case strings.HasPrefix(key, "reviewRequested"):
-			reviewRequested = append(reviewRequested, nodes...)
 		}
 	}
 
@@ -118,7 +115,7 @@ func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, err
 		Created:         parsed["created"],
 		Assigned:        parsed["assigned"],
 		Participated:    deduplicatePRNodes(participated),
-		ReviewRequested: deduplicatePRNodes(reviewRequested),
+		ReviewRequested: parsed["reviewRequested"],
 	}, nil
 }
 
