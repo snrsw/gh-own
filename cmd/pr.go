@@ -2,7 +2,10 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/snrsw/gh-own/internal/cache"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/pr"
 	"github.com/spf13/cobra"
@@ -28,6 +31,11 @@ var prCmd = &cobra.Command{
 			return err
 		}
 
+		store, err := cache.NewStore()
+		if err != nil {
+			return err
+		}
+
 		userCh := make(chan result[*gh.PRSearchResult], 1)
 		go func() {
 			prs, err := gh.SearchPRs(client, username)
@@ -36,7 +44,7 @@ var prCmd = &cobra.Command{
 
 		teamCh := make(chan result[*gh.PRSearchResult], 1)
 		go func() {
-			teams, err := gh.GetTeamSlugs(restClient)
+			teams, err := gh.GetTeamSlugsWithCache(restClient, store, 6*time.Hour)
 			if err != nil {
 				teamCh <- result[*gh.PRSearchResult]{v: nil, err: err}
 				return
