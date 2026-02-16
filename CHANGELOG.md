@@ -2,6 +2,13 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.0.7](https://github.com/snrsw/gh-own/compare/0.0.6...0.0.7) - 2026-02-16
+### Other Changes
+- Extract generic Search function to remove query building duplication by @snrsw in https://github.com/snrsw/gh-own/pull/27
+- Remove team-review-requested query by @snrsw in https://github.com/snrsw/gh-own/pull/29
+- Fix participated query to use involves and exclude duplicates by @snrsw in https://github.com/snrsw/gh-own/pull/30
+- Add team cache with injectable Store struct by @snrsw in https://github.com/snrsw/gh-own/pull/31
+
 ## [0.0.6](https://github.com/snrsw/gh-own/compare/0.0.5...0.0.6) - 2026-02-11
 ### Other Changes
 - Improve README with cross-repo scope and feature breakdown by @snrsw in https://github.com/snrsw/gh-own/pull/22
