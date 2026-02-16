@@ -4,10 +4,12 @@ package gh
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/auth"
 	"github.com/cli/go-gh/v2/pkg/config"
+	"github.com/snrsw/gh-own/internal/cache"
 )
 
 type User struct {
@@ -49,6 +51,22 @@ func GetTeamSlugs(client *api.RESTClient) ([]string, error) {
 		return nil, fmt.Errorf("failed to fetch teams: %w", err)
 	}
 	return parseTeamSlugs(teams), nil
+}
+
+func GetTeamSlugsWithCache(client *api.RESTClient, store *cache.Store, ttl time.Duration) ([]string, error) {
+	teams, err := store.ReadTeams(ttl)
+	if err == nil && teams != nil {
+		return teams, nil
+	}
+
+	teams, err = GetTeamSlugs(client)
+	if err != nil {
+		return nil, err
+	}
+
+	_ = store.WriteTeams(teams) //nolint:errcheck
+
+	return teams, nil
 }
 
 func parseTeamSlugs(teams []teamResponse) []string {
