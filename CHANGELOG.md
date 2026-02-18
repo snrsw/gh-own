@@ -5,6 +5,11 @@ All notable changes to this repository will be documented in this file.
 ## [0.0.8](https://github.com/snrsw/gh-own/compare/0.0.7...0.0.8) - 2026-02-18
 ### Other Changes
 - Add debug mode for command speed analysis by @snrsw in https://github.com/snrsw/gh-own/pull/32
+- Release for 0.0.8 by @github-actions[bot] in https://github.com/snrsw/gh-own/pull/33
+
+## [0.0.8](https://github.com/snrsw/gh-own/compare/0.0.7...0.0.8) - 2026-02-18
+### Other Changes
+- Add debug mode for command speed analysis by @snrsw in https://github.com/snrsw/gh-own/pull/32
 
 ## [0.0.7](https://github.com/snrsw/gh-own/compare/0.0.6...0.0.7) - 2026-02-16
 ### Other Changes
