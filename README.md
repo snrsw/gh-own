@@ -1,6 +1,12 @@
 # gh-own
 
-GitHub CLI extension to list your owned pull requests and issues across repositories unlike `gh pr list` and `gh issue list`, which are repo-scoped.
+[![CI](https://github.com/snrsw/gh-own/actions/workflows/ci.yml/badge.svg)](https://github.com/snrsw/gh-own/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/snrsw/gh-own)](https://goreportcard.com/report/github.com/snrsw/gh-own)
+[![GitHub release](https://img.shields.io/github/v/release/snrsw/gh-own)](https://github.com/snrsw/gh-own/releases/latest)
+[![Go version](https://img.shields.io/github/go-mod/go-version/snrsw/gh-own)](go.mod)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
+GitHub CLI extension to list your owned PRs and issues across repositories unlike `gh pr list` and `gh issue list`, which are repo-scoped.
 
 Key features:
 
