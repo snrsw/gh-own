@@ -5,11 +5,6 @@ All notable changes to this repository will be documented in this file.
 ## [0.0.8](https://github.com/snrsw/gh-own/compare/0.0.7...0.0.8) - 2026-02-18
 ### Other Changes
 - Add debug mode for command speed analysis by @snrsw in https://github.com/snrsw/gh-own/pull/32
-- Release for 0.0.8 by @github-actions[bot] in https://github.com/snrsw/gh-own/pull/33
-
-## [0.0.8](https://github.com/snrsw/gh-own/compare/0.0.7...0.0.8) - 2026-02-18
-### Other Changes
-- Add debug mode for command speed analysis by @snrsw in https://github.com/snrsw/gh-own/pull/32
 
 ## [0.0.7](https://github.com/snrsw/gh-own/compare/0.0.6...0.0.7) - 2026-02-16
 ### Other Changes
@@ -34,16 +29,6 @@ All notable changes to this repository will be documented in this file.
 ## [0.0.4](https://github.com/snrsw/gh-own/compare/0.0.3...0.0.4) - 2026-02-07
 ### Other Changes
 - Fix release workflow input name by @snrsw in https://github.com/snrsw/gh-own/pull/15
-- Release for 0.0.4 by @github-actions[bot] in https://github.com/snrsw/gh-own/pull/16
-
-## [0.0.4](https://github.com/snrsw/gh-own/compare/0.0.3...0.0.4) - 2026-02-07
-### Other Changes
-- Fix release workflow input name by @snrsw in https://github.com/snrsw/gh-own/pull/15
-
-## [0.0.3](https://github.com/snrsw/gh-own/compare/0.0.2...0.0.3) - 2026-02-07
-### Other Changes
-- Fix release job tag detection on shallow clone by @snrsw in https://github.com/snrsw/gh-own/pull/12
-- Release for 0.0.3 by @github-actions[bot] in https://github.com/snrsw/gh-own/pull/13
 
 ## [0.0.3](https://github.com/snrsw/gh-own/compare/0.0.2...0.0.3) - 2026-02-07
 ### Other Changes
