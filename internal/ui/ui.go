@@ -67,10 +67,14 @@ type Model struct {
 	outerH    int
 	loading   bool
 	spinner   spinner.Model
+	err       error
 }
 
 // TabsMsg signals that data loading is complete and tabs are ready.
 type TabsMsg []Tab
+
+// ErrMsg signals that data loading failed.
+type ErrMsg struct{ Err error }
 
 func NewModel(tabs []Tab) Model {
 	if len(tabs) == 0 {
@@ -108,6 +112,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if mm, cmd, handled := m.handleKey(msg); handled {
 			return mm, cmd
 		}
+	case ErrMsg:
+		m.err = msg.Err
+		return m, tea.Quit
 	case TabsMsg:
 		m.loading = false
 		m.tabs = []Tab(msg)

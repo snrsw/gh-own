@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -347,6 +348,17 @@ func TestModel_Update_TabsMsg(t *testing.T) {
 	view := m.View()
 	if strings.Contains(view, "Loading") {
 		t.Error("after TabsMsg, View() should not contain 'Loading'")
+	}
+}
+
+func TestModel_Update_ErrMsg(t *testing.T) {
+	m := NewLoadingModel()
+
+	errMsg := ErrMsg{Err: errors.New("API timeout")}
+	_, cmd := m.Update(errMsg)
+
+	if cmd == nil {
+		t.Fatal("ErrMsg should return a command (tea.Quit)")
 	}
 }
 

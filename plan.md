@@ -44,8 +44,8 @@ Error state: display error message and quit.
 - [x] After receiving `TabsMsg`, `View()` renders tabs (not spinner)
 
 ### Test 4: ErrMsg displays error and quits
-- [ ] Define `ErrMsg` as `struct{ Err error }`
-- [ ] `Update(ErrMsg)` returns `tea.Quit` command
+- [x] Define `ErrMsg` as `struct{ Err error }`
+- [x] `Update(ErrMsg)` returns `tea.Quit` command
 
 ### Test 5: FetchCmd wraps a function into a tea.Cmd returning TabsMsg or ErrMsg
 - [ ] `FetchCmd(fn func() ([]Tab, error))` returns a `tea.Cmd`
