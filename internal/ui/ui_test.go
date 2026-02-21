@@ -498,6 +498,24 @@ func TestModel_Update_RefreshKey(t *testing.T) {
 	}
 }
 
+func TestModel_Update_RefreshKey_IgnoredDuringLoading(t *testing.T) {
+	fetch := FetchCmd(func() ([]Tab, error) {
+		return []Tab{NewTab("Tab", CreateList(nil))}, nil
+	})
+	m := NewLoadingModel(fetch)
+
+	// Press 'r' while still loading
+	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m = newModel.(Model)
+
+	if !m.loading {
+		t.Error("loading should remain true")
+	}
+	if cmd != nil {
+		t.Error("no command should be returned when refreshing during loading")
+	}
+}
+
 func TestModel_View(t *testing.T) {
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(nil))})
 
