@@ -62,8 +62,8 @@ Error state: display error message and quit.
 - [ ] Manual verification: `go build && gh own pr` shows spinner then results
 
 ### Test 8: Wire up Issue command to use loading model
-- [ ] `cmd/issue.go` calls `ui.NewLoadingModel()` and passes `FetchCmd` with issue fetching logic
-- [ ] `issue.BuildTabs()` extracts tab-building from `issue.View()` so it can be called inside `FetchCmd`
+- [x] `cmd/issue.go` calls `ui.NewLoadingModel()` and passes `FetchCmd` with issue fetching logic
+- [x] `issue.BuildTabs()` extracts tab-building from `issue.View()` so it can be called inside `FetchCmd`
 - [ ] Manual verification: `go build && gh own issue` shows spinner then results
 
 ## Files to Modify/Create

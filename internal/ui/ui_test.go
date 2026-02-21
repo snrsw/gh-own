@@ -284,7 +284,11 @@ func TestNewLoadingModel(t *testing.T) {
 	// Give it a size so View() can render
 	sizeMsg := tea.WindowSizeMsg{Width: 80, Height: 24}
 	newModel, _ := m.Update(sizeMsg)
-	m = newModel.(Model)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	view := m.View()
 	if !strings.Contains(view, "Loading") {
@@ -298,7 +302,11 @@ func TestModel_Update_SpinnerTick(t *testing.T) {
 		tick := spinner.TickMsg{ID: m.spinner.ID()}
 
 		newModel, cmd := m.Update(tick)
-		m = newModel.(Model)
+		var ok bool
+		m, ok = newModel.(Model)
+		if !ok {
+			t.Fatal("expected Model type")
+		}
 
 		if cmd == nil {
 			t.Error("in loading state, spinner tick should return a command")
@@ -328,7 +336,11 @@ func TestModel_Update_TabsMsg(t *testing.T) {
 	}
 
 	newModel, _ := m.Update(TabsMsg(tabs))
-	m = newModel.(Model)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	if m.loading {
 		t.Error("after TabsMsg, loading should be false")
@@ -343,7 +355,10 @@ func TestModel_Update_TabsMsg(t *testing.T) {
 	// View should render tabs, not spinner
 	sizeMsg := tea.WindowSizeMsg{Width: 80, Height: 24}
 	newModel, _ = m.Update(sizeMsg)
-	m = newModel.(Model)
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	view := m.View()
 	if strings.Contains(view, "Loading") {
@@ -401,7 +416,11 @@ func TestModel_WindowResize_DuringLoading(t *testing.T) {
 	// Resize while loading
 	sizeMsg := tea.WindowSizeMsg{Width: 120, Height: 40}
 	newModel, _ := m.Update(sizeMsg)
-	m = newModel.(Model)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	if m.width != 120 || m.height != 40 {
 		t.Errorf("dimensions = %dx%d, want 120x40", m.width, m.height)
@@ -410,7 +429,10 @@ func TestModel_WindowResize_DuringLoading(t *testing.T) {
 	// Transition to loaded
 	tabs := []Tab{NewTab("Tab 1", CreateList(nil))}
 	newModel, _ = m.Update(TabsMsg(tabs))
-	m = newModel.(Model)
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	// Tabs should have sizes applied from the earlier resize
 	if m.outerW == 0 {
