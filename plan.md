@@ -53,8 +53,8 @@ Error state: display error message and quit.
 - [x] When `fn` fails, the command returns `ErrMsg`
 
 ### Test 6: Window resize during loading state sets dimensions
-- [ ] In loading state, `Update(WindowSizeMsg)` stores width/height
-- [ ] After transition to loaded, tabs have correct sizes
+- [x] In loading state, `Update(WindowSizeMsg)` stores width/height
+- [x] After transition to loaded, tabs have correct sizes
 
 ### Test 7: Wire up PR command to use loading model
 - [ ] `cmd/pr.go` calls `ui.NewLoadingModel()` and passes `FetchCmd` with PR fetching logic

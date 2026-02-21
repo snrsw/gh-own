@@ -395,6 +395,29 @@ func TestFetchCmd(t *testing.T) {
 	})
 }
 
+func TestModel_WindowResize_DuringLoading(t *testing.T) {
+	m := NewLoadingModel()
+
+	// Resize while loading
+	sizeMsg := tea.WindowSizeMsg{Width: 120, Height: 40}
+	newModel, _ := m.Update(sizeMsg)
+	m = newModel.(Model)
+
+	if m.width != 120 || m.height != 40 {
+		t.Errorf("dimensions = %dx%d, want 120x40", m.width, m.height)
+	}
+
+	// Transition to loaded
+	tabs := []Tab{NewTab("Tab 1", CreateList(nil))}
+	newModel, _ = m.Update(TabsMsg(tabs))
+	m = newModel.(Model)
+
+	// Tabs should have sizes applied from the earlier resize
+	if m.outerW == 0 {
+		t.Error("after transition, outerW should be set from earlier resize")
+	}
+}
+
 func TestModel_View(t *testing.T) {
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(nil))})
 
