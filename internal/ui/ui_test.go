@@ -484,11 +484,18 @@ func TestModel_Update_RefreshKey(t *testing.T) {
 		NewTab("Tab 2", CreateList(nil)),
 	}
 	newModel, _ := m.Update(TabsMsg(tabs))
-	m = newModel.(Model)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	// Press 'r' to refresh
 	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
-	m = newModel.(Model)
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	if !m.loading {
 		t.Error("after pressing 'r', loading should be true")
@@ -506,18 +513,28 @@ func TestModel_Update_RefreshKey_IgnoredDuringFiltering(t *testing.T) {
 	m := NewLoadingModel(fetch)
 	// Give it a size so the list is functional
 	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
-	m = newModel.(Model)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 	// Transition to loaded with items (filtering requires items)
 	items := []list.Item{
 		NewItem("repo", "title", "desc", "url"),
 	}
 	tabs := []Tab{NewTab("Tab 1", CreateList(items))}
 	newModel, _ = m.Update(TabsMsg(tabs))
-	m = newModel.(Model)
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	// Activate filter mode by pressing '/'
 	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
-	m = newModel.(Model)
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	// Verify we're in filtering state
 	if m.tabs[m.activeTab].list.FilterState() != list.Filtering {
@@ -526,7 +543,10 @@ func TestModel_Update_RefreshKey_IgnoredDuringFiltering(t *testing.T) {
 
 	// Press 'r' while filtering — should NOT trigger refresh
 	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
-	m = newModel.(Model)
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	if m.loading {
 		t.Error("pressing 'r' during filter mode should not trigger refresh")
@@ -541,7 +561,11 @@ func TestModel_Update_RefreshKey_IgnoredDuringLoading(t *testing.T) {
 
 	// Press 'r' while still loading
 	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
-	m = newModel.(Model)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	if !m.loading {
 		t.Error("loading should remain true")
@@ -563,7 +587,11 @@ func TestModel_Update_RefreshKey_FullCycle(t *testing.T) {
 		NewTab("Assigned (1)", CreateList(nil)),
 	}
 	newModel, _ := m.Update(TabsMsg(tabs))
-	m = newModel.(Model)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	if len(m.tabs) != 2 {
 		t.Fatalf("initial tabs = %d, want 2", len(m.tabs))
@@ -571,7 +599,10 @@ func TestModel_Update_RefreshKey_FullCycle(t *testing.T) {
 
 	// Press 'r' to refresh
 	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
-	m = newModel.(Model)
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	if !m.loading {
 		t.Fatal("after refresh, loading should be true")
@@ -580,7 +611,10 @@ func TestModel_Update_RefreshKey_FullCycle(t *testing.T) {
 	// Simulate fetch completing with new data
 	newTabs := []Tab{NewTab("Refreshed (5)", CreateList(nil))}
 	newModel, _ = m.Update(TabsMsg(newTabs))
-	m = newModel.(Model)
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
 
 	if m.loading {
 		t.Error("after TabsMsg, loading should be false")
