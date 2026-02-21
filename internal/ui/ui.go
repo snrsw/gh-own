@@ -69,6 +69,9 @@ type Model struct {
 	spinner   spinner.Model
 }
 
+// TabsMsg signals that data loading is complete and tabs are ready.
+type TabsMsg []Tab
+
 func NewModel(tabs []Tab) Model {
 	if len(tabs) == 0 {
 		tabs = []Tab{NewTab("Empty", CreateList(nil))}
@@ -105,6 +108,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if mm, cmd, handled := m.handleKey(msg); handled {
 			return mm, cmd
 		}
+	case TabsMsg:
+		m.loading = false
+		m.tabs = []Tab(msg)
+		if len(m.tabs) == 0 {
+			m.tabs = []Tab{NewTab("Empty", CreateList(nil))}
+		}
+		m.activeTab = 0
+		if m.width > 0 {
+			m = m.handleWindowSize(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+		}
+		return m, nil
 	case spinner.TickMsg:
 		if m.loading {
 			var cmd tea.Cmd

@@ -318,6 +318,38 @@ func TestModel_Update_SpinnerTick(t *testing.T) {
 	})
 }
 
+func TestModel_Update_TabsMsg(t *testing.T) {
+	m := NewLoadingModel()
+
+	tabs := []Tab{
+		NewTab("Created (3)", CreateList(nil)),
+		NewTab("Assigned (1)", CreateList(nil)),
+	}
+
+	newModel, _ := m.Update(TabsMsg(tabs))
+	m = newModel.(Model)
+
+	if m.loading {
+		t.Error("after TabsMsg, loading should be false")
+	}
+	if len(m.tabs) != 2 {
+		t.Errorf("tabs count = %d, want 2", len(m.tabs))
+	}
+	if m.tabs[0].name != "Created (3)" {
+		t.Errorf("tabs[0].name = %q, want %q", m.tabs[0].name, "Created (3)")
+	}
+
+	// View should render tabs, not spinner
+	sizeMsg := tea.WindowSizeMsg{Width: 80, Height: 24}
+	newModel, _ = m.Update(sizeMsg)
+	m = newModel.(Model)
+
+	view := m.View()
+	if strings.Contains(view, "Loading") {
+		t.Error("after TabsMsg, View() should not contain 'Loading'")
+	}
+}
+
 func TestModel_View(t *testing.T) {
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(nil))})
 

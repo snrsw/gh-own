@@ -39,9 +39,9 @@ Error state: display error message and quit.
 - [x] In loaded state, `Update(spinner.TickMsg)` is ignored (no command)
 
 ### Test 3: TabsMsg transitions from loading to loaded state
-- [ ] Define `TabsMsg` as `[]Tab`
-- [ ] `Update(TabsMsg)` sets `loading = false` and populates tabs
-- [ ] After receiving `TabsMsg`, `View()` renders tabs (not spinner)
+- [x] Define `TabsMsg` as `[]Tab`
+- [x] `Update(TabsMsg)` sets `loading = false` and populates tabs
+- [x] After receiving `TabsMsg`, `View()` renders tabs (not spinner)
 
 ### Test 4: ErrMsg displays error and quits
 - [ ] Define `ErrMsg` as `struct{ Err error }`
