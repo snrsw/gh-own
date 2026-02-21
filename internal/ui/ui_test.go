@@ -472,6 +472,171 @@ func TestModel_WindowResize_DuringLoading(t *testing.T) {
 	}
 }
 
+func TestModel_Update_RefreshKey(t *testing.T) {
+	fetch := FetchCmd(func() ([]Tab, error) {
+		return []Tab{NewTab("Refreshed", CreateList(nil))}, nil
+	})
+
+	m := NewLoadingModel(fetch)
+	// Transition to loaded state
+	tabs := []Tab{
+		NewTab("Tab 1", CreateList(nil)),
+		NewTab("Tab 2", CreateList(nil)),
+	}
+	newModel, _ := m.Update(TabsMsg(tabs))
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Press 'r' to refresh
+	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if !m.loading {
+		t.Error("after pressing 'r', loading should be true")
+	}
+	if cmd == nil {
+		t.Error("after pressing 'r', command should not be nil")
+	}
+}
+
+func TestModel_Update_RefreshKey_IgnoredDuringFiltering(t *testing.T) {
+	fetch := FetchCmd(func() ([]Tab, error) {
+		return []Tab{NewTab("Tab", CreateList(nil))}, nil
+	})
+
+	m := NewLoadingModel(fetch)
+	// Give it a size so the list is functional
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+	// Transition to loaded with items (filtering requires items)
+	items := []list.Item{
+		NewItem("repo", "title", "desc", "url"),
+	}
+	tabs := []Tab{NewTab("Tab 1", CreateList(items))}
+	newModel, _ = m.Update(TabsMsg(tabs))
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Activate filter mode by pressing '/'
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Verify we're in filtering state
+	if m.tabs[m.activeTab].list.FilterState() != list.Filtering {
+		t.Fatal("expected to be in filtering state")
+	}
+
+	// Press 'r' while filtering — should NOT trigger refresh
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if m.loading {
+		t.Error("pressing 'r' during filter mode should not trigger refresh")
+	}
+}
+
+func TestModel_Update_RefreshKey_IgnoredDuringLoading(t *testing.T) {
+	fetch := FetchCmd(func() ([]Tab, error) {
+		return []Tab{NewTab("Tab", CreateList(nil))}, nil
+	})
+	m := NewLoadingModel(fetch)
+
+	// Press 'r' while still loading
+	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if !m.loading {
+		t.Error("loading should remain true")
+	}
+	if cmd != nil {
+		t.Error("no command should be returned when refreshing during loading")
+	}
+}
+
+func TestModel_Update_RefreshKey_FullCycle(t *testing.T) {
+	fetch := FetchCmd(func() ([]Tab, error) {
+		return []Tab{NewTab("Refreshed (5)", CreateList(nil))}, nil
+	})
+
+	m := NewLoadingModel(fetch)
+	// Initial load
+	tabs := []Tab{
+		NewTab("Created (3)", CreateList(nil)),
+		NewTab("Assigned (1)", CreateList(nil)),
+	}
+	newModel, _ := m.Update(TabsMsg(tabs))
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if len(m.tabs) != 2 {
+		t.Fatalf("initial tabs = %d, want 2", len(m.tabs))
+	}
+
+	// Press 'r' to refresh
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if !m.loading {
+		t.Fatal("after refresh, loading should be true")
+	}
+
+	// Simulate fetch completing with new data
+	newTabs := []Tab{NewTab("Refreshed (5)", CreateList(nil))}
+	newModel, _ = m.Update(TabsMsg(newTabs))
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if m.loading {
+		t.Error("after TabsMsg, loading should be false")
+	}
+	if len(m.tabs) != 1 {
+		t.Errorf("refreshed tabs = %d, want 1", len(m.tabs))
+	}
+	if m.tabs[0].name != "Refreshed (5)" {
+		t.Errorf("tab name = %q, want %q", m.tabs[0].name, "Refreshed (5)")
+	}
+}
+
+func TestHelpView_ContainsRefresh(t *testing.T) {
+	view := helpView()
+	if !strings.Contains(view, "r") {
+		t.Error("helpView() should contain 'r' key")
+	}
+	if !strings.Contains(view, "refresh") {
+		t.Error("helpView() should contain 'refresh' description")
+	}
+}
+
 func TestModel_View(t *testing.T) {
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(nil))})
 

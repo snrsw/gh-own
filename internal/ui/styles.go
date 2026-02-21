@@ -43,6 +43,7 @@ var (
 func helpView() string {
 	entries := []struct{ key, desc string }{
 		{"/", "filter"},
+		{"r", "refresh"},
 		{"tab", "switch tabs"},
 		{"enter", "open"},
 		{"ctrl+c", "quit"},
