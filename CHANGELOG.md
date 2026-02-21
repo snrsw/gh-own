@@ -2,6 +2,10 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.0.11](https://github.com/snrsw/gh-own/compare/0.0.10...0.0.11) - 2026-02-21
+### Other Changes
+- Sync README and CLAUDE.md with current codebase by @snrsw in https://github.com/snrsw/gh-own/pull/44
+
 ## [0.0.10](https://github.com/snrsw/gh-own/compare/0.0.9...0.0.10) - 2026-02-21
 ### Other Changes
 - Add loading spinner for PR and issue commands by @snrsw in https://github.com/snrsw/gh-own/pull/39
