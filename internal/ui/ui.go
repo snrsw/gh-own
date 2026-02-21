@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -64,6 +65,8 @@ type Model struct {
 	height    int
 	outerW    int
 	outerH    int
+	loading   bool
+	spinner   spinner.Model
 }
 
 func NewModel(tabs []Tab) Model {
@@ -76,7 +79,23 @@ func NewModel(tabs []Tab) Model {
 	}
 }
 
-func (m Model) Init() tea.Cmd { return nil }
+func NewLoadingModel() Model {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(colorAccent)
+	return Model{
+		loading: true,
+		spinner: s,
+		tabs:    []Tab{NewTab("Empty", CreateList(nil))},
+	}
+}
+
+func (m Model) Init() tea.Cmd {
+	if m.loading {
+		return m.spinner.Tick
+	}
+	return nil
+}
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -94,6 +113,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	if m.loading {
+		return DocStyle.Render(m.spinner.View() + " Loading...")
+	}
+
 	var doc strings.Builder
 
 	doc.WriteString(m.tabsView())

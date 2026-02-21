@@ -1,157 +1,86 @@
-# Plan: Add Latest Activity to PR and Issue Lists
+# Plan: Add Loading Indicator
 
-## Context
+Show a spinner with "Loading..." while API data is being fetched, instead of a blank terminal.
 
-`gh-own` currently shows each PR/issue with: `#N opened on DATE by AUTHOR, updated AGO`.
-This tells you *when* but not *what happened*. Adding "latest activity" shows the most
-recent meaningful event: who commented, who approved/requested-changes, or who pushed.
+## Problem
 
-Desired output examples:
-- `#42 opened on 2024-03-10 by alice · approved by bob 2h ago`
-- `#7 opened on 2024-01-15 by carol · commented by dave 5m ago`
-- `#99 opened on 2024-02-01 by eve · changes requested by frank 3d ago`
-- `#12 opened on 2024-03-20 by grace · pushed by henry 1h ago`
-- `#5 opened on 2024-03-18 by ivan, updated 2d ago`  ← fallback when no activity
+Currently, all data fetching happens synchronously in `cmd/pr.go` and `cmd/issue.go` **before** Bubbletea starts. The user sees nothing until all API queries complete (typically 2-5 seconds).
 
 ## Approach
 
-Extend the existing GraphQL queries to fetch:
-- `comments(last: 1)` — last comment (PRs and Issues)
-- `reviews(last: 1)` — last review with state (PRs only)
-- `commits(last: 1)` — already fetched; extend to include commit author + date (PRs only)
+Introduce a **loading state** in `ui.Model` that displays a spinner. The Bubbletea program starts immediately with this state, and data fetching runs as a `tea.Cmd`. When results arrive, the model transitions to the normal tabbed view.
 
-Pick the most-recent event across those sources and display it in the description line.
-If none available, fall back to the existing "updated X ago" format.
+### Key Design Decisions
 
-No new dependencies. No changes to `cmd/` or `main.go`.
+1. **Use `charmbracelet/bubbles/spinner`** — standard Bubbletea spinner component, already a transitive dependency
+2. **Move data fetching into a `tea.Cmd`** — the command handlers pass a fetch function to the UI, which runs it asynchronously
+3. **Two-phase Model** — `loading: true` shows spinner, `loading: false` shows tabs (current behavior)
 
----
+## UI Design
 
-## Steps
-
-### Step 1: `LatestActivity` type and picker in `internal/gh`
-
-**Files:** `internal/gh/activity.go`, `internal/gh/activity_test.go`
-
-`LatestActivity` stores the resolved "most recent event":
-```go
-type LatestActivity struct {
-    Kind  string // "commented", "approved", "changes requested", "dismissed", "pushed", ""
-    Login string // actor username; empty means no activity
-    At    string // RFC3339 timestamp
-}
+Loading state:
+```
+  ⣾ Loading...
 ```
 
-`NewLatestActivity(commentLogin, commentAt, reviewLogin, reviewAt, reviewState, pushLogin, pushAt string) LatestActivity`
-selects the most recent non-empty event across comment, review, and push.
+After data arrives: current tabbed UI (no change).
 
-Tests (`activity_test.go`):
-- [x] `TestNewLatestActivity_NoActivity` — all empty → `LatestActivity{}` with empty Login
-- [x] `TestNewLatestActivity_CommentOnly` — only comment → Kind="commented", Login=comment author
-- [x] `TestNewLatestActivity_ReviewApproved` — approved review → Kind="approved"
-- [x] `TestNewLatestActivity_ReviewChangesRequested` — → Kind="changes requested"
-- [x] `TestNewLatestActivity_ReviewDismissed` — → Kind="dismissed"
-- [x] `TestNewLatestActivity_PushOnly` — only push → Kind="pushed"
-- [x] `TestNewLatestActivity_CommentMoreRecentThanReview` — picks comment
-- [x] `TestNewLatestActivity_ReviewMoreRecentThanComment` — picks review
+Error state: display error message and quit.
 
----
+## Implementation (TDD)
 
-### Step 2: Extend PR GraphQL query + parse into `PRSearchNode.LatestActivity`
+### Test 1: Model starts in loading state when created via NewLoadingModel
+- [x] `NewLoadingModel()` returns a Model with `loading == true`
+- [x] `View()` in loading state renders spinner text (contains "Loading")
+- [x] `Init()` returns a non-nil `tea.Cmd` (the spinner tick)
 
-**Files:** `internal/gh/pr.go`, `internal/gh/pr_test.go`
+### Test 2: Spinner animates on tick messages
+- [ ] In loading state, `Update(spinner.TickMsg)` returns a command (keeps spinner alive)
+- [ ] In loaded state, `Update(spinner.TickMsg)` is ignored (no command)
 
-Extend `prSearchQuery` to add inside `... on PullRequest`:
-```graphql
-comments(last: 1) {
-    nodes { author { login } createdAt }
-}
-reviews(last: 1) {
-    nodes { author { login } submittedAt state }
-}
-```
-Also extend existing `commits(last: 1)` node:
-```graphql
-commits(last: 1) {
-    nodes {
-        commit {
-            statusCheckRollup { state }
-            committedDate
-            author { user { login } }
-        }
-    }
-}
-```
+### Test 3: TabsMsg transitions from loading to loaded state
+- [ ] Define `TabsMsg` as `[]Tab`
+- [ ] `Update(TabsMsg)` sets `loading = false` and populates tabs
+- [ ] After receiving `TabsMsg`, `View()` renders tabs (not spinner)
 
-Add corresponding fields to `prSearchRawNode` and populate `PRSearchNode.LatestActivity`
-via `NewLatestActivity` in `parsePRSearchNodes`.
+### Test 4: ErrMsg displays error and quits
+- [ ] Define `ErrMsg` as `struct{ Err error }`
+- [ ] `Update(ErrMsg)` returns `tea.Quit` command
 
-Tests (`pr_test.go`):
-- [x] `TestParsePRSearchNodes_WithComment` — raw node has comment → `LatestActivity.Kind == "commented"`
-- [x] `TestParsePRSearchNodes_WithApprovedReview` — raw node has approved review → `Kind == "approved"`
-- [x] `TestParsePRSearchNodes_WithPush` — raw node has commit author → `Kind == "pushed"`
-- [x] `TestParsePRSearchNodes_NoActivity` — no comment/review/push author → `LatestActivity.Login == ""`
+### Test 5: FetchCmd wraps a function into a tea.Cmd returning TabsMsg or ErrMsg
+- [ ] `FetchCmd(fn func() ([]Tab, error))` returns a `tea.Cmd`
+- [ ] When `fn` succeeds, the command returns `TabsMsg`
+- [ ] When `fn` fails, the command returns `ErrMsg`
 
----
+### Test 6: Window resize during loading state sets dimensions
+- [ ] In loading state, `Update(WindowSizeMsg)` stores width/height
+- [ ] After transition to loaded, tabs have correct sizes
 
-### Step 3: Propagate to `pullRequest` and update `toItem()` description
+### Test 7: Wire up PR command to use loading model
+- [ ] `cmd/pr.go` calls `ui.NewLoadingModel()` and passes `FetchCmd` with PR fetching logic
+- [ ] `pr.BuildTabs()` extracts tab-building from `pr.View()` so it can be called inside `FetchCmd`
+- [ ] Manual verification: `go build && gh own pr` shows spinner then results
 
-**Files:** `internal/pr/pr.go`, `internal/pr/ui.go`, `internal/pr/pr_test.go`
+### Test 8: Wire up Issue command to use loading model
+- [ ] `cmd/issue.go` calls `ui.NewLoadingModel()` and passes `FetchCmd` with issue fetching logic
+- [ ] `issue.BuildTabs()` extracts tab-building from `issue.View()` so it can be called inside `FetchCmd`
+- [ ] Manual verification: `go build && gh own issue` shows spinner then results
 
-Add `LatestActivity gh.LatestActivity` to `pullRequest`. Copy it in `fromGraphQL`.
+## Files to Modify/Create
 
-In `toItem()` description:
-- If `LatestActivity.Login != ""`: `"#N opened on DATE by AUTHOR · KIND by LOGIN AGO"`
-- Else: fall back to `"#N opened on DATE by AUTHOR, updated AGO"` (existing format)
-
-Tests (`pr_test.go`):
-- [x] `TestPullRequest_ToItem_WithActivity` — description contains `"· approved by bob"`
-- [x] `TestPullRequest_ToItem_NoActivity` — description still contains `"updated"` (fallback)
-- [x] `TestFromGraphQL_PropagatesLatestActivity` — `fromGraphQL` copies `LatestActivity`
-
----
-
-### Step 4: Extend issue GraphQL query + parse into `IssueSearchNode.LatestActivity`
-
-**Files:** `internal/gh/issue.go`, `internal/gh/issue_test.go`
-
-Extend `issueSearchQuery` to add inside `... on Issue`:
-```graphql
-comments(last: 1) {
-    nodes { author { login } createdAt }
-}
-```
-
-Add fields to `issueSearchRawNode` and populate `IssueSearchNode.LatestActivity`
-(only comment; no reviews or commits for issues).
-
-Tests (`issue_test.go`):
-- [x] `TestParseIssueSearchNodes_WithComment` — raw node has comment → `LatestActivity.Kind == "commented"`
-- [x] `TestParseIssueSearchNodes_NoActivity` — no comment → `LatestActivity.Login == ""`
-
----
-
-### Step 5: Propagate to `issue` and update `toItem()` description
-
-**Files:** `internal/issue/issue.go`, `internal/issue/ui.go`, `internal/issue/issue_test.go`
-
-Add `LatestActivity gh.LatestActivity` to `issue`. Copy it in `fromGraphQL`.
-
-Same fallback logic as Step 3 in `toItem()`.
-
-Tests (`issue_test.go`):
-- [x] `TestIssue_ToItem_WithActivity` — description contains `"· commented by alice"`
-- [x] `TestIssue_ToItem_NoActivity` — description contains `"updated"` (fallback)
-- [x] `TestFromGraphQL_PropagatesLatestActivity` — `fromGraphQL` copies `LatestActivity`
-
----
+| File | Action |
+|------|--------|
+| `internal/ui/ui.go` | Modify - Add loading state, `NewLoadingModel`, `TabsMsg`, `ErrMsg`, `FetchCmd`, spinner |
+| `internal/ui/ui_test.go` | Modify - Add tests for loading state, transitions, fetch command |
+| `internal/pr/ui.go` | Modify - Extract tab-building into `BuildTabs`, remove `tea.NewProgram` call |
+| `internal/issue/issue.go` or new `internal/issue/ui.go` | Modify - Extract tab-building, remove `tea.NewProgram` call |
+| `cmd/pr.go` | Modify - Start TUI immediately with loading model, pass fetch function |
+| `cmd/issue.go` | Modify - Same as pr.go |
 
 ## Verification
 
-```sh
-go test ./...
-go build
-gh own pr     # verify PR list shows latest activity
-gh own issue  # verify issue list shows latest activity
-golangci-lint run
-```
+1. `go test ./...` after each test
+2. `go build` to verify compilation
+3. `gh own pr` — spinner appears, then PR list loads
+4. `gh own issue` — spinner appears, then issue list loads
+5. Test with slow network to confirm spinner is visible

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -264,6 +265,28 @@ func TestModel_Update_WindowSize(t *testing.T) {
 				t.Errorf("height = %d, want %d", m.height, tt.height)
 			}
 		})
+	}
+}
+
+func TestNewLoadingModel(t *testing.T) {
+	m := NewLoadingModel()
+
+	if !m.loading {
+		t.Error("NewLoadingModel() should have loading = true")
+	}
+
+	if cmd := m.Init(); cmd == nil {
+		t.Error("Init() should return a non-nil command for spinner tick")
+	}
+
+	// Give it a size so View() can render
+	sizeMsg := tea.WindowSizeMsg{Width: 80, Height: 24}
+	newModel, _ := m.Update(sizeMsg)
+	m = newModel.(Model)
+
+	view := m.View()
+	if !strings.Contains(view, "Loading") {
+		t.Errorf("View() in loading state should contain 'Loading', got %q", view)
 	}
 }
 
