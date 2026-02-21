@@ -105,6 +105,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if mm, cmd, handled := m.handleKey(msg); handled {
 			return mm, cmd
 		}
+	case spinner.TickMsg:
+		if m.loading {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
+		}
+		return m, nil
 	}
 
 	var cmd tea.Cmd

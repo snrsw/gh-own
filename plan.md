@@ -35,8 +35,8 @@ Error state: display error message and quit.
 - [x] `Init()` returns a non-nil `tea.Cmd` (the spinner tick)
 
 ### Test 2: Spinner animates on tick messages
-- [ ] In loading state, `Update(spinner.TickMsg)` returns a command (keeps spinner alive)
-- [ ] In loaded state, `Update(spinner.TickMsg)` is ignored (no command)
+- [x] In loading state, `Update(spinner.TickMsg)` returns a command (keeps spinner alive)
+- [x] In loaded state, `Update(spinner.TickMsg)` is ignored (no command)
 
 ### Test 3: TabsMsg transitions from loading to loaded state
 - [ ] Define `TabsMsg` as `[]Tab`

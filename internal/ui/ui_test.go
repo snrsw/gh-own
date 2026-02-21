@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -288,6 +289,33 @@ func TestNewLoadingModel(t *testing.T) {
 	if !strings.Contains(view, "Loading") {
 		t.Errorf("View() in loading state should contain 'Loading', got %q", view)
 	}
+}
+
+func TestModel_Update_SpinnerTick(t *testing.T) {
+	t.Run("loading state forwards tick", func(t *testing.T) {
+		m := NewLoadingModel()
+		tick := spinner.TickMsg{ID: m.spinner.ID()}
+
+		newModel, cmd := m.Update(tick)
+		m = newModel.(Model)
+
+		if cmd == nil {
+			t.Error("in loading state, spinner tick should return a command")
+		}
+	})
+
+	t.Run("loaded state ignores tick", func(t *testing.T) {
+		m := NewModel([]Tab{
+			NewTab("Tab 1", CreateList(nil)),
+		})
+		tick := spinner.TickMsg{}
+
+		_, cmd := m.Update(tick)
+
+		if cmd != nil {
+			t.Error("in loaded state, spinner tick should return nil command")
+		}
+	})
 }
 
 func TestModel_View(t *testing.T) {
