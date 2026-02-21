@@ -1,9 +1,12 @@
 package ui
 
 import (
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -264,6 +267,176 @@ func TestModel_Update_WindowSize(t *testing.T) {
 				t.Errorf("height = %d, want %d", m.height, tt.height)
 			}
 		})
+	}
+}
+
+func TestNewLoadingModel(t *testing.T) {
+	m := NewLoadingModel(nil)
+
+	if !m.loading {
+		t.Error("NewLoadingModel() should have loading = true")
+	}
+
+	if cmd := m.Init(); cmd == nil {
+		t.Error("Init() should return a non-nil command for spinner tick")
+	}
+
+	// Give it a size so View() can render
+	sizeMsg := tea.WindowSizeMsg{Width: 80, Height: 24}
+	newModel, _ := m.Update(sizeMsg)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "Loading") {
+		t.Errorf("View() in loading state should contain 'Loading', got %q", view)
+	}
+}
+
+func TestModel_Update_SpinnerTick(t *testing.T) {
+	t.Run("loading state forwards tick", func(t *testing.T) {
+		m := NewLoadingModel(nil)
+		tick := spinner.TickMsg{ID: m.spinner.ID()}
+
+		newModel, cmd := m.Update(tick)
+		var ok bool
+		m, ok = newModel.(Model)
+		if !ok {
+			t.Fatal("expected Model type")
+		}
+
+		if cmd == nil {
+			t.Error("in loading state, spinner tick should return a command")
+		}
+	})
+
+	t.Run("loaded state ignores tick", func(t *testing.T) {
+		m := NewModel([]Tab{
+			NewTab("Tab 1", CreateList(nil)),
+		})
+		tick := spinner.TickMsg{}
+
+		_, cmd := m.Update(tick)
+
+		if cmd != nil {
+			t.Error("in loaded state, spinner tick should return nil command")
+		}
+	})
+}
+
+func TestModel_Update_TabsMsg(t *testing.T) {
+	m := NewLoadingModel(nil)
+
+	tabs := []Tab{
+		NewTab("Created (3)", CreateList(nil)),
+		NewTab("Assigned (1)", CreateList(nil)),
+	}
+
+	newModel, _ := m.Update(TabsMsg(tabs))
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if m.loading {
+		t.Error("after TabsMsg, loading should be false")
+	}
+	if len(m.tabs) != 2 {
+		t.Errorf("tabs count = %d, want 2", len(m.tabs))
+	}
+	if m.tabs[0].name != "Created (3)" {
+		t.Errorf("tabs[0].name = %q, want %q", m.tabs[0].name, "Created (3)")
+	}
+
+	// View should render tabs, not spinner
+	sizeMsg := tea.WindowSizeMsg{Width: 80, Height: 24}
+	newModel, _ = m.Update(sizeMsg)
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	view := m.View()
+	if strings.Contains(view, "Loading") {
+		t.Error("after TabsMsg, View() should not contain 'Loading'")
+	}
+}
+
+func TestModel_Update_ErrMsg(t *testing.T) {
+	m := NewLoadingModel(nil)
+
+	errMsg := ErrMsg{Err: errors.New("API timeout")}
+	_, cmd := m.Update(errMsg)
+
+	if cmd == nil {
+		t.Fatal("ErrMsg should return a command (tea.Quit)")
+	}
+}
+
+func TestFetchCmd(t *testing.T) {
+	t.Run("success returns TabsMsg", func(t *testing.T) {
+		tabs := []Tab{NewTab("Tab 1", CreateList(nil))}
+		cmd := FetchCmd(func() ([]Tab, error) {
+			return tabs, nil
+		})
+
+		msg := cmd()
+		tabsMsg, ok := msg.(TabsMsg)
+		if !ok {
+			t.Fatalf("expected TabsMsg, got %T", msg)
+		}
+		if len(tabsMsg) != 1 {
+			t.Errorf("TabsMsg len = %d, want 1", len(tabsMsg))
+		}
+	})
+
+	t.Run("failure returns ErrMsg", func(t *testing.T) {
+		cmd := FetchCmd(func() ([]Tab, error) {
+			return nil, errors.New("network error")
+		})
+
+		msg := cmd()
+		errMsg, ok := msg.(ErrMsg)
+		if !ok {
+			t.Fatalf("expected ErrMsg, got %T", msg)
+		}
+		if errMsg.Err.Error() != "network error" {
+			t.Errorf("ErrMsg.Err = %q, want %q", errMsg.Err.Error(), "network error")
+		}
+	})
+}
+
+func TestModel_WindowResize_DuringLoading(t *testing.T) {
+	m := NewLoadingModel(nil)
+
+	// Resize while loading
+	sizeMsg := tea.WindowSizeMsg{Width: 120, Height: 40}
+	newModel, _ := m.Update(sizeMsg)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if m.width != 120 || m.height != 40 {
+		t.Errorf("dimensions = %dx%d, want 120x40", m.width, m.height)
+	}
+
+	// Transition to loaded
+	tabs := []Tab{NewTab("Tab 1", CreateList(nil))}
+	newModel, _ = m.Update(TabsMsg(tabs))
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Tabs should have sizes applied from the earlier resize
+	if m.outerW == 0 {
+		t.Error("after transition, outerW should be set from earlier resize")
 	}
 }
 

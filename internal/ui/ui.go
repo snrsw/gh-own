@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -64,7 +65,17 @@ type Model struct {
 	height    int
 	outerW    int
 	outerH    int
+	loading   bool
+	spinner   spinner.Model
+	err       error
+	fetchCmd  tea.Cmd
 }
+
+// TabsMsg signals that data loading is complete and tabs are ready.
+type TabsMsg []Tab
+
+// ErrMsg signals that data loading failed.
+type ErrMsg struct{ Err error }
 
 func NewModel(tabs []Tab) Model {
 	if len(tabs) == 0 {
@@ -76,7 +87,41 @@ func NewModel(tabs []Tab) Model {
 	}
 }
 
-func (m Model) Init() tea.Cmd { return nil }
+func NewLoadingModel(fetch tea.Cmd) Model {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(colorAccent)
+	return Model{
+		loading:  true,
+		spinner:  s,
+		tabs:     []Tab{NewTab("Empty", CreateList(nil))},
+		fetchCmd: fetch,
+	}
+}
+
+// FetchCmd wraps a data-fetching function into a tea.Cmd.
+// On success it returns TabsMsg; on failure it returns ErrMsg.
+func FetchCmd(fn func() ([]Tab, error)) tea.Cmd {
+	return func() tea.Msg {
+		tabs, err := fn()
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+		return TabsMsg(tabs)
+	}
+}
+
+func (m Model) Init() tea.Cmd {
+	if m.loading {
+		return tea.Batch(m.spinner.Tick, m.fetchCmd)
+	}
+	return nil
+}
+
+// Err returns the error from a failed fetch, if any.
+func (m Model) Err() error {
+	return m.err
+}
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -86,6 +131,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if mm, cmd, handled := m.handleKey(msg); handled {
 			return mm, cmd
 		}
+	case ErrMsg:
+		m.err = msg.Err
+		return m, tea.Quit
+	case TabsMsg:
+		m.loading = false
+		m.tabs = []Tab(msg)
+		if len(m.tabs) == 0 {
+			m.tabs = []Tab{NewTab("Empty", CreateList(nil))}
+		}
+		m.activeTab = 0
+		if m.width > 0 {
+			m = m.handleWindowSize(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+		}
+		return m, nil
+	case spinner.TickMsg:
+		if m.loading {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
+		}
+		return m, nil
 	}
 
 	var cmd tea.Cmd
@@ -94,6 +160,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	if m.loading {
+		return DocStyle.Render(m.spinner.View() + " Loading...")
+	}
+
 	var doc strings.Builder
 
 	doc.WriteString(m.tabsView())

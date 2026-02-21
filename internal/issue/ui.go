@@ -5,20 +5,17 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/ui"
 )
 
-func (o *GroupedIssues) View() error {
-	m := ui.NewModel([]ui.Tab{
+// BuildTabs converts grouped issues into UI tabs.
+func (o *GroupedIssues) BuildTabs() []ui.Tab {
+	return []ui.Tab{
 		ui.NewTab(fmt.Sprintf("Created (%d)", o.Created.TotalCount), ui.CreateList(o.issueItems(o.Created))),
 		ui.NewTab(fmt.Sprintf("Participated (%d)", o.Participated.TotalCount), ui.CreateList(o.issueItems(o.Participated))),
 		ui.NewTab(fmt.Sprintf("Assigned (%d)", o.Assigned.TotalCount), ui.CreateList(o.issueItems(o.Assigned))),
-	})
-
-	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
-	return err
+	}
 }
 
 func (i issue) toItem() ui.Item {
