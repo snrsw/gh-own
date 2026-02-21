@@ -472,6 +472,32 @@ func TestModel_WindowResize_DuringLoading(t *testing.T) {
 	}
 }
 
+func TestModel_Update_RefreshKey(t *testing.T) {
+	fetch := FetchCmd(func() ([]Tab, error) {
+		return []Tab{NewTab("Refreshed", CreateList(nil))}, nil
+	})
+
+	m := NewLoadingModel(fetch)
+	// Transition to loaded state
+	tabs := []Tab{
+		NewTab("Tab 1", CreateList(nil)),
+		NewTab("Tab 2", CreateList(nil)),
+	}
+	newModel, _ := m.Update(TabsMsg(tabs))
+	m = newModel.(Model)
+
+	// Press 'r' to refresh
+	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m = newModel.(Model)
+
+	if !m.loading {
+		t.Error("after pressing 'r', loading should be true")
+	}
+	if cmd == nil {
+		t.Error("after pressing 'r', command should not be nil")
+	}
+}
+
 func TestModel_View(t *testing.T) {
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(nil))})
 
