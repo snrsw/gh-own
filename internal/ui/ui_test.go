@@ -169,18 +169,28 @@ func TestModel_Update_KeyMsg(t *testing.T) {
 	tests := []struct {
 		name           string
 		key            tea.KeyMsg
+		startTab       int
 		expectedTab    int
 		expectsCommand bool
 	}{
 		{
 			name:           "tab cycles to next",
 			key:            tea.KeyMsg{Type: tea.KeyTab},
+			startTab:       0,
 			expectedTab:    1,
+			expectsCommand: false,
+		},
+		{
+			name:           "shift+tab cycles to previous",
+			key:            tea.KeyMsg{Type: tea.KeyShiftTab},
+			startTab:       1,
+			expectedTab:    0,
 			expectsCommand: false,
 		},
 		{
 			name:           "ctrl+c quits",
 			key:            tea.KeyMsg{Type: tea.KeyCtrlC},
+			startTab:       0,
 			expectedTab:    0,
 			expectsCommand: true,
 		},
@@ -192,6 +202,7 @@ func TestModel_Update_KeyMsg(t *testing.T) {
 				NewTab("Tab 1", CreateList(nil)),
 				NewTab("Tab 2", CreateList(nil)),
 			})
+			m.activeTab = tt.startTab
 
 			newModel, cmd := m.Update(tt.key)
 			var ok bool
@@ -234,6 +245,27 @@ func TestModel_Update_TabWrap(t *testing.T) {
 
 	if m.activeTab != 0 {
 		t.Errorf("after wrapping, activeTab = %d, want 0", m.activeTab)
+	}
+}
+
+func TestModel_Update_ShiftTabWrap(t *testing.T) {
+	m := NewModel([]Tab{
+		NewTab("Tab 1", CreateList(nil)),
+		NewTab("Tab 2", CreateList(nil)),
+		NewTab("Tab 3", CreateList(nil)),
+	})
+
+	// activeTab starts at 0; shift+tab should wrap to last tab (2)
+	keyMsg := tea.KeyMsg{Type: tea.KeyShiftTab}
+	newModel, _ := m.Update(keyMsg)
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if m.activeTab != 2 {
+		t.Errorf("after shift+tab wrap, activeTab = %d, want 2", m.activeTab)
 	}
 }
 
