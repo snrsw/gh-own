@@ -57,8 +57,8 @@ Error state: display error message and quit.
 - [x] After transition to loaded, tabs have correct sizes
 
 ### Test 7: Wire up PR command to use loading model
-- [ ] `cmd/pr.go` calls `ui.NewLoadingModel()` and passes `FetchCmd` with PR fetching logic
-- [ ] `pr.BuildTabs()` extracts tab-building from `pr.View()` so it can be called inside `FetchCmd`
+- [x] `cmd/pr.go` calls `ui.NewLoadingModel()` and passes `FetchCmd` with PR fetching logic
+- [x] `pr.BuildTabs()` extracts tab-building from `pr.View()` so it can be called inside `FetchCmd`
 - [ ] Manual verification: `go build && gh own pr` shows spinner then results
 
 ### Test 8: Wire up Issue command to use loading model

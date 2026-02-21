@@ -271,7 +271,7 @@ func TestModel_Update_WindowSize(t *testing.T) {
 }
 
 func TestNewLoadingModel(t *testing.T) {
-	m := NewLoadingModel()
+	m := NewLoadingModel(nil)
 
 	if !m.loading {
 		t.Error("NewLoadingModel() should have loading = true")
@@ -294,7 +294,7 @@ func TestNewLoadingModel(t *testing.T) {
 
 func TestModel_Update_SpinnerTick(t *testing.T) {
 	t.Run("loading state forwards tick", func(t *testing.T) {
-		m := NewLoadingModel()
+		m := NewLoadingModel(nil)
 		tick := spinner.TickMsg{ID: m.spinner.ID()}
 
 		newModel, cmd := m.Update(tick)
@@ -320,7 +320,7 @@ func TestModel_Update_SpinnerTick(t *testing.T) {
 }
 
 func TestModel_Update_TabsMsg(t *testing.T) {
-	m := NewLoadingModel()
+	m := NewLoadingModel(nil)
 
 	tabs := []Tab{
 		NewTab("Created (3)", CreateList(nil)),
@@ -352,7 +352,7 @@ func TestModel_Update_TabsMsg(t *testing.T) {
 }
 
 func TestModel_Update_ErrMsg(t *testing.T) {
-	m := NewLoadingModel()
+	m := NewLoadingModel(nil)
 
 	errMsg := ErrMsg{Err: errors.New("API timeout")}
 	_, cmd := m.Update(errMsg)
@@ -396,7 +396,7 @@ func TestFetchCmd(t *testing.T) {
 }
 
 func TestModel_WindowResize_DuringLoading(t *testing.T) {
-	m := NewLoadingModel()
+	m := NewLoadingModel(nil)
 
 	// Resize while loading
 	sizeMsg := tea.WindowSizeMsg{Width: 120, Height: 40}

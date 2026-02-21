@@ -68,6 +68,7 @@ type Model struct {
 	loading   bool
 	spinner   spinner.Model
 	err       error
+	fetchCmd  tea.Cmd
 }
 
 // TabsMsg signals that data loading is complete and tabs are ready.
@@ -86,14 +87,15 @@ func NewModel(tabs []Tab) Model {
 	}
 }
 
-func NewLoadingModel() Model {
+func NewLoadingModel(fetch tea.Cmd) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(colorAccent)
 	return Model{
-		loading: true,
-		spinner: s,
-		tabs:    []Tab{NewTab("Empty", CreateList(nil))},
+		loading:  true,
+		spinner:  s,
+		tabs:     []Tab{NewTab("Empty", CreateList(nil))},
+		fetchCmd: fetch,
 	}
 }
 
@@ -111,9 +113,14 @@ func FetchCmd(fn func() ([]Tab, error)) tea.Cmd {
 
 func (m Model) Init() tea.Cmd {
 	if m.loading {
-		return m.spinner.Tick
+		return tea.Batch(m.spinner.Tick, m.fetchCmd)
 	}
 	return nil
+}
+
+// Err returns the error from a failed fetch, if any.
+func (m Model) Err() error {
+	return m.err
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

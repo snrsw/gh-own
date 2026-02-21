@@ -5,23 +5,20 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/snrsw/gh-own/internal/cistatus"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/ui"
 )
 
-func (o *GroupedPullRequests) View() error {
-	m := ui.NewModel([]ui.Tab{
+// BuildTabs converts grouped pull requests into UI tabs.
+func (o *GroupedPullRequests) BuildTabs() []ui.Tab {
+	return []ui.Tab{
 		ui.NewTab(fmt.Sprintf("Created (%d)", o.Created.TotalCount), ui.CreateList(o.prItems(o.Created))),
 		ui.NewTab(fmt.Sprintf("Participated (%d)", o.Participated.TotalCount), ui.CreateList(o.prItems(o.Participated))),
 		ui.NewTab(fmt.Sprintf("Assigned (%d)", o.Assigned.TotalCount), ui.CreateList(o.prItems(o.Assigned))),
 		ui.NewTab(fmt.Sprintf("Review Requested (%d)", o.ReviewRequested.TotalCount), ui.CreateList(o.prItems(o.ReviewRequested))),
-	})
-
-	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
-	return err
+	}
 }
 
 func (p pullRequest) toItem() ui.Item {
