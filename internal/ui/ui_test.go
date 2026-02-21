@@ -498,6 +498,41 @@ func TestModel_Update_RefreshKey(t *testing.T) {
 	}
 }
 
+func TestModel_Update_RefreshKey_IgnoredDuringFiltering(t *testing.T) {
+	fetch := FetchCmd(func() ([]Tab, error) {
+		return []Tab{NewTab("Tab", CreateList(nil))}, nil
+	})
+
+	m := NewLoadingModel(fetch)
+	// Give it a size so the list is functional
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = newModel.(Model)
+	// Transition to loaded with items (filtering requires items)
+	items := []list.Item{
+		NewItem("repo", "title", "desc", "url"),
+	}
+	tabs := []Tab{NewTab("Tab 1", CreateList(items))}
+	newModel, _ = m.Update(TabsMsg(tabs))
+	m = newModel.(Model)
+
+	// Activate filter mode by pressing '/'
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	m = newModel.(Model)
+
+	// Verify we're in filtering state
+	if m.tabs[m.activeTab].list.FilterState() != list.Filtering {
+		t.Fatal("expected to be in filtering state")
+	}
+
+	// Press 'r' while filtering — should NOT trigger refresh
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m = newModel.(Model)
+
+	if m.loading {
+		t.Error("pressing 'r' during filter mode should not trigger refresh")
+	}
+}
+
 func TestModel_Update_RefreshKey_IgnoredDuringLoading(t *testing.T) {
 	fetch := FetchCmd(func() ([]Tab, error) {
 		return []Tab{NewTab("Tab", CreateList(nil))}, nil

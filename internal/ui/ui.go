@@ -270,6 +270,9 @@ func (m Model) handleRefresh() (Model, tea.Cmd, bool) {
 	if m.loading || m.fetchCmd == nil {
 		return m, nil, true
 	}
+	if m.tabs[m.activeTab].list.FilterState() == list.Filtering {
+		return m, nil, false
+	}
 	m.loading = true
 	return m, tea.Batch(m.spinner.Tick, m.fetchCmd), true
 }
