@@ -551,6 +551,16 @@ func TestModel_Update_RefreshKey_IgnoredDuringLoading(t *testing.T) {
 	}
 }
 
+func TestHelpView_ContainsRefresh(t *testing.T) {
+	view := helpView()
+	if !strings.Contains(view, "r") {
+		t.Error("helpView() should contain 'r' key")
+	}
+	if !strings.Contains(view, "refresh") {
+		t.Error("helpView() should contain 'refresh' description")
+	}
+}
+
 func TestModel_View(t *testing.T) {
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(nil))})
 
