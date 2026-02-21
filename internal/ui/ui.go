@@ -253,6 +253,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		m.activeTab = (m.activeTab + 1) % len(m.tabs)
 		return m, nil, true
 
+	case "shift+tab":
+		m.activeTab = (m.activeTab - 1 + len(m.tabs)) % len(m.tabs)
+		return m, nil, true
+
 	case "enter":
 		return m.handleEnter()
 	}
