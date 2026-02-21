@@ -27,7 +27,10 @@ func mostRecent(candidates []LatestActivity) LatestActivity {
 		return LatestActivity{}
 	}
 	best := candidates[0]
-	bestTime, _ := time.Parse(time.RFC3339, best.At)
+	var bestTime time.Time
+	if t, err := time.Parse(time.RFC3339, best.At); err == nil {
+		bestTime = t
+	}
 	for _, c := range candidates[1:] {
 		t, err := time.Parse(time.RFC3339, c.At)
 		if err == nil && t.After(bestTime) {
