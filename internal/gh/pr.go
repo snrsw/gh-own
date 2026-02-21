@@ -88,6 +88,7 @@ const prSearchQuery = `query($q: String!) {
 				isDraft
 				updatedAt
 				createdAt
+				reviewDecision
 				author { login }
 				repository { nameWithOwner }
 				commits(last: 1) {
@@ -135,6 +136,7 @@ type PRSearchNode struct {
 	UpdatedAt      string
 	CreatedAt      string
 	StatusState    string
+	ReviewDecision string
 	LatestActivity LatestActivity
 	Author         struct {
 		Login string
@@ -153,13 +155,14 @@ func (p *PRSearchNode) RepositoryURL() string {
 }
 
 type prSearchRawNode struct {
-	Number    int    `json:"number"`
-	Title     string `json:"title"`
-	URL       string `json:"url"`
-	IsDraft   bool   `json:"isDraft"`
-	UpdatedAt string `json:"updatedAt"`
-	CreatedAt string `json:"createdAt"`
-	Author    struct {
+	Number         int    `json:"number"`
+	Title          string `json:"title"`
+	URL            string `json:"url"`
+	IsDraft        bool   `json:"isDraft"`
+	UpdatedAt      string `json:"updatedAt"`
+	CreatedAt      string `json:"createdAt"`
+	ReviewDecision string `json:"reviewDecision"`
+	Author         struct {
 		Login string `json:"login"`
 	} `json:"author"`
 	Repository struct {
@@ -202,12 +205,13 @@ func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
 			continue
 		}
 		node := PRSearchNode{
-			Number:    n.Number,
-			Title:     n.Title,
-			URL:       n.URL,
-			IsDraft:   n.IsDraft,
-			UpdatedAt: n.UpdatedAt,
-			CreatedAt: n.CreatedAt,
+			Number:         n.Number,
+			Title:          n.Title,
+			URL:            n.URL,
+			IsDraft:        n.IsDraft,
+			UpdatedAt:      n.UpdatedAt,
+			CreatedAt:      n.CreatedAt,
+			ReviewDecision: n.ReviewDecision,
 		}
 		node.Author.Login = n.Author.Login
 		node.Repository.NameWithOwner = n.Repository.NameWithOwner

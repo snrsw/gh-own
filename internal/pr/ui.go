@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/snrsw/gh-own/internal/cistatus"
 	"github.com/snrsw/gh-own/internal/gh"
+	"github.com/snrsw/gh-own/internal/reviewstatus"
 	"github.com/snrsw/gh-own/internal/ui"
 )
 
@@ -42,9 +43,15 @@ func (p pullRequest) toItem() ui.Item {
 			ui.UpdatedAgo(p.UpdatedAt),
 		)
 	}
+	titleText := p.Title
+	if rs := reviewstatus.RenderReviewStatus(p.ReviewStatus); rs != "" {
+		titleText += " " + rs
+	}
+	titleText += " " + cistatus.RenderCIStatus(p.CIStatus)
+
 	return ui.NewItem(
 		p.repositoryFullName(),
-		fmt.Sprintf("%s %s", p.Title, cistatus.RenderCIStatus(p.CIStatus)),
+		titleText,
 		desc,
 		p.HTMLURL,
 	)

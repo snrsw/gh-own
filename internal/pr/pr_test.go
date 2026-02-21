@@ -6,6 +6,7 @@ import (
 
 	"github.com/snrsw/gh-own/internal/cistatus"
 	"github.com/snrsw/gh-own/internal/gh"
+	"github.com/snrsw/gh-own/internal/reviewstatus"
 )
 
 func TestPullRequest_RepositoryFullName(t *testing.T) {
@@ -162,6 +163,49 @@ func TestPullRequest_ToItem(t *testing.T) {
 			},
 			expectedTitle: "owner/repo Failing CI ✗",
 			descContains:  []string{"#101"},
+		},
+		{
+			name: "PR with approved review and CI success",
+			pr: pullRequest{
+				Number:        200,
+				User:          gh.User{Login: "dev"},
+				RepositoryURL: "https://api.github.com/repos/owner/repo",
+				Title:         "Ready to merge",
+				Draft:         false,
+				CreatedAt:     "2024-03-15T10:00:00Z",
+				CIStatus:      cistatus.CIStatusSuccess,
+				ReviewStatus:  reviewstatus.ReviewStatusApproved,
+			},
+			expectedTitle: "owner/repo Ready to merge ✔ ✓",
+			descContains:  []string{"#200"},
+		},
+		{
+			name: "PR with changes requested",
+			pr: pullRequest{
+				Number:        201,
+				User:          gh.User{Login: "dev"},
+				RepositoryURL: "https://api.github.com/repos/owner/repo",
+				Title:         "Needs work",
+				Draft:         false,
+				CreatedAt:     "2024-03-15T10:00:00Z",
+				ReviewStatus:  reviewstatus.ReviewStatusChangesRequested,
+			},
+			expectedTitle: "owner/repo Needs work ⊘ -",
+			descContains:  []string{"#201"},
+		},
+		{
+			name: "PR with review required",
+			pr: pullRequest{
+				Number:        202,
+				User:          gh.User{Login: "dev"},
+				RepositoryURL: "https://api.github.com/repos/owner/repo",
+				Title:         "Awaiting review",
+				Draft:         false,
+				CreatedAt:     "2024-03-15T10:00:00Z",
+				ReviewStatus:  reviewstatus.ReviewStatusReviewRequired,
+			},
+			expectedTitle: "owner/repo Awaiting review ◇ -",
+			descContains:  []string{"#202"},
 		},
 	}
 
@@ -331,6 +375,36 @@ func TestFromGraphQL(t *testing.T) {
 	}
 	if pr.HTMLURL != "https://github.com/owner/repo/pull/123" {
 		t.Errorf("HTMLURL = %q, want %q", pr.HTMLURL, "https://github.com/owner/repo/pull/123")
+	}
+}
+
+func TestFromGraphQL_PropagatesReviewStatus(t *testing.T) {
+	tests := []struct {
+		name     string
+		decision string
+		want     reviewstatus.ReviewStatus
+	}{
+		{"approved", "APPROVED", reviewstatus.ReviewStatusApproved},
+		{"changes requested", "CHANGES_REQUESTED", reviewstatus.ReviewStatusChangesRequested},
+		{"review required", "REVIEW_REQUIRED", reviewstatus.ReviewStatusReviewRequired},
+		{"none", "", reviewstatus.ReviewStatusNone},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := gh.PRSearchNode{
+				Number:         1,
+				Title:          "Test",
+				ReviewDecision: tt.decision,
+			}
+			node.Repository.NameWithOwner = "owner/repo"
+
+			pr := fromGraphQL(node)
+
+			if pr.ReviewStatus != tt.want {
+				t.Errorf("ReviewStatus = %v, want %v", pr.ReviewStatus, tt.want)
+			}
+		})
 	}
 }
 
