@@ -277,3 +277,32 @@ func TestParsePRSearchNodes_CIStatus(t *testing.T) {
 		t.Errorf("nodes[1].CIStatus() = %v, want %v", nodes[1].CIStatus(), cistatus.CIStatusNone)
 	}
 }
+
+func TestParsePRSearchNodes_ReviewDecision(t *testing.T) {
+	tests := []struct {
+		name     string
+		decision string
+		want     string
+	}{
+		{"approved", "APPROVED", "APPROVED"},
+		{"changes requested", "CHANGES_REQUESTED", "CHANGES_REQUESTED"},
+		{"review required", "REVIEW_REQUIRED", "REVIEW_REQUIRED"},
+		{"none", "", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := prSearchRawNode{Number: 1, Title: "Test"}
+			node.ReviewDecision = tt.decision
+
+			nodes := parsePRSearchNodes([]prSearchRawNode{node})
+
+			if len(nodes) != 1 {
+				t.Fatalf("expected 1 node, got %d", len(nodes))
+			}
+			if nodes[0].ReviewDecision != tt.want {
+				t.Errorf("ReviewDecision = %q, want %q", nodes[0].ReviewDecision, tt.want)
+			}
+		})
+	}
+}

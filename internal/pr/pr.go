@@ -6,6 +6,7 @@ import (
 
 	"github.com/snrsw/gh-own/internal/cistatus"
 	"github.com/snrsw/gh-own/internal/gh"
+	"github.com/snrsw/gh-own/internal/reviewstatus"
 )
 
 type GroupedPullRequests struct {
@@ -34,8 +35,9 @@ type pullRequest struct {
 	Draft          bool              `json:"draft"`
 	UpdatedAt      string            `json:"updated_at"`
 	CreatedAt      string            `json:"created_at"`
-	CIStatus       cistatus.CIStatus `json:"-"`
-	LatestActivity gh.LatestActivity `json:"-"`
+	CIStatus       cistatus.CIStatus           `json:"-"`
+	ReviewStatus   reviewstatus.ReviewStatus   `json:"-"`
+	LatestActivity gh.LatestActivity           `json:"-"`
 }
 
 func (p *pullRequest) repositoryFullName() string {
@@ -74,6 +76,7 @@ func fromGraphQL(node gh.PRSearchNode) pullRequest {
 		UpdatedAt:      node.UpdatedAt,
 		CreatedAt:      node.CreatedAt,
 		CIStatus:       node.CIStatus(),
+		ReviewStatus:   reviewstatus.ParseReviewDecision(node.ReviewDecision),
 		LatestActivity: node.LatestActivity,
 	}
 }
