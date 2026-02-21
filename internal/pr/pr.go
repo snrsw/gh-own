@@ -25,16 +25,17 @@ func NewGroupedPullRequests(ghResult *gh.PRSearchResult) *GroupedPullRequests {
 }
 
 type pullRequest struct {
-	Number        int               `json:"number"`
-	User          gh.User           `json:"user"`
-	RepositoryURL string            `json:"repository_url"`
-	Title         string            `json:"title"`
-	State         string            `json:"state"`
-	HTMLURL       string            `json:"html_url"`
-	Draft         bool              `json:"draft"`
-	UpdatedAt     string            `json:"updated_at"`
-	CreatedAt     string            `json:"created_at"`
-	CIStatus      cistatus.CIStatus `json:"-"`
+	Number         int               `json:"number"`
+	User           gh.User           `json:"user"`
+	RepositoryURL  string            `json:"repository_url"`
+	Title          string            `json:"title"`
+	State          string            `json:"state"`
+	HTMLURL        string            `json:"html_url"`
+	Draft          bool              `json:"draft"`
+	UpdatedAt      string            `json:"updated_at"`
+	CreatedAt      string            `json:"created_at"`
+	CIStatus       cistatus.CIStatus `json:"-"`
+	LatestActivity gh.LatestActivity `json:"-"`
 }
 
 func (p *pullRequest) repositoryFullName() string {
@@ -64,14 +65,15 @@ func fromGraphQLNodes(nodes []gh.PRSearchNode) []pullRequest {
 
 func fromGraphQL(node gh.PRSearchNode) pullRequest {
 	return pullRequest{
-		Number:        node.Number,
-		User:          gh.User{Login: node.Author.Login},
-		RepositoryURL: node.RepositoryURL(),
-		Title:         node.Title,
-		HTMLURL:       node.URL,
-		Draft:         node.IsDraft,
-		UpdatedAt:     node.UpdatedAt,
-		CreatedAt:     node.CreatedAt,
-		CIStatus:      node.CIStatus(),
+		Number:         node.Number,
+		User:           gh.User{Login: node.Author.Login},
+		RepositoryURL:  node.RepositoryURL(),
+		Title:          node.Title,
+		HTMLURL:        node.URL,
+		Draft:          node.IsDraft,
+		UpdatedAt:      node.UpdatedAt,
+		CreatedAt:      node.CreatedAt,
+		CIStatus:       node.CIStatus(),
+		LatestActivity: node.LatestActivity,
 	}
 }

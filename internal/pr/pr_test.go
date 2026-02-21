@@ -64,6 +64,44 @@ func TestPullRequest_RepositoryFullName(t *testing.T) {
 	}
 }
 
+func TestPullRequest_ToItem_NoActivity(t *testing.T) {
+	pr := pullRequest{
+		Number:        42,
+		User:          gh.User{Login: "alice"},
+		RepositoryURL: "https://api.github.com/repos/owner/repo",
+		Title:         "Fix bug",
+		CreatedAt:     "2024-03-10T08:00:00Z",
+		UpdatedAt:     "2024-03-10T12:00:00Z",
+	}
+
+	desc := pr.toItem().Description()
+
+	if !strings.Contains(desc, "updated") {
+		t.Errorf("Description() = %q, should contain %q", desc, "updated")
+	}
+}
+
+func TestPullRequest_ToItem_WithActivity(t *testing.T) {
+	pr := pullRequest{
+		Number:        42,
+		User:          gh.User{Login: "alice"},
+		RepositoryURL: "https://api.github.com/repos/owner/repo",
+		Title:         "Fix bug",
+		CreatedAt:     "2024-03-10T08:00:00Z",
+		LatestActivity: gh.LatestActivity{
+			Kind:  "approved",
+			Login: "bob",
+			At:    "2024-03-10T12:00:00Z",
+		},
+	}
+
+	desc := pr.toItem().Description()
+
+	if !strings.Contains(desc, ", approved by bob") {
+		t.Errorf("Description() = %q, should contain %q", desc, ", approved by bob")
+	}
+}
+
 func TestPullRequest_ToItem(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -243,6 +281,24 @@ func TestPullRequest_HasCIStatusField(t *testing.T) {
 
 	if pr.CIStatus != cistatus.CIStatusSuccess {
 		t.Errorf("CIStatus = %v, want %v", pr.CIStatus, cistatus.CIStatusSuccess)
+	}
+}
+
+func TestFromGraphQL_PropagatesLatestActivity(t *testing.T) {
+	node := gh.PRSearchNode{
+		Number: 1,
+		Title:  "Test",
+	}
+	node.LatestActivity = gh.LatestActivity{Kind: "commented", Login: "alice", At: "2024-03-10T10:00:00Z"}
+	node.Repository.NameWithOwner = "owner/repo"
+
+	pr := fromGraphQL(node)
+
+	if pr.LatestActivity.Kind != "commented" {
+		t.Errorf("Kind = %q, want %q", pr.LatestActivity.Kind, "commented")
+	}
+	if pr.LatestActivity.Login != "alice" {
+		t.Errorf("Login = %q, want %q", pr.LatestActivity.Login, "alice")
 	}
 }
 

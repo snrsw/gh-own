@@ -84,6 +84,43 @@ func TestSearchIssues_EmptyUsername(t *testing.T) {
 	}
 }
 
+func TestParseIssueSearchNodes_NoActivity(t *testing.T) {
+	node := issueSearchRawNode{Number: 1, Title: "Test"}
+
+	nodes := parseIssueSearchNodes([]issueSearchRawNode{node})
+
+	if len(nodes) != 1 {
+		t.Fatalf("expected 1 node, got %d", len(nodes))
+	}
+	if nodes[0].LatestActivity.Login != "" {
+		t.Errorf("Login = %q, want empty", nodes[0].LatestActivity.Login)
+	}
+	if nodes[0].LatestActivity.Kind != "" {
+		t.Errorf("Kind = %q, want empty", nodes[0].LatestActivity.Kind)
+	}
+}
+
+func TestParseIssueSearchNodes_WithComment(t *testing.T) {
+	node := issueSearchRawNode{Number: 1, Title: "Test"}
+	node.Comments.Nodes = []struct {
+		Author    struct{ Login string `json:"login"` } `json:"author"`
+		CreatedAt string                                `json:"createdAt"`
+	}{{CreatedAt: "2024-03-10T12:00:00Z"}}
+	node.Comments.Nodes[0].Author.Login = "alice"
+
+	nodes := parseIssueSearchNodes([]issueSearchRawNode{node})
+
+	if len(nodes) != 1 {
+		t.Fatalf("expected 1 node, got %d", len(nodes))
+	}
+	if nodes[0].LatestActivity.Kind != "commented" {
+		t.Errorf("Kind = %q, want %q", nodes[0].LatestActivity.Kind, "commented")
+	}
+	if nodes[0].LatestActivity.Login != "alice" {
+		t.Errorf("Login = %q, want %q", nodes[0].LatestActivity.Login, "alice")
+	}
+}
+
 func TestParseIssueSearchNodes(t *testing.T) {
 	node1 := issueSearchRawNode{
 		Number:    1,

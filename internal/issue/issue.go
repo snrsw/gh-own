@@ -22,14 +22,15 @@ func NewGroupedIssues(ghResult *gh.IssueSearchResult) *GroupedIssues {
 }
 
 type issue struct {
-	Number        int     `json:"number"`
-	User          gh.User `json:"user"`
-	RepositoryURL string  `json:"repository_url"`
-	Title         string  `json:"title"`
-	State         string  `json:"state"`
-	HTMLURL       string  `json:"html_url"`
-	UpdatedAt     string  `json:"updated_at"`
-	CreatedAt     string  `json:"created_at"`
+	Number         int               `json:"number"`
+	User           gh.User           `json:"user"`
+	RepositoryURL  string            `json:"repository_url"`
+	Title          string            `json:"title"`
+	State          string            `json:"state"`
+	HTMLURL        string            `json:"html_url"`
+	UpdatedAt      string            `json:"updated_at"`
+	CreatedAt      string            `json:"created_at"`
+	LatestActivity gh.LatestActivity `json:"-"`
 }
 
 func (i *issue) repositoryFullName() string {
@@ -59,13 +60,14 @@ func fromGraphQLNodes(nodes []gh.IssueSearchNode) []issue {
 
 func fromGraphQL(node gh.IssueSearchNode) issue {
 	return issue{
-		Number:        node.Number,
-		User:          gh.User{Login: node.Author.Login},
-		RepositoryURL: node.RepositoryURL(),
-		Title:         node.Title,
-		State:         node.State,
-		HTMLURL:       node.URL,
-		UpdatedAt:     node.UpdatedAt,
-		CreatedAt:     node.CreatedAt,
+		Number:         node.Number,
+		User:           gh.User{Login: node.Author.Login},
+		RepositoryURL:  node.RepositoryURL(),
+		Title:          node.Title,
+		State:          node.State,
+		HTMLURL:        node.URL,
+		UpdatedAt:      node.UpdatedAt,
+		CreatedAt:      node.CreatedAt,
+		LatestActivity: node.LatestActivity,
 	}
 }

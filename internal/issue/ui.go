@@ -22,10 +22,30 @@ func (o *GroupedIssues) View() error {
 }
 
 func (i issue) toItem() ui.Item {
+	var desc string
+	if i.LatestActivity.Login != "" {
+		desc = fmt.Sprintf(
+			"#%d opened on %s by %s, %s by %s %s",
+			i.Number,
+			ui.CreatedOn(i.CreatedAt),
+			i.User.Login,
+			i.LatestActivity.Kind,
+			i.LatestActivity.Login,
+			ui.UpdatedAgo(i.LatestActivity.At),
+		)
+	} else {
+		desc = fmt.Sprintf(
+			"#%d opened on %s by %s, updated %s",
+			i.Number,
+			ui.CreatedOn(i.CreatedAt),
+			i.User.Login,
+			ui.UpdatedAgo(i.UpdatedAt),
+		)
+	}
 	return ui.NewItem(
 		i.repositoryFullName(),
 		i.Title,
-		fmt.Sprintf("#%d opened on %s by %s, updated %s", i.Number, ui.CreatedOn(i.CreatedAt), i.User.Login, ui.UpdatedAgo(i.UpdatedAt)),
+		desc,
 		i.HTMLURL,
 	)
 }
