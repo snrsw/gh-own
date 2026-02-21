@@ -48,9 +48,9 @@ Error state: display error message and quit.
 - [x] `Update(ErrMsg)` returns `tea.Quit` command
 
 ### Test 5: FetchCmd wraps a function into a tea.Cmd returning TabsMsg or ErrMsg
-- [ ] `FetchCmd(fn func() ([]Tab, error))` returns a `tea.Cmd`
-- [ ] When `fn` succeeds, the command returns `TabsMsg`
-- [ ] When `fn` fails, the command returns `ErrMsg`
+- [x] `FetchCmd(fn func() ([]Tab, error))` returns a `tea.Cmd`
+- [x] When `fn` succeeds, the command returns `TabsMsg`
+- [x] When `fn` fails, the command returns `ErrMsg`
 
 ### Test 6: Window resize during loading state sets dimensions
 - [ ] In loading state, `Update(WindowSizeMsg)` stores width/height

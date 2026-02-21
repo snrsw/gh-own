@@ -97,6 +97,18 @@ func NewLoadingModel() Model {
 	}
 }
 
+// FetchCmd wraps a data-fetching function into a tea.Cmd.
+// On success it returns TabsMsg; on failure it returns ErrMsg.
+func FetchCmd(fn func() ([]Tab, error)) tea.Cmd {
+	return func() tea.Msg {
+		tabs, err := fn()
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+		return TabsMsg(tabs)
+	}
+}
+
 func (m Model) Init() tea.Cmd {
 	if m.loading {
 		return m.spinner.Tick

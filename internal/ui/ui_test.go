@@ -362,6 +362,39 @@ func TestModel_Update_ErrMsg(t *testing.T) {
 	}
 }
 
+func TestFetchCmd(t *testing.T) {
+	t.Run("success returns TabsMsg", func(t *testing.T) {
+		tabs := []Tab{NewTab("Tab 1", CreateList(nil))}
+		cmd := FetchCmd(func() ([]Tab, error) {
+			return tabs, nil
+		})
+
+		msg := cmd()
+		tabsMsg, ok := msg.(TabsMsg)
+		if !ok {
+			t.Fatalf("expected TabsMsg, got %T", msg)
+		}
+		if len(tabsMsg) != 1 {
+			t.Errorf("TabsMsg len = %d, want 1", len(tabsMsg))
+		}
+	})
+
+	t.Run("failure returns ErrMsg", func(t *testing.T) {
+		cmd := FetchCmd(func() ([]Tab, error) {
+			return nil, errors.New("network error")
+		})
+
+		msg := cmd()
+		errMsg, ok := msg.(ErrMsg)
+		if !ok {
+			t.Fatalf("expected ErrMsg, got %T", msg)
+		}
+		if errMsg.Err.Error() != "network error" {
+			t.Errorf("ErrMsg.Err = %q, want %q", errMsg.Err.Error(), "network error")
+		}
+	})
+}
+
 func TestModel_View(t *testing.T) {
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(nil))})
 
