@@ -19,6 +19,11 @@ Key features:
   - Created by you
   - Assigned to you
   - You have participated in mentioned or commented (including teams)
+- Displays CI status (✓ / ✗ / ●) and review decision (✔ / ⊘ / ◇) for each PR
+- Shows latest activity (who commented, reviewed, or pushed and when)
+- Includes draft PR indication
+- Fetches results for all teams you belong to, merged and deduplicated with your personal results
+- Team slugs are cached for 6 hours to avoid repeated API calls
 
 ## Installation
 
@@ -29,7 +34,7 @@ gh extension install snrsw/gh-own
 ## Usage
 
 ```sh
-gh own [command]
+gh own [command] [flags]
 ```
 
 ### Commands
@@ -39,6 +44,12 @@ gh own [command]
 | `gh own` | List your pull requests (default) |
 | `gh own pr` | List your pull requests |
 | `gh own issue` | List your issues |
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--debug` | Enable debug logging to stderr (includes timing instrumentation) |
 
 ### Examples
 
@@ -51,7 +62,20 @@ gh own pr
 
 # List your issues
 gh own issue
+
+# Enable debug logging
+gh own --debug
 ```
+
+### Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| `tab` / `shift+tab` | Switch between tabs |
+| `enter` | Open selected item in browser |
+| `r` | Refresh data |
+| `/` | Filter items in current tab |
+| `ctrl+c` | Quit |
 
 ## Requirements
 
