@@ -2,6 +2,13 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.0.10](https://github.com/snrsw/gh-own/compare/0.0.9...0.0.10) - 2026-02-21
+### Other Changes
+- Add loading spinner for PR and issue commands by @snrsw in https://github.com/snrsw/gh-own/pull/39
+- Add review status indicator to PR list items by @snrsw in https://github.com/snrsw/gh-own/pull/41
+- Add backward tab navigation with Shift+Tab by @snrsw in https://github.com/snrsw/gh-own/pull/42
+- Add r key to refresh data without restarting by @snrsw in https://github.com/snrsw/gh-own/pull/43
+
 ## [0.0.9](https://github.com/snrsw/gh-own/compare/0.0.8...0.0.9) - 2026-02-21
 ### Other Changes
 - Add CI and project badges to README by @snrsw in https://github.com/snrsw/gh-own/pull/35
