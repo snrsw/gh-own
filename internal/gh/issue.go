@@ -85,7 +85,10 @@ const issueSearchQuery = `query($q: String!) {
 			updatedAt
 			createdAt
 			author { login }
-				repository { nameWithOwner }
+			repository { nameWithOwner }
+			comments(last: 1) {
+				nodes { author { login } createdAt }
+			}
 			}
 		}
 	}
@@ -108,13 +111,14 @@ func parseIssueSearchResult(parsed map[string][]IssueSearchNode) (*IssueSearchRe
 }
 
 type IssueSearchNode struct {
-	Number    int
-	Title     string
-	URL       string
-	State     string
-	UpdatedAt string
-	CreatedAt string
-	Author    struct {
+	Number         int
+	Title          string
+	URL            string
+	State          string
+	UpdatedAt      string
+	CreatedAt      string
+	LatestActivity LatestActivity
+	Author         struct {
 		Login string
 	}
 	Repository struct {
@@ -139,6 +143,12 @@ type issueSearchRawNode struct {
 	Repository struct {
 		NameWithOwner string `json:"nameWithOwner"`
 	} `json:"repository"`
+	Comments struct {
+		Nodes []struct {
+			Author    struct{ Login string `json:"login"` } `json:"author"`
+			CreatedAt string                                `json:"createdAt"`
+		} `json:"nodes"`
+	} `json:"comments"`
 }
 
 func parseIssueSearchNodes(rawNodes []issueSearchRawNode) []IssueSearchNode {
@@ -157,6 +167,14 @@ func parseIssueSearchNodes(rawNodes []issueSearchRawNode) []IssueSearchNode {
 		}
 		node.Author.Login = n.Author.Login
 		node.Repository.NameWithOwner = n.Repository.NameWithOwner
+
+		var commentLogin, commentAt string
+		if len(n.Comments.Nodes) > 0 {
+			commentLogin = n.Comments.Nodes[0].Author.Login
+			commentAt = n.Comments.Nodes[0].CreatedAt
+		}
+		node.LatestActivity = NewLatestActivity(commentLogin, commentAt, "", "", "", "", "")
+
 		nodes = append(nodes, node)
 	}
 	return nodes

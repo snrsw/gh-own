@@ -63,6 +63,44 @@ func TestIssue_RepositoryFullName(t *testing.T) {
 	}
 }
 
+func TestIssue_ToItem_NoActivity(t *testing.T) {
+	i := issue{
+		Number:        7,
+		User:          gh.User{Login: "carol"},
+		RepositoryURL: "https://api.github.com/repos/owner/repo",
+		Title:         "Fix login",
+		CreatedAt:     "2024-03-10T08:00:00Z",
+		UpdatedAt:     "2024-03-10T12:00:00Z",
+	}
+
+	desc := i.toItem().Description()
+
+	if !strings.Contains(desc, "updated") {
+		t.Errorf("Description() = %q, should contain %q", desc, "updated")
+	}
+}
+
+func TestIssue_ToItem_WithActivity(t *testing.T) {
+	i := issue{
+		Number:        7,
+		User:          gh.User{Login: "carol"},
+		RepositoryURL: "https://api.github.com/repos/owner/repo",
+		Title:         "Fix login",
+		CreatedAt:     "2024-03-10T08:00:00Z",
+		LatestActivity: gh.LatestActivity{
+			Kind:  "commented",
+			Login: "alice",
+			At:    "2024-03-10T12:00:00Z",
+		},
+	}
+
+	desc := i.toItem().Description()
+
+	if !strings.Contains(desc, ", commented by alice") {
+		t.Errorf("Description() = %q, should contain %q", desc, ", commented by alice")
+	}
+}
+
 func TestIssue_ToItem(t *testing.T) {
 	_issue := issue{
 		Number:        42,
@@ -145,6 +183,24 @@ func TestGroupedIssues_IssueItems(t *testing.T) {
 				t.Errorf("issueItems() returned %d items, want %d", len(items), tt.expected)
 			}
 		})
+	}
+}
+
+func TestFromGraphQL_PropagatesLatestActivity(t *testing.T) {
+	node := gh.IssueSearchNode{
+		Number: 1,
+		Title:  "Test",
+	}
+	node.LatestActivity = gh.LatestActivity{Kind: "commented", Login: "alice", At: "2024-03-10T10:00:00Z"}
+	node.Repository.NameWithOwner = "owner/repo"
+
+	i := fromGraphQL(node)
+
+	if i.LatestActivity.Kind != "commented" {
+		t.Errorf("Kind = %q, want %q", i.LatestActivity.Kind, "commented")
+	}
+	if i.LatestActivity.Login != "alice" {
+		t.Errorf("Login = %q, want %q", i.LatestActivity.Login, "alice")
 	}
 }
 

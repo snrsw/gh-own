@@ -25,16 +25,30 @@ func (o *GroupedPullRequests) View() error {
 }
 
 func (p pullRequest) toItem() ui.Item {
-	return ui.NewItem(
-		p.repositoryFullName(),
-		fmt.Sprintf("%s %s", p.Title, cistatus.RenderCIStatus(p.CIStatus)),
-		fmt.Sprintf(
+	var desc string
+	if p.LatestActivity.Login != "" {
+		desc = fmt.Sprintf(
+			"%s opened on %s by %s, %s by %s %s",
+			RenderPRNumber(p.Number, p.Draft),
+			ui.CreatedOn(p.CreatedAt),
+			p.User.Login,
+			p.LatestActivity.Kind,
+			p.LatestActivity.Login,
+			ui.UpdatedAgo(p.LatestActivity.At),
+		)
+	} else {
+		desc = fmt.Sprintf(
 			"%s opened on %s by %s, updated %s",
 			RenderPRNumber(p.Number, p.Draft),
 			ui.CreatedOn(p.CreatedAt),
 			p.User.Login,
 			ui.UpdatedAgo(p.UpdatedAt),
-		),
+		)
+	}
+	return ui.NewItem(
+		p.repositoryFullName(),
+		fmt.Sprintf("%s %s", p.Title, cistatus.RenderCIStatus(p.CIStatus)),
+		desc,
 		p.HTMLURL,
 	)
 }

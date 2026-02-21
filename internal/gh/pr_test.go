@@ -140,6 +140,97 @@ func TestParsePRSearchNodes(t *testing.T) {
 	}
 }
 
+func TestParsePRSearchNodes_WithPush(t *testing.T) {
+	node := prSearchRawNode{Number: 1, Title: "Test"}
+	node.Commits.Nodes = []struct {
+		Commit struct {
+			StatusCheckRollup *struct {
+				State string `json:"state"`
+			} `json:"statusCheckRollup"`
+			CommittedDate string `json:"committedDate"`
+			Author        struct {
+				User *struct {
+					Login string `json:"login"`
+				} `json:"user"`
+			} `json:"author"`
+		} `json:"commit"`
+	}{{}}
+	node.Commits.Nodes[0].Commit.CommittedDate = "2024-03-10T12:00:00Z"
+	commitUser := struct{ Login string `json:"login"` }{Login: "charlie"}
+	node.Commits.Nodes[0].Commit.Author.User = &commitUser
+
+	nodes := parsePRSearchNodes([]prSearchRawNode{node})
+
+	if len(nodes) != 1 {
+		t.Fatalf("expected 1 node, got %d", len(nodes))
+	}
+	if nodes[0].LatestActivity.Kind != "pushed" {
+		t.Errorf("Kind = %q, want %q", nodes[0].LatestActivity.Kind, "pushed")
+	}
+	if nodes[0].LatestActivity.Login != "charlie" {
+		t.Errorf("Login = %q, want %q", nodes[0].LatestActivity.Login, "charlie")
+	}
+}
+
+func TestParsePRSearchNodes_NoActivity(t *testing.T) {
+	node := prSearchRawNode{Number: 1, Title: "Test"}
+
+	nodes := parsePRSearchNodes([]prSearchRawNode{node})
+
+	if len(nodes) != 1 {
+		t.Fatalf("expected 1 node, got %d", len(nodes))
+	}
+	if nodes[0].LatestActivity.Login != "" {
+		t.Errorf("Login = %q, want empty", nodes[0].LatestActivity.Login)
+	}
+	if nodes[0].LatestActivity.Kind != "" {
+		t.Errorf("Kind = %q, want empty", nodes[0].LatestActivity.Kind)
+	}
+}
+
+func TestParsePRSearchNodes_WithApprovedReview(t *testing.T) {
+	node := prSearchRawNode{Number: 1, Title: "Test"}
+	node.Reviews.Nodes = []struct {
+		Author      struct{ Login string `json:"login"` } `json:"author"`
+		SubmittedAt string                                `json:"submittedAt"`
+		State       string                                `json:"state"`
+	}{{SubmittedAt: "2024-03-10T12:00:00Z", State: "APPROVED"}}
+	node.Reviews.Nodes[0].Author.Login = "bob"
+
+	nodes := parsePRSearchNodes([]prSearchRawNode{node})
+
+	if len(nodes) != 1 {
+		t.Fatalf("expected 1 node, got %d", len(nodes))
+	}
+	if nodes[0].LatestActivity.Kind != "approved" {
+		t.Errorf("Kind = %q, want %q", nodes[0].LatestActivity.Kind, "approved")
+	}
+	if nodes[0].LatestActivity.Login != "bob" {
+		t.Errorf("Login = %q, want %q", nodes[0].LatestActivity.Login, "bob")
+	}
+}
+
+func TestParsePRSearchNodes_WithComment(t *testing.T) {
+	node := prSearchRawNode{Number: 1, Title: "Test"}
+	node.Comments.Nodes = []struct {
+		Author    struct{ Login string `json:"login"` } `json:"author"`
+		CreatedAt string                                `json:"createdAt"`
+	}{{CreatedAt: "2024-03-10T12:00:00Z"}}
+	node.Comments.Nodes[0].Author.Login = "alice"
+
+	nodes := parsePRSearchNodes([]prSearchRawNode{node})
+
+	if len(nodes) != 1 {
+		t.Fatalf("expected 1 node, got %d", len(nodes))
+	}
+	if nodes[0].LatestActivity.Kind != "commented" {
+		t.Errorf("Kind = %q, want %q", nodes[0].LatestActivity.Kind, "commented")
+	}
+	if nodes[0].LatestActivity.Login != "alice" {
+		t.Errorf("Login = %q, want %q", nodes[0].LatestActivity.Login, "alice")
+	}
+}
+
 func TestParsePRSearchNodes_CIStatus(t *testing.T) {
 	successState := "SUCCESS"
 	nodeWithCI := prSearchRawNode{
@@ -151,16 +242,15 @@ func TestParsePRSearchNodes_CIStatus(t *testing.T) {
 			StatusCheckRollup *struct {
 				State string `json:"state"`
 			} `json:"statusCheckRollup"`
+			CommittedDate string `json:"committedDate"`
+			Author        struct {
+				User *struct {
+					Login string `json:"login"`
+				} `json:"user"`
+			} `json:"author"`
 		} `json:"commit"`
-	}{
-		{Commit: struct {
-			StatusCheckRollup *struct {
-				State string `json:"state"`
-			} `json:"statusCheckRollup"`
-		}{StatusCheckRollup: &struct {
-			State string `json:"state"`
-		}{State: successState}}},
-	}
+	}{{}}
+	nodeWithCI.Commits.Nodes[0].Commit.StatusCheckRollup = &struct{ State string `json:"state"` }{State: successState}
 
 	nodeWithoutCI := prSearchRawNode{
 		Number: 2,

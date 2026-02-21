@@ -94,8 +94,16 @@ const prSearchQuery = `query($q: String!) {
 					nodes {
 						commit {
 							statusCheckRollup { state }
+							committedDate
+							author { user { login } }
 						}
 					}
+				}
+				comments(last: 1) {
+					nodes { author { login } createdAt }
+				}
+				reviews(last: 1) {
+					nodes { author { login } submittedAt state }
 				}
 			}
 		}
@@ -120,14 +128,15 @@ func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, err
 }
 
 type PRSearchNode struct {
-	Number      int
-	Title       string
-	URL         string
-	IsDraft     bool
-	UpdatedAt   string
-	CreatedAt   string
-	StatusState string
-	Author      struct {
+	Number         int
+	Title          string
+	URL            string
+	IsDraft        bool
+	UpdatedAt      string
+	CreatedAt      string
+	StatusState    string
+	LatestActivity LatestActivity
+	Author         struct {
 		Login string
 	}
 	Repository struct {
@@ -162,9 +171,28 @@ type prSearchRawNode struct {
 				StatusCheckRollup *struct {
 					State string `json:"state"`
 				} `json:"statusCheckRollup"`
+				CommittedDate string `json:"committedDate"`
+				Author        struct {
+					User *struct {
+						Login string `json:"login"`
+					} `json:"user"`
+				} `json:"author"`
 			} `json:"commit"`
 		} `json:"nodes"`
 	} `json:"commits"`
+	Comments struct {
+		Nodes []struct {
+			Author    struct{ Login string `json:"login"` } `json:"author"`
+			CreatedAt string                                `json:"createdAt"`
+		} `json:"nodes"`
+	} `json:"comments"`
+	Reviews struct {
+		Nodes []struct {
+			Author      struct{ Login string `json:"login"` } `json:"author"`
+			SubmittedAt string                                `json:"submittedAt"`
+			State       string                                `json:"state"`
+		} `json:"nodes"`
+	} `json:"reviews"`
 }
 
 func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
@@ -187,6 +215,24 @@ func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
 		if len(n.Commits.Nodes) > 0 && n.Commits.Nodes[0].Commit.StatusCheckRollup != nil {
 			node.StatusState = n.Commits.Nodes[0].Commit.StatusCheckRollup.State
 		}
+
+		var commentLogin, commentAt string
+		if len(n.Comments.Nodes) > 0 {
+			commentLogin = n.Comments.Nodes[0].Author.Login
+			commentAt = n.Comments.Nodes[0].CreatedAt
+		}
+		var reviewLogin, reviewAt, reviewState string
+		if len(n.Reviews.Nodes) > 0 {
+			reviewLogin = n.Reviews.Nodes[0].Author.Login
+			reviewAt = n.Reviews.Nodes[0].SubmittedAt
+			reviewState = n.Reviews.Nodes[0].State
+		}
+		var pushLogin, pushAt string
+		if len(n.Commits.Nodes) > 0 && n.Commits.Nodes[0].Commit.Author.User != nil {
+			pushLogin = n.Commits.Nodes[0].Commit.Author.User.Login
+			pushAt = n.Commits.Nodes[0].Commit.CommittedDate
+		}
+		node.LatestActivity = NewLatestActivity(commentLogin, commentAt, reviewLogin, reviewAt, reviewState, pushLogin, pushAt)
 
 		nodes = append(nodes, node)
 	}
