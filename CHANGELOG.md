@@ -2,6 +2,12 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.0.9](https://github.com/snrsw/gh-own/compare/0.0.8...0.0.9) - 2026-02-21
+### Other Changes
+- Add CI and project badges to README by @snrsw in https://github.com/snrsw/gh-own/pull/35
+- Fix duplicate version sections in CHANGELOG by @snrsw in https://github.com/snrsw/gh-own/pull/37
+- Show latest activity in PR and issue lists by @snrsw in https://github.com/snrsw/gh-own/pull/38
+
 ## [0.0.8](https://github.com/snrsw/gh-own/compare/0.0.7...0.0.8) - 2026-02-18
 ### Other Changes
 - Add debug mode for command speed analysis by @snrsw in https://github.com/snrsw/gh-own/pull/32
