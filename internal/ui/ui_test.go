@@ -551,6 +551,48 @@ func TestModel_Update_RefreshKey_IgnoredDuringLoading(t *testing.T) {
 	}
 }
 
+func TestModel_Update_RefreshKey_FullCycle(t *testing.T) {
+	fetch := FetchCmd(func() ([]Tab, error) {
+		return []Tab{NewTab("Refreshed (5)", CreateList(nil))}, nil
+	})
+
+	m := NewLoadingModel(fetch)
+	// Initial load
+	tabs := []Tab{
+		NewTab("Created (3)", CreateList(nil)),
+		NewTab("Assigned (1)", CreateList(nil)),
+	}
+	newModel, _ := m.Update(TabsMsg(tabs))
+	m = newModel.(Model)
+
+	if len(m.tabs) != 2 {
+		t.Fatalf("initial tabs = %d, want 2", len(m.tabs))
+	}
+
+	// Press 'r' to refresh
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m = newModel.(Model)
+
+	if !m.loading {
+		t.Fatal("after refresh, loading should be true")
+	}
+
+	// Simulate fetch completing with new data
+	newTabs := []Tab{NewTab("Refreshed (5)", CreateList(nil))}
+	newModel, _ = m.Update(TabsMsg(newTabs))
+	m = newModel.(Model)
+
+	if m.loading {
+		t.Error("after TabsMsg, loading should be false")
+	}
+	if len(m.tabs) != 1 {
+		t.Errorf("refreshed tabs = %d, want 1", len(m.tabs))
+	}
+	if m.tabs[0].name != "Refreshed (5)" {
+		t.Errorf("tab name = %q, want %q", m.tabs[0].name, "Refreshed (5)")
+	}
+}
+
 func TestHelpView_ContainsRefresh(t *testing.T) {
 	view := helpView()
 	if !strings.Contains(view, "r") {
