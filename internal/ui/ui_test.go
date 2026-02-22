@@ -674,6 +674,22 @@ func TestModel_View(t *testing.T) {
 	}
 }
 
+func TestWithCheckout_SetsCheckoutEnabled(t *testing.T) {
+	m := NewLoadingModel(nil, WithCheckout(true))
+
+	if !m.checkoutEnabled {
+		t.Error("NewLoadingModel(nil, WithCheckout(true)) should set checkoutEnabled = true")
+	}
+}
+
+func TestWithCheckout_DefaultDisabled(t *testing.T) {
+	m := NewLoadingModel(nil)
+
+	if m.checkoutEnabled {
+		t.Error("NewLoadingModel(nil) should have checkoutEnabled = false by default")
+	}
+}
+
 func TestModel_View_ShowsFilterHelpWhenFiltering(t *testing.T) {
 	items := []list.Item{NewItem("owner/repo", "PR title", "desc", "https://example.com")}
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(items))})

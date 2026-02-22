@@ -59,16 +59,27 @@ func NewTab(name string, list list.Model) Tab {
 }
 
 type Model struct {
-	tabs      []Tab
-	activeTab int
-	width     int
-	height    int
-	outerW    int
-	outerH    int
-	loading   bool
-	spinner   spinner.Model
-	err       error
-	fetchCmd  tea.Cmd
+	tabs            []Tab
+	activeTab       int
+	width           int
+	height          int
+	outerW          int
+	outerH          int
+	loading         bool
+	spinner         spinner.Model
+	err             error
+	fetchCmd        tea.Cmd
+	checkoutEnabled bool
+}
+
+// ModelOption configures optional behaviour on Model.
+type ModelOption func(*Model)
+
+// WithCheckout enables the `c` key binding for PR checkout.
+func WithCheckout(enabled bool) ModelOption {
+	return func(m *Model) {
+		m.checkoutEnabled = enabled
+	}
 }
 
 // TabsMsg signals that data loading is complete and tabs are ready.
@@ -87,16 +98,20 @@ func NewModel(tabs []Tab) Model {
 	}
 }
 
-func NewLoadingModel(fetch tea.Cmd) Model {
+func NewLoadingModel(fetch tea.Cmd, opts ...ModelOption) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(colorAccent)
-	return Model{
+	m := Model{
 		loading:  true,
 		spinner:  s,
 		tabs:     []Tab{NewTab("Empty", CreateList(nil))},
 		fetchCmd: fetch,
 	}
+	for _, opt := range opts {
+		opt(&m)
+	}
+	return m
 }
 
 // FetchCmd wraps a data-fetching function into a tea.Cmd.
