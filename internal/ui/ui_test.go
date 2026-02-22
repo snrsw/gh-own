@@ -668,6 +668,20 @@ func TestHelpView_Filtering_HidesRefresh(t *testing.T) {
 	}
 }
 
+func TestHelpView_Unfiltered_ContainsCheckout(t *testing.T) {
+	view := helpView(list.Unfiltered)
+	if !strings.Contains(view, "checkout") {
+		t.Error("helpView(Unfiltered) should contain 'checkout'")
+	}
+}
+
+func TestHelpView_Filtering_HidesCheckout(t *testing.T) {
+	view := helpView(list.Filtering)
+	if strings.Contains(view, "checkout") {
+		t.Error("helpView(Filtering) should not contain 'checkout'")
+	}
+}
+
 func TestModel_View(t *testing.T) {
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(nil))})
 

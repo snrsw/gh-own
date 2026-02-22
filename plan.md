@@ -47,8 +47,8 @@ Structural change — no behavior change yet.
 
 ### Step 4: Add `g` to help bar
 
-- [ ] **Test**: `helpView(list.Unfiltered)` contains "checkout"
-- [ ] **Test**: `helpView(list.Filtering)` does NOT contain "checkout"
+- [x] **Test**: `helpView(list.Unfiltered)` contains "checkout"
+- [x] **Test**: `helpView(list.Filtering)` does NOT contain "checkout"
 
 ### Step 5: Execute checkout in cmd layer
 
