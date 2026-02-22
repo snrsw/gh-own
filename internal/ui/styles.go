@@ -49,6 +49,13 @@ func helpView(state list.FilterState) string {
 			{"esc", "exit filter"},
 			{"enter", "select"},
 		}
+	case list.FilterApplied:
+		entries = []struct{ key, desc string }{
+			{"esc", "clear filter"},
+			{"tab", "switch tabs"},
+			{"enter", "open"},
+			{"ctrl+c", "quit"},
+		}
 	default:
 		entries = []struct{ key, desc string }{
 			{"/", "filter"},

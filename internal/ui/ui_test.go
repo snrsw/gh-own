@@ -637,6 +637,13 @@ func TestHelpView_Unfiltered_ContainsRefresh(t *testing.T) {
 	}
 }
 
+func TestHelpView_FilterApplied_ContainsClear(t *testing.T) {
+	view := helpView(list.FilterApplied)
+	if !strings.Contains(view, "clear") {
+		t.Error("helpView(FilterApplied) should contain 'clear'")
+	}
+}
+
 func TestHelpView_Filtering_ContainsEsc(t *testing.T) {
 	view := helpView(list.Filtering)
 	if !strings.Contains(view, "esc") {
