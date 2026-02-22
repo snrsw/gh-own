@@ -41,9 +41,9 @@ Structural change — no behavior change yet.
 
 ### Step 3: `g` keybinding sets checkout request and quits
 
-- [ ] **Test**: Pressing `g` on a model with a selected item sets checkout request and returns tea.Quit
-- [ ] **Test**: Pressing `g` during filtering is a no-op (consistent with enter/refresh behavior)
-- [ ] **Test**: Pressing `g` with no selected item is a no-op
+- [x] **Test**: Pressing `g` on a model with a selected item sets checkout request and returns tea.Quit
+- [x] **Test**: Pressing `g` during filtering is a no-op (consistent with enter/refresh behavior)
+- [x] **Test**: Pressing `g` with no selected item is a no-op
 
 ### Step 4: Add `g` to help bar
 

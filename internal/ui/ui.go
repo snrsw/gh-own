@@ -276,6 +276,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 
 	case "r":
 		return m.handleRefresh()
+
+	case "g":
+		return m.handleCheckout()
 	}
 	return m, nil, false
 }
@@ -289,6 +292,22 @@ func (m Model) handleRefresh() (Model, tea.Cmd, bool) {
 	}
 	m.loading = true
 	return m, tea.Batch(m.spinner.Tick, m.fetchCmd), true
+}
+
+func (m Model) handleCheckout() (Model, tea.Cmd, bool) {
+	if m.tabs[m.activeTab].list.FilterState() == list.Filtering {
+		return m, nil, false
+	}
+
+	sel := m.tabs[m.activeTab].list.SelectedItem()
+	it, ok := sel.(Item)
+	if !ok || it.number == 0 {
+		return m, nil, true
+	}
+
+	m.checkoutRepo = it.repoName
+	m.checkoutNumber = it.number
+	return m, tea.Quit, true
 }
 
 func (m Model) handleEnter() (Model, tea.Cmd, bool) {

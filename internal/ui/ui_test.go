@@ -720,3 +720,105 @@ func TestModel_CheckoutRequest_DefaultIsEmpty(t *testing.T) {
 		t.Errorf("CheckoutRequest() number = %d, want 0", number)
 	}
 }
+
+func TestModel_Update_CheckoutKey_SetsRequestAndQuits(t *testing.T) {
+	items := []list.Item{
+		NewItem("owner/repo", "Fix bug", "desc", "https://example.com/1", 42),
+	}
+	m := NewModel([]Tab{NewTab("Tab", CreateList(items))})
+
+	// Give it a size so list selection works
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Press 'g'
+	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Should set checkout request
+	repo, number, reqOk := m.CheckoutRequest()
+	if !reqOk {
+		t.Fatal("CheckoutRequest() ok should be true after pressing g")
+	}
+	if repo != "owner/repo" {
+		t.Errorf("CheckoutRequest() repo = %q, want %q", repo, "owner/repo")
+	}
+	if number != 42 {
+		t.Errorf("CheckoutRequest() number = %d, want 42", number)
+	}
+
+	// Should return tea.Quit
+	if cmd == nil {
+		t.Fatal("expected a command (tea.Quit)")
+	}
+}
+
+func TestModel_Update_CheckoutKey_IgnoredDuringFiltering(t *testing.T) {
+	items := []list.Item{
+		NewItem("owner/repo", "Fix bug", "desc", "https://example.com/1", 42),
+	}
+	m := NewModel([]Tab{NewTab("Tab", CreateList(items))})
+
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Enter filter mode
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+	if m.tabs[m.activeTab].list.FilterState() != list.Filtering {
+		t.Fatal("expected to be in filtering state")
+	}
+
+	// Press 'g' while filtering
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	_, _, reqOk := m.CheckoutRequest()
+	if reqOk {
+		t.Error("CheckoutRequest() should not be set during filtering")
+	}
+}
+
+func TestModel_Update_CheckoutKey_NoSelectedItem(t *testing.T) {
+	// Empty list — no item selected
+	m := NewModel([]Tab{NewTab("Tab", CreateList(nil))})
+
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Press 'g' with no items
+	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	_, _, reqOk := m.CheckoutRequest()
+	if reqOk {
+		t.Error("CheckoutRequest() should not be set with no selected item")
+	}
+	if cmd != nil {
+		t.Error("expected nil command with no selected item")
+	}
+}
