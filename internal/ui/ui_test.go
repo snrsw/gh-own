@@ -637,6 +637,20 @@ func TestHelpView_Unfiltered_ContainsRefresh(t *testing.T) {
 	}
 }
 
+func TestHelpView_Filtering_ContainsEsc(t *testing.T) {
+	view := helpView(list.Filtering)
+	if !strings.Contains(view, "esc") {
+		t.Error("helpView(Filtering) should contain 'esc'")
+	}
+}
+
+func TestHelpView_Filtering_HidesRefresh(t *testing.T) {
+	view := helpView(list.Filtering)
+	if strings.Contains(view, "refresh") {
+		t.Error("helpView(Filtering) should not contain 'refresh'")
+	}
+}
+
 func TestModel_View(t *testing.T) {
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(nil))})
 
