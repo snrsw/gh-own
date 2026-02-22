@@ -63,16 +63,18 @@ func NewTab(name string, list list.Model) Tab {
 }
 
 type Model struct {
-	tabs      []Tab
-	activeTab int
-	width     int
-	height    int
-	outerW    int
-	outerH    int
-	loading   bool
-	spinner   spinner.Model
-	err       error
-	fetchCmd  tea.Cmd
+	tabs           []Tab
+	activeTab      int
+	width          int
+	height         int
+	outerW         int
+	outerH         int
+	loading        bool
+	spinner        spinner.Model
+	err            error
+	fetchCmd       tea.Cmd
+	checkoutRepo   string
+	checkoutNumber int
 }
 
 // TabsMsg signals that data loading is complete and tabs are ready.
@@ -125,6 +127,14 @@ func (m Model) Init() tea.Cmd {
 // Err returns the error from a failed fetch, if any.
 func (m Model) Err() error {
 	return m.err
+}
+
+// CheckoutRequest returns the checkout target if the user pressed `g`.
+func (m Model) CheckoutRequest() (repo string, number int, ok bool) {
+	if m.checkoutRepo != "" && m.checkoutNumber != 0 {
+		return m.checkoutRepo, m.checkoutNumber, true
+	}
+	return "", 0, false
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

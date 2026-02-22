@@ -35,7 +35,7 @@ Structural change — no behavior change.
 
 Structural change — no behavior change yet.
 
-- [ ] **Test**: `Model.CheckoutRequest()` returns `("", 0, false)` by default
+- [x] **Test**: `Model.CheckoutRequest()` returns `("", 0, false)` by default
 - Add fields `checkoutRepo string`, `checkoutNumber int` to Model
 - Add method `CheckoutRequest() (repo string, number int, ok bool)`
 

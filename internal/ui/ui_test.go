@@ -705,3 +705,18 @@ func TestModel_View_ShowsFilterHelpWhenFiltering(t *testing.T) {
 		t.Error("View() should contain 'esc' when filtering is active")
 	}
 }
+
+func TestModel_CheckoutRequest_DefaultIsEmpty(t *testing.T) {
+	m := NewModel(nil)
+
+	repo, number, ok := m.CheckoutRequest()
+	if ok {
+		t.Error("CheckoutRequest() ok should be false by default")
+	}
+	if repo != "" {
+		t.Errorf("CheckoutRequest() repo = %q, want empty", repo)
+	}
+	if number != 0 {
+		t.Errorf("CheckoutRequest() number = %d, want 0", number)
+	}
+}
