@@ -628,7 +628,7 @@ func TestModel_Update_RefreshKey_FullCycle(t *testing.T) {
 }
 
 func TestHelpView_Unfiltered_ContainsRefresh(t *testing.T) {
-	view := helpView(list.Unfiltered)
+	view := helpView(list.Unfiltered, false)
 	if !strings.Contains(view, "r") {
 		t.Error("helpView(Unfiltered) should contain 'r' key")
 	}
@@ -638,23 +638,49 @@ func TestHelpView_Unfiltered_ContainsRefresh(t *testing.T) {
 }
 
 func TestHelpView_FilterApplied_ContainsClear(t *testing.T) {
-	view := helpView(list.FilterApplied)
+	view := helpView(list.FilterApplied, false)
 	if !strings.Contains(view, "clear") {
 		t.Error("helpView(FilterApplied) should contain 'clear'")
 	}
 }
 
 func TestHelpView_Filtering_ContainsEsc(t *testing.T) {
-	view := helpView(list.Filtering)
+	view := helpView(list.Filtering, false)
 	if !strings.Contains(view, "esc") {
 		t.Error("helpView(Filtering) should contain 'esc'")
 	}
 }
 
 func TestHelpView_Filtering_HidesRefresh(t *testing.T) {
-	view := helpView(list.Filtering)
+	view := helpView(list.Filtering, false)
 	if strings.Contains(view, "refresh") {
 		t.Error("helpView(Filtering) should not contain 'refresh'")
+	}
+}
+
+func TestHelpView_CheckoutEnabled_ShowsCheckout(t *testing.T) {
+	view := helpView(list.Unfiltered, true)
+	if !strings.Contains(view, "checkout") {
+		t.Error("helpView(Unfiltered, true) should contain 'checkout'")
+	}
+
+	view = helpView(list.FilterApplied, true)
+	if !strings.Contains(view, "checkout") {
+		t.Error("helpView(FilterApplied, true) should contain 'checkout'")
+	}
+}
+
+func TestHelpView_CheckoutDisabled_HidesCheckout(t *testing.T) {
+	view := helpView(list.Unfiltered, false)
+	if strings.Contains(view, "checkout") {
+		t.Error("helpView(Unfiltered, false) should NOT contain 'checkout'")
+	}
+}
+
+func TestHelpView_Filtering_HidesCheckout(t *testing.T) {
+	view := helpView(list.Filtering, true)
+	if strings.Contains(view, "checkout") {
+		t.Error("helpView(Filtering, true) should NOT contain 'checkout'")
 	}
 }
 
@@ -680,6 +706,149 @@ func TestWithCheckout_SetsCheckoutEnabled(t *testing.T) {
 	if !m.checkoutEnabled {
 		t.Error("NewLoadingModel(nil, WithCheckout(true)) should set checkoutEnabled = true")
 	}
+}
+
+func TestCheckout_ReturnsCommandWhenEnabledAndItemSelected(t *testing.T) {
+	items := []list.Item{
+		NewItem("owner/repo", "Fix bug", "desc", "https://github.com/o/r/pull/1"),
+	}
+	m := NewLoadingModel(nil, WithCheckout(true))
+	// Transition to loaded with items
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+	newModel, _ = m.Update(TabsMsg([]Tab{NewTab("Tab", CreateList(items))}))
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Press 'c'
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+
+	if cmd == nil {
+		t.Error("pressing 'c' with checkout enabled and item selected should return a command")
+	}
+}
+
+func TestCheckout_NoOpWhenDisabled(t *testing.T) {
+	items := []list.Item{
+		NewItem("owner/repo", "Fix bug", "desc", "https://github.com/o/r/pull/1"),
+	}
+	m := NewModel([]Tab{NewTab("Tab", CreateList(items))})
+
+	// Press 'c' without checkout enabled — key should fall through (not handled)
+	_, cmd, handled := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+
+	if handled {
+		t.Error("pressing 'c' without checkout enabled should not be handled")
+	}
+	if cmd != nil {
+		t.Error("pressing 'c' without checkout enabled should return nil command")
+	}
+}
+
+func TestCheckout_IgnoredDuringFiltering(t *testing.T) {
+	items := []list.Item{
+		NewItem("owner/repo", "Fix bug", "desc", "https://github.com/o/r/pull/1"),
+	}
+	m := NewLoadingModel(nil, WithCheckout(true))
+	var ok bool
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+	newModel, _ = m.Update(TabsMsg([]Tab{NewTab("Tab", CreateList(items))}))
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Enter filter mode
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	if m.tabs[m.activeTab].list.FilterState() != list.Filtering {
+		t.Fatal("expected to be in filtering state")
+	}
+
+	// Press 'c' while filtering — should not trigger checkout
+	_, cmd, handled := m.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+
+	if handled {
+		t.Error("pressing 'c' during filtering should not be handled (falls through to filter input)")
+	}
+	if cmd != nil {
+		t.Error("pressing 'c' during filtering should return nil command")
+	}
+}
+
+func TestCheckout_NoOpWhenEmptyList(t *testing.T) {
+	m := NewLoadingModel(nil, WithCheckout(true))
+	var ok bool
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+	newModel, _ = m.Update(TabsMsg([]Tab{NewTab("Empty", CreateList(nil))}))
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	// Press 'c' with empty list
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+
+	if cmd != nil {
+		t.Error("pressing 'c' with empty list should return nil command")
+	}
+}
+
+func TestCheckoutExecCommand(t *testing.T) {
+	url := "https://github.com/o/r/pull/1"
+	cmd := checkoutExecCommand(url)
+
+	expectedArgs := []string{"gh", "pr", "checkout", url}
+	if len(cmd.Args) != len(expectedArgs) {
+		t.Fatalf("Args length = %d, want %d", len(cmd.Args), len(expectedArgs))
+	}
+	for i, arg := range expectedArgs {
+		if cmd.Args[i] != arg {
+			t.Errorf("Args[%d] = %q, want %q", i, cmd.Args[i], arg)
+		}
+	}
+}
+
+func TestCheckoutFinishedMsg(t *testing.T) {
+	t.Run("success does not quit", func(t *testing.T) {
+		m := NewModel([]Tab{NewTab("Tab", CreateList(nil))})
+		newModel, cmd := m.Update(checkoutFinishedMsg{err: nil})
+		if _, ok := newModel.(Model); !ok {
+			t.Fatal("expected Model type")
+		}
+		if cmd != nil {
+			t.Error("checkoutFinishedMsg with nil error should return nil command")
+		}
+	})
+
+	t.Run("error does not quit", func(t *testing.T) {
+		m := NewModel([]Tab{NewTab("Tab", CreateList(nil))})
+		newModel, cmd := m.Update(checkoutFinishedMsg{err: errors.New("checkout failed")})
+		if _, ok := newModel.(Model); !ok {
+			t.Fatal("expected Model type")
+		}
+		if cmd != nil {
+			t.Error("checkoutFinishedMsg with error should return nil command")
+		}
+	})
 }
 
 func TestWithCheckout_DefaultDisabled(t *testing.T) {

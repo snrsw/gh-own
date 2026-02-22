@@ -40,7 +40,7 @@ var (
 	helpSepStyle  = lipgloss.NewStyle().Foreground(colorMuted)
 )
 
-func helpView(state list.FilterState) string {
+func helpView(state list.FilterState, checkoutEnabled bool) string {
 	var entries []struct{ key, desc string }
 
 	switch state {
@@ -54,16 +54,22 @@ func helpView(state list.FilterState) string {
 			{"esc", "clear filter"},
 			{"tab", "switch tabs"},
 			{"enter", "open"},
-			{"ctrl+c", "quit"},
 		}
+		if checkoutEnabled {
+			entries = append(entries, struct{ key, desc string }{"c", "checkout"})
+		}
+		entries = append(entries, struct{ key, desc string }{"ctrl+c", "quit"})
 	default:
 		entries = []struct{ key, desc string }{
 			{"/", "filter"},
 			{"r", "refresh"},
 			{"tab", "switch tabs"},
 			{"enter", "open"},
-			{"ctrl+c", "quit"},
 		}
+		if checkoutEnabled {
+			entries = append(entries, struct{ key, desc string }{"c", "checkout"})
+		}
+		entries = append(entries, struct{ key, desc string }{"ctrl+c", "quit"})
 	}
 
 	var parts []string

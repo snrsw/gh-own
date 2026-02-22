@@ -100,7 +100,7 @@ var prCmd = &cobra.Command{
 			return prg.BuildTabs(), nil
 		})
 
-		m := ui.NewLoadingModel(fetch)
+		m := ui.NewLoadingModel(fetch, ui.WithCheckout(true))
 		p := tea.NewProgram(m, tea.WithAltScreen())
 		finalModel, err := p.Run()
 		if err != nil {

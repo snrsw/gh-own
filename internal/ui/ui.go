@@ -72,7 +72,7 @@ type Model struct {
 	checkoutEnabled bool
 }
 
-// ModelOption configures optional behaviour on Model.
+// ModelOption configures optional behavior on Model.
 type ModelOption func(*Model)
 
 // WithCheckout enables the `c` key binding for PR checkout.
@@ -160,6 +160,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m = m.handleWindowSize(tea.WindowSizeMsg{Width: m.width, Height: m.height})
 		}
 		return m, nil
+	case checkoutFinishedMsg:
+		if msg.err != nil {
+			slog.Error("checkout failed", "error", msg.err)
+		}
+		return m, nil
 	case spinner.TickMsg:
 		if m.loading {
 			var cmd tea.Cmd
@@ -191,7 +196,7 @@ func (m Model) View() string {
 	)
 
 	doc.WriteString("\n")
-	doc.WriteString(helpView(m.tabs[m.activeTab].list.FilterState()))
+	doc.WriteString(helpView(m.tabs[m.activeTab].list.FilterState(), m.checkoutEnabled))
 
 	out := DocStyle.Render(doc.String())
 	return out
@@ -248,7 +253,7 @@ func (m Model) handleWindowSize(msg tea.WindowSizeMsg) Model {
 	innerW := max(20, m.outerW-winH)
 
 	tabsH := lipgloss.Height(m.tabsView())
-	helpH := lipgloss.Height(helpView(list.Unfiltered)) + 1 // +1 for newline
+	helpH := lipgloss.Height(helpView(list.Unfiltered, m.checkoutEnabled)) + 1 // +1 for newline
 	m.outerH = max(5, m.height-docV-tabsH-helpH)
 
 	innerH := max(5, m.outerH-winV)
@@ -274,6 +279,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 
 	case "enter":
 		return m.handleEnter()
+
+	case "c":
+		return m.handleCheckout()
 
 	case "r":
 		return m.handleRefresh()
@@ -304,4 +312,35 @@ func (m Model) handleEnter() (Model, tea.Cmd, bool) {
 	}
 
 	return m, openURLCmd(it.url), true
+}
+
+// checkoutFinishedMsg is sent when the checkout process completes.
+type checkoutFinishedMsg struct{ err error }
+
+func (m Model) handleCheckout() (Model, tea.Cmd, bool) {
+	if !m.checkoutEnabled {
+		return m, nil, false
+	}
+	if m.tabs[m.activeTab].list.FilterState() == list.Filtering {
+		return m, nil, false
+	}
+
+	sel := m.tabs[m.activeTab].list.SelectedItem()
+	it, ok := sel.(Item)
+	if !ok || it.url == "" {
+		return m, nil, true
+	}
+
+	return m, checkoutCmd(it.url), true
+}
+
+func checkoutExecCommand(url string) *exec.Cmd {
+	return exec.Command("gh", "pr", "checkout", url)
+}
+
+func checkoutCmd(url string) tea.Cmd {
+	c := checkoutExecCommand(url)
+	return tea.ExecProcess(c, func(err error) tea.Msg {
+		return checkoutFinishedMsg{err: err}
+	})
 }
