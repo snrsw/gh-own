@@ -2,11 +2,15 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/cache"
+	"github.com/snrsw/gh-own/internal/checkout"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/pr"
 	"github.com/snrsw/gh-own/internal/timing"
@@ -110,7 +114,31 @@ var prCmd = &cobra.Command{
 			if fmErr := fm.Err(); fmErr != nil {
 				return fmErr
 			}
+			if repo, number, ok := fm.CheckoutRequest(); ok {
+				return runCheckout(repo, number)
+			}
 		}
 		return nil
 	},
+}
+
+func runCheckout(repo string, number int) error {
+	repoDir, err := checkout.FindRepoDir(repo, ghqOutput)
+	if err != nil {
+		return fmt.Errorf("finding repo: %w", err)
+	}
+	return checkout.Checkout(repoDir, number, execRun)
+}
+
+func ghqOutput(name string, args []string, _ string) (string, error) {
+	out, err := exec.Command(name, args...).Output()
+	return string(out), err
+}
+
+func execRun(name string, args []string, dir string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }

@@ -52,7 +52,7 @@ Structural change — no behavior change yet.
 
 ### Step 5: Execute checkout in cmd layer
 
-- [ ] **Test**: `Checkout(repoDir, number)` runs `gh pr checkout <number>` with Dir set
+- [x] **Test**: `Checkout(repoDir, number)` runs `gh pr checkout <number>` with Dir set
 - Create `internal/checkout/checkout.go` with:
   - `FindRepoDir(repoName string) (string, error)` — runs `ghq list --full-path -e <owner/repo>`
   - `Checkout(repoDir string, number int) error` — runs `gh pr checkout <number>` with Dir
