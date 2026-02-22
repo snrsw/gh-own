@@ -54,6 +54,7 @@ func (p pullRequest) toItem() ui.Item {
 		titleText,
 		desc,
 		p.HTMLURL,
+		p.Number,
 	)
 }
 

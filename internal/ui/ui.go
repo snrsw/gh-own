@@ -15,14 +15,16 @@ import (
 
 type Item struct {
 	repoName, titleText, description, url string
+	number                                int
 }
 
-func NewItem(repoName, titleText, description, url string) Item {
+func NewItem(repoName, titleText, description, url string, number int) Item {
 	return Item{
 		repoName:    repoName,
 		titleText:   titleText,
 		description: description,
 		url:         url,
+		number:      number,
 	}
 }
 
@@ -34,6 +36,8 @@ func (i Item) Title() string {
 }
 func (i Item) Description() string { return i.description }
 func (i Item) FilterValue() string { return i.Title() }
+func (i Item) Number() int         { return i.number }
+func (i Item) RepoName() string    { return i.repoName }
 
 func CreateList(items []list.Item) list.Model {
 	delegate := newGithubDelegate()

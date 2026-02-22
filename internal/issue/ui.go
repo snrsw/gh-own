@@ -44,6 +44,7 @@ func (i issue) toItem() ui.Item {
 		i.Title,
 		desc,
 		i.HTMLURL,
+		0,
 	)
 }
 

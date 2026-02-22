@@ -17,6 +17,7 @@ func TestNewItem(t *testing.T) {
 		titleText     string
 		description   string
 		url           string
+		number        int
 		wantTitle     string
 	}{
 		{
@@ -25,6 +26,7 @@ func TestNewItem(t *testing.T) {
 			titleText:   "Test Title",
 			description: "Test Description",
 			url:         "https://example.com",
+			number:      42,
 			wantTitle:   "owner/repo Test Title",
 		},
 		{
@@ -33,6 +35,7 @@ func TestNewItem(t *testing.T) {
 			titleText:   "",
 			description: "",
 			url:         "",
+			number:      0,
 			wantTitle:   "",
 		},
 		{
@@ -41,13 +44,14 @@ func TestNewItem(t *testing.T) {
 			titleText:   "Searchable Title",
 			description: "Description",
 			url:         "url",
+			number:      7,
 			wantTitle:   "Searchable Title",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			item := NewItem(tt.repoName, tt.titleText, tt.description, tt.url)
+			item := NewItem(tt.repoName, tt.titleText, tt.description, tt.url, tt.number)
 
 			if got := item.Title(); got != tt.wantTitle {
 				t.Errorf("Title() = %q, want %q", got, tt.wantTitle)
@@ -57,6 +61,12 @@ func TestNewItem(t *testing.T) {
 			}
 			if got := item.FilterValue(); got != tt.wantTitle {
 				t.Errorf("FilterValue() = %q, want %q", got, tt.wantTitle)
+			}
+			if got := item.Number(); got != tt.number {
+				t.Errorf("Number() = %d, want %d", got, tt.number)
+			}
+			if got := item.RepoName(); got != tt.repoName {
+				t.Errorf("RepoName() = %q, want %q", got, tt.repoName)
 			}
 		})
 	}
@@ -81,8 +91,8 @@ func TestCreateList(t *testing.T) {
 		{
 			name: "two items",
 			items: []list.Item{
-				NewItem("", "Item 1", "Desc 1", "url1"),
-				NewItem("", "Item 2", "Desc 2", "url2"),
+				NewItem("", "Item 1", "Desc 1", "url1", 0),
+				NewItem("", "Item 2", "Desc 2", "url2", 0),
 			},
 			expected: 2,
 		},
@@ -520,7 +530,7 @@ func TestModel_Update_RefreshKey_IgnoredDuringFiltering(t *testing.T) {
 	}
 	// Transition to loaded with items (filtering requires items)
 	items := []list.Item{
-		NewItem("repo", "title", "desc", "url"),
+		NewItem("repo", "title", "desc", "url", 0),
 	}
 	tabs := []Tab{NewTab("Tab 1", CreateList(items))}
 	newModel, _ = m.Update(TabsMsg(tabs))
@@ -675,7 +685,7 @@ func TestModel_View(t *testing.T) {
 }
 
 func TestModel_View_ShowsFilterHelpWhenFiltering(t *testing.T) {
-	items := []list.Item{NewItem("owner/repo", "PR title", "desc", "https://example.com")}
+	items := []list.Item{NewItem("owner/repo", "PR title", "desc", "https://example.com", 0)}
 	m := NewModel([]Tab{NewTab("Test Tab", CreateList(items))})
 
 	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
