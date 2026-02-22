@@ -176,7 +176,7 @@ func (m Model) View() string {
 	)
 
 	doc.WriteString("\n")
-	doc.WriteString(helpView())
+	doc.WriteString(helpView(m.tabs[m.activeTab].list.FilterState()))
 
 	out := DocStyle.Render(doc.String())
 	return out
@@ -233,7 +233,7 @@ func (m Model) handleWindowSize(msg tea.WindowSizeMsg) Model {
 	innerW := max(20, m.outerW-winH)
 
 	tabsH := lipgloss.Height(m.tabsView())
-	helpH := lipgloss.Height(helpView()) + 1 // +1 for newline
+	helpH := lipgloss.Height(helpView(list.Unfiltered)) + 1 // +1 for newline
 	m.outerH = max(5, m.height-docV-tabsH-helpH)
 
 	innerH := max(5, m.outerH-winV)

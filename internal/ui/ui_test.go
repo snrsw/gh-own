@@ -627,13 +627,34 @@ func TestModel_Update_RefreshKey_FullCycle(t *testing.T) {
 	}
 }
 
-func TestHelpView_ContainsRefresh(t *testing.T) {
-	view := helpView()
+func TestHelpView_Unfiltered_ContainsRefresh(t *testing.T) {
+	view := helpView(list.Unfiltered)
 	if !strings.Contains(view, "r") {
-		t.Error("helpView() should contain 'r' key")
+		t.Error("helpView(Unfiltered) should contain 'r' key")
 	}
 	if !strings.Contains(view, "refresh") {
-		t.Error("helpView() should contain 'refresh' description")
+		t.Error("helpView(Unfiltered) should contain 'refresh' description")
+	}
+}
+
+func TestHelpView_FilterApplied_ContainsClear(t *testing.T) {
+	view := helpView(list.FilterApplied)
+	if !strings.Contains(view, "clear") {
+		t.Error("helpView(FilterApplied) should contain 'clear'")
+	}
+}
+
+func TestHelpView_Filtering_ContainsEsc(t *testing.T) {
+	view := helpView(list.Filtering)
+	if !strings.Contains(view, "esc") {
+		t.Error("helpView(Filtering) should contain 'esc'")
+	}
+}
+
+func TestHelpView_Filtering_HidesRefresh(t *testing.T) {
+	view := helpView(list.Filtering)
+	if strings.Contains(view, "refresh") {
+		t.Error("helpView(Filtering) should not contain 'refresh'")
 	}
 }
 
@@ -650,5 +671,27 @@ func TestModel_View(t *testing.T) {
 
 	if view := m.View(); view == "" {
 		t.Error("View() should not be empty")
+	}
+}
+
+func TestModel_View_ShowsFilterHelpWhenFiltering(t *testing.T) {
+	items := []list.Item{NewItem("owner/repo", "PR title", "desc", "https://example.com")}
+	m := NewModel([]Tab{NewTab("Test Tab", CreateList(items))})
+
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type after WindowSizeMsg")
+	}
+
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type after '/' key")
+	}
+
+	if !strings.Contains(m.View(), "esc") {
+		t.Error("View() should contain 'esc' when filtering is active")
 	}
 }
