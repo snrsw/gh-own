@@ -673,3 +673,25 @@ func TestModel_View(t *testing.T) {
 		t.Error("View() should not be empty")
 	}
 }
+
+func TestModel_View_ShowsFilterHelpWhenFiltering(t *testing.T) {
+	items := []list.Item{NewItem("owner/repo", "PR title", "desc", "https://example.com")}
+	m := NewModel([]Tab{NewTab("Test Tab", CreateList(items))})
+
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	var ok bool
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type after WindowSizeMsg")
+	}
+
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type after '/' key")
+	}
+
+	if !strings.Contains(m.View(), "esc") {
+		t.Error("View() should contain 'esc' when filtering is active")
+	}
+}
