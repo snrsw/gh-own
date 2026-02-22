@@ -40,7 +40,7 @@ var (
 	helpSepStyle  = lipgloss.NewStyle().Foreground(colorMuted)
 )
 
-func helpView() string {
+func helpView(state list.FilterState) string {
 	entries := []struct{ key, desc string }{
 		{"/", "filter"},
 		{"r", "refresh"},

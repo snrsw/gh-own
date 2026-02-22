@@ -627,13 +627,13 @@ func TestModel_Update_RefreshKey_FullCycle(t *testing.T) {
 	}
 }
 
-func TestHelpView_ContainsRefresh(t *testing.T) {
-	view := helpView()
+func TestHelpView_Unfiltered_ContainsRefresh(t *testing.T) {
+	view := helpView(list.Unfiltered)
 	if !strings.Contains(view, "r") {
-		t.Error("helpView() should contain 'r' key")
+		t.Error("helpView(Unfiltered) should contain 'r' key")
 	}
 	if !strings.Contains(view, "refresh") {
-		t.Error("helpView() should contain 'refresh' description")
+		t.Error("helpView(Unfiltered) should contain 'refresh' description")
 	}
 }
 
