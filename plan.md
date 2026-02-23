@@ -5,7 +5,7 @@
 ### Phase 1: Default query constants
 
 - [x] `TestDefaultPRQueries_ContainsExpectedKeys` — 4 keys: created, assigned, participatedUser, reviewRequested; each contains `{user}`
-- [ ] `TestDefaultIssueQueries_ContainsExpectedKeys` — 3 keys: created, assigned, participatedUser; each contains `{user}`
+- [x] `TestDefaultIssueQueries_ContainsExpectedKeys` — 3 keys: created, assigned, participatedUser; each contains `{user}`
 
 ### Phase 2: ResolveQueries
 

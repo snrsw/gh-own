@@ -23,3 +23,22 @@ func TestDefaultPRQueries_ContainsExpectedKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestDefaultIssueQueries_ContainsExpectedKeys(t *testing.T) {
+	expectedKeys := []string{"created", "assigned", "participatedUser"}
+
+	if len(DefaultIssueQueries) != len(expectedKeys) {
+		t.Fatalf("DefaultIssueQueries has %d keys, want %d", len(DefaultIssueQueries), len(expectedKeys))
+	}
+
+	for _, key := range expectedKeys {
+		query, ok := DefaultIssueQueries[key]
+		if !ok {
+			t.Errorf("DefaultIssueQueries missing key %q", key)
+			continue
+		}
+		if !strings.Contains(query, "{user}") {
+			t.Errorf("DefaultIssueQueries[%q] = %q, want it to contain {user}", key, query)
+		}
+	}
+}
