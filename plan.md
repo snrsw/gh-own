@@ -9,7 +9,7 @@
 
 ### Phase 2: ResolveQueries
 
-- [ ] `TestResolveQueries_ReplacesUserPlaceholder` — `author:{user}` + `"octocat"` → `author:octocat`
+- [x] `TestResolveQueries_ReplacesUserPlaceholder` — `author:{user}` + `"octocat"` → `author:octocat`
 - [ ] `TestResolveQueries_MultipleOccurrences` — `involves:{user} -author:{user}` → both replaced
 - [ ] `TestResolveQueries_NoPlaceholder` — query without `{user}` passes through unchanged
 

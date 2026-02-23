@@ -42,3 +42,16 @@ func TestDefaultIssueQueries_ContainsExpectedKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveQueries_ReplacesUserPlaceholder(t *testing.T) {
+	queries := map[string]string{
+		"created": "is:pr is:open author:{user}",
+	}
+
+	resolved := ResolveQueries(queries, "octocat")
+
+	want := "is:pr is:open author:octocat"
+	if got := resolved["created"]; got != want {
+		t.Errorf("resolved[created] = %q, want %q", got, want)
+	}
+}
