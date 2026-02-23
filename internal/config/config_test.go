@@ -170,3 +170,36 @@ func TestMergeIssueQueries_PartialOverride(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeKeys(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"participated", "participatedUser"},
+		{"review_requested", "reviewRequested"},
+		{"created", "created"},
+		{"assigned", "assigned"},
+		{"participatedUser", "participatedUser"},
+		{"reviewRequested", "reviewRequested"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			input := map[string]string{tt.input: "some query"}
+			normalized := NormalizeKeys(input)
+
+			if _, ok := normalized[tt.want]; !ok {
+				t.Errorf("NormalizeKeys(%q) missing key %q, got keys: %v", tt.input, tt.want, keys(normalized))
+			}
+		})
+	}
+}
+
+func keys(m map[string]string) []string {
+	ks := make([]string, 0, len(m))
+	for k := range m {
+		ks = append(ks, k)
+	}
+	return ks
+}

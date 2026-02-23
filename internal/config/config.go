@@ -34,6 +34,23 @@ func mergeQueries(defaults, override map[string]string) map[string]string {
 	return merged
 }
 
+var keyAliases = map[string]string{
+	"participated":     "participatedUser",
+	"review_requested": "reviewRequested",
+}
+
+func NormalizeKeys(queries map[string]string) map[string]string {
+	normalized := make(map[string]string, len(queries))
+	for k, v := range queries {
+		if alias, ok := keyAliases[k]; ok {
+			normalized[alias] = v
+		} else {
+			normalized[k] = v
+		}
+	}
+	return normalized
+}
+
 func ResolveQueries(queries map[string]string, username string) map[string]string {
 	resolved := make(map[string]string, len(queries))
 	for key, query := range queries {

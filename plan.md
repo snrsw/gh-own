@@ -23,7 +23,7 @@
 
 ### Phase 4: Key normalization
 
-- [ ] `TestNormalizeKeys` — `participated` → `participatedUser`, `review_requested` → `reviewRequested`, passthrough for already-correct keys
+- [x] `TestNormalizeKeys` — `participated` → `participatedUser`, `review_requested` → `reviewRequested`, passthrough for already-correct keys
 
 ### Phase 5: LoadFromPath
 
