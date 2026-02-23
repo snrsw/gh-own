@@ -22,7 +22,10 @@ type CommandConfig struct {
 func DefaultPath() string {
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if configHome == "" {
-		home, _ := os.UserHomeDir()
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
 		configHome = filepath.Join(home, ".config")
 	}
 	return filepath.Join(configHome, "gh-own", "config.yaml")

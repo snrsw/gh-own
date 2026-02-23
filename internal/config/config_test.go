@@ -294,7 +294,7 @@ func writeTempYAML(t *testing.T, content string) string {
 	t.Helper()
 	dir := t.TempDir()
 	path := dir + "/config.yaml"
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("failed to write temp YAML: %v", err)
 	}
 	return path
@@ -314,7 +314,10 @@ func TestDefaultPath_FallsBackToHomeDotConfig(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 
 	got := DefaultPath()
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir returned error: %v", err)
+	}
 	want := home + "/.config/gh-own/config.yaml"
 	if got != want {
 		t.Errorf("DefaultPath() = %q, want %q", got, want)
