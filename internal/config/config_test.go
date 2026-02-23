@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -202,4 +203,99 @@ func keys(m map[string]string) []string {
 		ks = append(ks, k)
 	}
 	return ks
+}
+
+func TestLoadFromPath_FileNotFound_ReturnsEmptyConfig(t *testing.T) {
+	cfg, err := LoadFromPath("/nonexistent/path/config.yaml")
+
+	if err != nil {
+		t.Fatalf("LoadFromPath returned error: %v", err)
+	}
+
+	if cfg.PR.Queries != nil {
+		t.Errorf("PR.Queries = %v, want nil", cfg.PR.Queries)
+	}
+	if cfg.Issue.Queries != nil {
+		t.Errorf("Issue.Queries = %v, want nil", cfg.Issue.Queries)
+	}
+}
+
+func TestLoadFromPath_ValidYAML_ParsesPRQueries(t *testing.T) {
+	content := `
+pr:
+  queries:
+    created: "is:pr is:open author:{user} label:custom"
+    review_requested: "is:pr is:open review-requested:{user} label:urgent"
+`
+	path := writeTempYAML(t, content)
+
+	cfg, err := LoadFromPath(path)
+	if err != nil {
+		t.Fatalf("LoadFromPath returned error: %v", err)
+	}
+
+	if got := cfg.PR.Queries["created"]; got != "is:pr is:open author:{user} label:custom" {
+		t.Errorf("PR.Queries[created] = %q, want custom value", got)
+	}
+	if got := cfg.PR.Queries["reviewRequested"]; got != "is:pr is:open review-requested:{user} label:urgent" {
+		t.Errorf("PR.Queries[reviewRequested] = %q, want normalized key with custom value", got)
+	}
+}
+
+func TestLoadFromPath_ValidYAML_ParsesIssueQueries(t *testing.T) {
+	content := `
+issue:
+  queries:
+    participated: "is:issue is:open involves:{user}"
+`
+	path := writeTempYAML(t, content)
+
+	cfg, err := LoadFromPath(path)
+	if err != nil {
+		t.Fatalf("LoadFromPath returned error: %v", err)
+	}
+
+	if got := cfg.Issue.Queries["participatedUser"]; got != "is:issue is:open involves:{user}" {
+		t.Errorf("Issue.Queries[participatedUser] = %q, want normalized key with custom value", got)
+	}
+}
+
+func TestLoadFromPath_InvalidYAML_ReturnsError(t *testing.T) {
+	path := writeTempYAML(t, "{{invalid yaml")
+
+	_, err := LoadFromPath(path)
+	if err == nil {
+		t.Fatal("LoadFromPath with invalid YAML should return error")
+	}
+}
+
+func TestLoadFromPath_PartialConfig_OnlyPR(t *testing.T) {
+	content := `
+pr:
+  queries:
+    created: "is:pr is:open author:{user} label:mine"
+`
+	path := writeTempYAML(t, content)
+
+	cfg, err := LoadFromPath(path)
+	if err != nil {
+		t.Fatalf("LoadFromPath returned error: %v", err)
+	}
+
+	if cfg.PR.Queries == nil {
+		t.Fatal("PR.Queries should not be nil")
+	}
+	if cfg.Issue.Queries != nil {
+		t.Errorf("Issue.Queries = %v, want nil", cfg.Issue.Queries)
+	}
+}
+
+func writeTempYAML(t *testing.T, content string) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := dir + "/config.yaml"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write temp YAML: %v", err)
+	}
+	return path
 }

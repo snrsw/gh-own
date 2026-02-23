@@ -27,11 +27,11 @@
 
 ### Phase 5: LoadFromPath
 
-- [ ] `TestLoadFromPath_FileNotFound_ReturnsEmptyConfig` — no error, empty Config
-- [ ] `TestLoadFromPath_ValidYAML_ParsesPRQueries` — temp YAML → correct Config.PR.Queries with normalized keys
-- [ ] `TestLoadFromPath_ValidYAML_ParsesIssueQueries` — temp YAML → correct Config.Issue.Queries
-- [ ] `TestLoadFromPath_InvalidYAML_ReturnsError` — malformed YAML → error
-- [ ] `TestLoadFromPath_PartialConfig_OnlyPR` — only `pr:` section → Issue.Queries is nil
+- [x] `TestLoadFromPath_FileNotFound_ReturnsEmptyConfig` — no error, empty Config
+- [x] `TestLoadFromPath_ValidYAML_ParsesPRQueries` — temp YAML → correct Config.PR.Queries with normalized keys
+- [x] `TestLoadFromPath_ValidYAML_ParsesIssueQueries` — temp YAML → correct Config.Issue.Queries
+- [x] `TestLoadFromPath_InvalidYAML_ReturnsError` — malformed YAML → error
+- [x] `TestLoadFromPath_PartialConfig_OnlyPR` — only `pr:` section → Issue.Queries is nil
 
 ### Phase 6: DefaultPath
 

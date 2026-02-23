@@ -1,6 +1,46 @@
 package config
 
-import "strings"
+import (
+	"errors"
+	"io/fs"
+	"os"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
+
+type Config struct {
+	PR    CommandConfig `yaml:"pr"`
+	Issue CommandConfig `yaml:"issue"`
+}
+
+type CommandConfig struct {
+	Queries map[string]string `yaml:"queries"`
+}
+
+func LoadFromPath(path string) (Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return Config{}, nil
+		}
+		return Config{}, err
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return Config{}, err
+	}
+
+	if cfg.PR.Queries != nil {
+		cfg.PR.Queries = NormalizeKeys(cfg.PR.Queries)
+	}
+	if cfg.Issue.Queries != nil {
+		cfg.Issue.Queries = NormalizeKeys(cfg.Issue.Queries)
+	}
+
+	return cfg, nil
+}
 
 var DefaultPRQueries = map[string]string{
 	"created":          "is:pr is:open author:{user}",
