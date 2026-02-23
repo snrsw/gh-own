@@ -15,11 +15,11 @@
 
 ### Phase 3: MergeQueries
 
-- [ ] `TestMergePRQueries_NilOverride_ReturnsDefaults` — nil → copy of DefaultPRQueries
-- [ ] `TestMergePRQueries_PartialOverride` — override `created` only, other 3 use defaults
-- [ ] `TestMergePRQueries_FullOverride` — all 4 keys overridden
-- [ ] `TestMergeIssueQueries_NilOverride_ReturnsDefaults` — nil → copy of DefaultIssueQueries
-- [ ] `TestMergeIssueQueries_PartialOverride` — override `assigned` only, other 2 use defaults
+- [x] `TestMergePRQueries_NilOverride_ReturnsDefaults` — nil → copy of DefaultPRQueries
+- [x] `TestMergePRQueries_PartialOverride` — override `created` only, other 3 use defaults
+- [x] `TestMergePRQueries_FullOverride` — all 4 keys overridden
+- [x] `TestMergeIssueQueries_NilOverride_ReturnsDefaults` — nil → copy of DefaultIssueQueries
+- [x] `TestMergeIssueQueries_PartialOverride` — override `assigned` only, other 2 use defaults
 
 ### Phase 4: Key normalization
 
