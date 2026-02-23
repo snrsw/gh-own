@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -16,6 +17,15 @@ type Config struct {
 
 type CommandConfig struct {
 	Queries map[string]string `yaml:"queries"`
+}
+
+func DefaultPath() string {
+	configHome := os.Getenv("XDG_CONFIG_HOME")
+	if configHome == "" {
+		home, _ := os.UserHomeDir()
+		configHome = filepath.Join(home, ".config")
+	}
+	return filepath.Join(configHome, "gh-own", "config.yaml")
 }
 
 func LoadFromPath(path string) (Config, error) {

@@ -35,8 +35,8 @@
 
 ### Phase 6: DefaultPath
 
-- [ ] `TestDefaultPath_UsesXDGConfigHome` — set env → `$XDG_CONFIG_HOME/gh-own/config.yaml`
-- [ ] `TestDefaultPath_FallsBackToHomeDotConfig` — unset env → `~/.config/gh-own/config.yaml`
+- [x] `TestDefaultPath_UsesXDGConfigHome` — set env → `$XDG_CONFIG_HOME/gh-own/config.yaml`
+- [x] `TestDefaultPath_FallsBackToHomeDotConfig` — unset env → `~/.config/gh-own/config.yaml`
 
 ### Phase 7: Tidy — thread config through existing code
 

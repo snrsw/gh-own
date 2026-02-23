@@ -299,3 +299,24 @@ func writeTempYAML(t *testing.T, content string) string {
 	}
 	return path
 }
+
+func TestDefaultPath_UsesXDGConfigHome(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "/tmp/xdg-test")
+
+	got := DefaultPath()
+	want := "/tmp/xdg-test/gh-own/config.yaml"
+	if got != want {
+		t.Errorf("DefaultPath() = %q, want %q", got, want)
+	}
+}
+
+func TestDefaultPath_FallsBackToHomeDotConfig(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	got := DefaultPath()
+	home, _ := os.UserHomeDir()
+	want := home + "/.config/gh-own/config.yaml"
+	if got != want {
+		t.Errorf("DefaultPath() = %q, want %q", got, want)
+	}
+}
