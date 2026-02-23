@@ -10,8 +10,8 @@
 ### Phase 2: ResolveQueries
 
 - [x] `TestResolveQueries_ReplacesUserPlaceholder` — `author:{user}` + `"octocat"` → `author:octocat`
-- [ ] `TestResolveQueries_MultipleOccurrences` — `involves:{user} -author:{user}` → both replaced
-- [ ] `TestResolveQueries_NoPlaceholder` — query without `{user}` passes through unchanged
+- [x] `TestResolveQueries_MultipleOccurrences` — `involves:{user} -author:{user}` → both replaced
+- [x] `TestResolveQueries_NoPlaceholder` — query without `{user}` passes through unchanged
 
 ### Phase 3: MergeQueries
 

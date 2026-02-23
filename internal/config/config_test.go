@@ -55,3 +55,29 @@ func TestResolveQueries_ReplacesUserPlaceholder(t *testing.T) {
 		t.Errorf("resolved[created] = %q, want %q", got, want)
 	}
 }
+
+func TestResolveQueries_MultipleOccurrences(t *testing.T) {
+	queries := map[string]string{
+		"participated": "is:pr is:open involves:{user} -author:{user}",
+	}
+
+	resolved := ResolveQueries(queries, "octocat")
+
+	want := "is:pr is:open involves:octocat -author:octocat"
+	if got := resolved["participated"]; got != want {
+		t.Errorf("resolved[participated] = %q, want %q", got, want)
+	}
+}
+
+func TestResolveQueries_NoPlaceholder(t *testing.T) {
+	queries := map[string]string{
+		"custom": "is:pr is:open label:bug",
+	}
+
+	resolved := ResolveQueries(queries, "octocat")
+
+	want := "is:pr is:open label:bug"
+	if got := resolved["custom"]; got != want {
+		t.Errorf("resolved[custom] = %q, want %q", got, want)
+	}
+}
