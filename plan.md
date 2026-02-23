@@ -40,9 +40,9 @@
 
 ### Phase 7: Tidy — thread config through existing code
 
-- [ ] Update `SearchPRs` signature: `SearchPRs(client, entries map[string]string)` — remove internal query construction
-- [ ] Update `SearchIssues` signature: `SearchIssues(client, entries map[string]string)` — same
-- [ ] Update `TestSearchPRs_EmptyUsername` → pass empty entries map
-- [ ] Update `TestSearchIssues_EmptyUsername` → pass empty entries map
-- [ ] Update `cmd/pr.go` — load config, merge, resolve, pass to `SearchPRs`
-- [ ] Update `cmd/issue.go` — load config, merge, resolve, pass to `SearchIssues`
+- [x] Update `SearchPRs` signature: `SearchPRs(client, entries map[string]string)` — remove internal query construction
+- [x] Update `SearchIssues` signature: `SearchIssues(client, entries map[string]string)` — same
+- [x] Update `TestSearchPRs_EmptyUsername` → pass empty entries map
+- [x] Update `TestSearchIssues_EmptyUsername` → pass empty entries map
+- [x] Update `cmd/pr.go` — load config, merge, resolve, pass to `SearchPRs`
+- [x] Update `cmd/issue.go` — load config, merge, resolve, pass to `SearchIssues`

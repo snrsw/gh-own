@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/cache"
+	"github.com/snrsw/gh-own/internal/config"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/issue"
 	"github.com/snrsw/gh-own/internal/timing"
@@ -22,12 +23,21 @@ var issueCmd = &cobra.Command{
 		defer timing.Track("issue:total")()
 
 		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
-			done := timing.Track("issue:login")
+			done := timing.Track("issue:config")
+			cfg, err := config.LoadFromPath(config.DefaultPath())
+			done()
+			if err != nil {
+				return nil, err
+			}
+
+			done = timing.Track("issue:login")
 			username, err := gh.CurrentLogin()
 			done()
 			if err != nil {
 				return nil, err
 			}
+
+			entries := config.ResolveQueries(config.MergeIssueQueries(cfg.Issue.Queries), username)
 
 			done = timing.Track("issue:rest-client")
 			restClient, err := api.DefaultRESTClient()
@@ -53,7 +63,7 @@ var issueCmd = &cobra.Command{
 			userCh := make(chan result[*gh.IssueSearchResult], 1)
 			go func() {
 				defer timing.Track("issue:search-user")()
-				issues, err := gh.SearchIssues(client, username)
+				issues, err := gh.SearchIssues(client, entries)
 				userCh <- result[*gh.IssueSearchResult]{v: issues, err: err}
 			}()
 
