@@ -19,7 +19,7 @@ Key features:
   - Created by you
   - Assigned to you
   - You have participated in mentioned or commented (including teams)
-- Displays CI status (✓ / ✗ / ●) and review decision (✔ / ⊘ / ◇) for each PR
+- Displays CI status and review decision for each PR (see [Symbol legend](#symbol-legend))
 - Shows latest activity (who commented, reviewed, or pushed and when)
 - Includes draft PR indication
 - Fetches results for all teams you belong to, merged and deduplicated with your personal results
@@ -76,6 +76,25 @@ gh own --debug
 | `r` | Refresh data |
 | `/` | Filter items in current tab |
 | `ctrl+c` | Quit |
+
+## Symbol legend
+
+### CI status
+
+| Symbol | Meaning |
+|--------|---------|
+| `✓` | CI passed |
+| `✗` | CI failed |
+| `●` | CI pending |
+| `-` | No CI status |
+
+### Review decision
+
+| Symbol | Meaning |
+|--------|---------|
+| `✔` | Approved |
+| `⊘` | Changes requested |
+| `◇` | Review required |
 
 ## Requirements
 
