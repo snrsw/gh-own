@@ -58,6 +58,10 @@ func NewTab(name string, list list.Model) Tab {
 	}
 }
 
+func (t Tab) Name() string {
+	return t.name
+}
+
 type Model struct {
 	tabs      []Tab
 	activeTab int

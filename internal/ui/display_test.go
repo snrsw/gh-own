@@ -156,3 +156,28 @@ func TestCreatedOn(t *testing.T) {
 		})
 	}
 }
+
+func TestHumanizeTabName(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"needs-triage", "Needs Triage"},
+		{"new-tab", "New Tab"},
+		{"bugs", "Bugs"},
+		{"my-custom-tab", "My Custom Tab"},
+		{"already Title", "Already Title"},
+		{"UPPER", "UPPER"},
+		{"a", "A"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := HumanizeTabName(tt.input)
+			if got != tt.want {
+				t.Errorf("HumanizeTabName(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}

@@ -6,6 +6,102 @@ import (
 	"github.com/snrsw/gh-own/internal/cistatus"
 )
 
+func TestParsePRSearchResult_CustomKeyPreserved(t *testing.T) {
+	parsed := map[string][]PRSearchNode{
+		"created": {{Number: 1, Title: "PR1"}},
+		"myTab":   {{Number: 2, Title: "PR2"}},
+	}
+
+	result, err := parsePRSearchResult(parsed)
+	if err != nil {
+		t.Fatalf("parsePRSearchResult returned error: %v", err)
+	}
+
+	if len(result.Custom) == 0 {
+		t.Fatal("Custom map is empty, want key \"myTab\"")
+	}
+	nodes, ok := result.Custom["myTab"]
+	if !ok {
+		t.Fatal("Custom[\"myTab\"] not found")
+	}
+	if len(nodes) != 1 || nodes[0].Number != 2 {
+		t.Errorf("Custom[\"myTab\"] = %v, want [{Number:2}]", nodes)
+	}
+}
+
+func TestParsePRSearchResult_NoCustomKeys(t *testing.T) {
+	parsed := map[string][]PRSearchNode{
+		"created":          {{Number: 1}},
+		"assigned":         {{Number: 2}},
+		"participatedUser": {{Number: 3}},
+		"reviewRequested":  {{Number: 4}},
+	}
+
+	result, err := parsePRSearchResult(parsed)
+	if err != nil {
+		t.Fatalf("parsePRSearchResult returned error: %v", err)
+	}
+
+	if result.Custom == nil {
+		t.Fatal("Custom should not be nil")
+	}
+	if len(result.Custom) != 0 {
+		t.Errorf("Custom has %d keys, want 0", len(result.Custom))
+	}
+}
+
+func TestMergeSearchPRsResults_MergesCustom(t *testing.T) {
+	a := &PRSearchResult{
+		Custom: map[string][]PRSearchNode{
+			"alpha": {{Number: 1, URL: "https://github.com/org/repo/pull/1"}},
+			"beta":  {{Number: 2, URL: "https://github.com/org/repo/pull/2"}},
+		},
+	}
+	b := &PRSearchResult{
+		Custom: map[string][]PRSearchNode{
+			"beta":  {{Number: 3, URL: "https://github.com/org/repo/pull/3"}},
+			"gamma": {{Number: 4, URL: "https://github.com/org/repo/pull/4"}},
+		},
+	}
+
+	merged := MergeSearchPRsResults(a, b)
+
+	if len(merged.Custom) != 3 {
+		t.Fatalf("Custom has %d keys, want 3", len(merged.Custom))
+	}
+	if len(merged.Custom["alpha"]) != 1 {
+		t.Errorf("Custom[alpha] has %d nodes, want 1", len(merged.Custom["alpha"]))
+	}
+	if len(merged.Custom["beta"]) != 2 {
+		t.Errorf("Custom[beta] has %d nodes, want 2", len(merged.Custom["beta"]))
+	}
+	if len(merged.Custom["gamma"]) != 1 {
+		t.Errorf("Custom[gamma] has %d nodes, want 1", len(merged.Custom["gamma"]))
+	}
+}
+
+func TestMergeSearchPRsResults_DeduplicatesCustomByURL(t *testing.T) {
+	a := &PRSearchResult{
+		Custom: map[string][]PRSearchNode{
+			"myTab": {{Number: 1, URL: "https://github.com/org/repo/pull/1"}},
+		},
+	}
+	b := &PRSearchResult{
+		Custom: map[string][]PRSearchNode{
+			"myTab": {
+				{Number: 1, URL: "https://github.com/org/repo/pull/1"},
+				{Number: 2, URL: "https://github.com/org/repo/pull/2"},
+			},
+		},
+	}
+
+	merged := MergeSearchPRsResults(a, b)
+
+	if len(merged.Custom["myTab"]) != 2 {
+		t.Errorf("Custom[myTab] has %d nodes, want 2 (deduplicated)", len(merged.Custom["myTab"]))
+	}
+}
+
 func TestPRSearchResult_CIStatus(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -63,6 +159,21 @@ func TestSearchPRs_EmptyEntries(t *testing.T) {
 	}
 	if len(results.ReviewRequested) != 0 {
 		t.Errorf("SearchPRs with empty username returned %d results, want 0", len(results.ReviewRequested))
+	}
+}
+
+func TestSearchPRs_EmptyEntries_HasEmptyCustom(t *testing.T) {
+	results, err := SearchPRs(nil, nil)
+
+	if err != nil {
+		t.Fatalf("SearchPRs returned error: %v", err)
+	}
+
+	if results.Custom == nil {
+		t.Fatal("Custom should not be nil")
+	}
+	if len(results.Custom) != 0 {
+		t.Errorf("Custom has %d keys, want 0", len(results.Custom))
 	}
 }
 

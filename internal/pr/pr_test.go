@@ -9,6 +9,90 @@ import (
 	"github.com/snrsw/gh-own/internal/reviewstatus"
 )
 
+func TestNewGroupedPullRequests_PropagatesCustom(t *testing.T) {
+	ghResult := &gh.PRSearchResult{
+		Created: []gh.PRSearchNode{{Number: 1}},
+		Custom: map[string][]gh.PRSearchNode{
+			"myTab": {{Number: 10, Title: "Custom PR"}},
+		},
+	}
+
+	grouped := NewGroupedPullRequests(ghResult)
+
+	if len(grouped.Custom) != 1 {
+		t.Fatalf("Custom has %d keys, want 1", len(grouped.Custom))
+	}
+	sr, ok := grouped.Custom["myTab"]
+	if !ok {
+		t.Fatal("Custom[\"myTab\"] not found")
+	}
+	if sr.TotalCount != 1 {
+		t.Errorf("TotalCount = %d, want 1", sr.TotalCount)
+	}
+}
+
+func TestBuildTabs_DefaultTabsOnly(t *testing.T) {
+	grouped := &GroupedPullRequests{
+		Created:         gh.SearchResult[pullRequest]{TotalCount: 1, Items: []pullRequest{{Number: 1}}},
+		Participated:    gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Assigned:        gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		ReviewRequested: gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+	}
+
+	tabs := grouped.BuildTabs()
+
+	if len(tabs) != 4 {
+		t.Fatalf("BuildTabs() returned %d tabs, want 4", len(tabs))
+	}
+}
+
+func TestBuildTabs_WithCustomTabs(t *testing.T) {
+	grouped := &GroupedPullRequests{
+		Created:         gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Participated:    gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Assigned:        gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		ReviewRequested: gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Custom: map[string]gh.SearchResult[pullRequest]{
+			"zeta":  {TotalCount: 1, Items: []pullRequest{{Number: 1}}},
+			"alpha": {TotalCount: 2, Items: []pullRequest{{Number: 2}, {Number: 3}}},
+		},
+	}
+
+	tabs := grouped.BuildTabs()
+
+	if len(tabs) != 6 {
+		t.Fatalf("BuildTabs() returned %d tabs, want 6", len(tabs))
+	}
+	// Custom tabs should be sorted alphabetically at indices 4-5
+	if tabs[4].Name() != "Alpha (2)" {
+		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "Alpha (2)")
+	}
+	if tabs[5].Name() != "Zeta (1)" {
+		t.Errorf("tabs[5].Name() = %q, want %q", tabs[5].Name(), "Zeta (1)")
+	}
+}
+
+func TestBuildTabs_CustomTabNameIncludesCount(t *testing.T) {
+	grouped := &GroupedPullRequests{
+		Created:         gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Participated:    gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Assigned:        gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		ReviewRequested: gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Custom: map[string]gh.SearchResult[pullRequest]{
+			"myTab": {TotalCount: 3, Items: []pullRequest{{Number: 1}, {Number: 2}, {Number: 3}}},
+		},
+	}
+
+	tabs := grouped.BuildTabs()
+
+	if len(tabs) != 5 {
+		t.Fatalf("BuildTabs() returned %d tabs, want 5", len(tabs))
+	}
+	if tabs[4].Name() != "MyTab (3)" {
+		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "MyTab (3)")
+	}
+}
+
 func TestPullRequest_RepositoryFullName(t *testing.T) {
 	tests := []struct {
 		name          string

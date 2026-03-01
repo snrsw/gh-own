@@ -14,14 +14,21 @@ type GroupedPullRequests struct {
 	Assigned        gh.SearchResult[pullRequest]
 	ReviewRequested gh.SearchResult[pullRequest]
 	Participated    gh.SearchResult[pullRequest]
+	Custom          map[string]gh.SearchResult[pullRequest]
 }
 
 func NewGroupedPullRequests(ghResult *gh.PRSearchResult) *GroupedPullRequests {
+	custom := make(map[string]gh.SearchResult[pullRequest], len(ghResult.Custom))
+	for k, nodes := range ghResult.Custom {
+		custom[k] = toSearchResult(nodes)
+	}
+
 	return &GroupedPullRequests{
 		Created:         toSearchResult(ghResult.Created),
 		Assigned:        toSearchResult(ghResult.Assigned),
 		ReviewRequested: toSearchResult(ghResult.ReviewRequested),
 		Participated:    toSearchResult(ghResult.Participated),
+		Custom:          custom,
 	}
 }
 

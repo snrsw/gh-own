@@ -7,11 +7,12 @@ import (
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/cistatus"
+	"github.com/snrsw/gh-own/internal/config"
 )
 
 func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchResult, error) {
 	if len(entries) == 0 {
-		return &PRSearchResult{}, nil
+		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
 	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
@@ -24,11 +25,11 @@ func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchR
 
 func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string) (*PRSearchResult, error) {
 	if username == "" {
-		return &PRSearchResult{}, nil
+		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
 	if len(teams) == 0 {
-		return &PRSearchResult{}, nil
+		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
 	entries := make(map[string]string, len(teams))
@@ -49,14 +50,27 @@ type PRSearchResult struct {
 	Assigned        []PRSearchNode
 	Participated    []PRSearchNode
 	ReviewRequested []PRSearchNode
+	Custom          map[string][]PRSearchNode
 }
 
 func MergeSearchPRsResults(a, b *PRSearchResult) *PRSearchResult {
+	custom := make(map[string][]PRSearchNode)
+	for k, v := range a.Custom {
+		custom[k] = v
+	}
+	for k, v := range b.Custom {
+		custom[k] = append(custom[k], v...)
+	}
+	for k, v := range custom {
+		custom[k] = deduplicatePRNodes(v)
+	}
+
 	merged := &PRSearchResult{
 		Created:         append(a.Created, b.Created...),
 		Assigned:        append(a.Assigned, b.Assigned...),
 		Participated:    append(a.Participated, b.Participated...),
 		ReviewRequested: append(a.ReviewRequested, b.ReviewRequested...),
+		Custom:          custom,
 	}
 	return merged
 }
@@ -105,11 +119,16 @@ const prSearchQuery = `query($q: String!) {
 }`
 
 func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, error) {
+	defaultKeys := config.DefaultPRKeys()
 	var participated []PRSearchNode
+	custom := make(map[string][]PRSearchNode)
+
 	for key, nodes := range parsed {
 		switch {
 		case strings.HasPrefix(key, "participated"):
 			participated = append(participated, nodes...)
+		case !defaultKeys[key]:
+			custom[key] = nodes
 		}
 	}
 
@@ -118,6 +137,7 @@ func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, err
 		Assigned:        parsed["assigned"],
 		Participated:    deduplicatePRNodes(participated),
 		ReviewRequested: parsed["reviewRequested"],
+		Custom:          custom,
 	}, nil
 }
 

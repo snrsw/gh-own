@@ -68,8 +68,24 @@ var defaultIssueQueries = map[string]string{
 	"participatedUser": "is:issue is:open involves:{user} -author:{user} -assignee:{user}",
 }
 
+func DefaultPRKeys() map[string]bool {
+	keys := make(map[string]bool, len(defaultPRQueries))
+	for k := range defaultPRQueries {
+		keys[k] = true
+	}
+	return keys
+}
+
 func DefaultPRQueries() map[string]string {
 	return copyMap(defaultPRQueries)
+}
+
+func DefaultIssueKeys() map[string]bool {
+	keys := make(map[string]bool, len(defaultIssueQueries))
+	for k := range defaultIssueQueries {
+		keys[k] = true
+	}
+	return keys
 }
 
 func DefaultIssueQueries() map[string]string {
