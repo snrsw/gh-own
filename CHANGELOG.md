@@ -2,6 +2,14 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.0.11](https://github.com/snrsw/gh-own/compare/0.0.10...0.0.11) - 2026-03-01
+### Other Changes
+- Sync README and CLAUDE.md with current codebase by @snrsw in https://github.com/snrsw/gh-own/pull/44
+- Make help bar context-sensitive during filter mode by @snrsw in https://github.com/snrsw/gh-own/pull/46
+- Add YAML config file for query customization by @snrsw in https://github.com/snrsw/gh-own/pull/49
+- Add symbol legend section to README by @snrsw in https://github.com/snrsw/gh-own/pull/50
+- Add custom tab support via config.yaml by @snrsw in https://github.com/snrsw/gh-own/pull/51
+
 ## [0.0.10](https://github.com/snrsw/gh-own/compare/0.0.9...0.0.10) - 2026-02-21
 ### Other Changes
 - Add loading spinner for PR and issue commands by @snrsw in https://github.com/snrsw/gh-own/pull/39
