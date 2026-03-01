@@ -8,15 +8,9 @@ import (
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 
-func SearchIssues(client *api.GraphQLClient, username string) (*IssueSearchResult, error) {
-	if username == "" {
+func SearchIssues(client *api.GraphQLClient, entries map[string]string) (*IssueSearchResult, error) {
+	if len(entries) == 0 {
 		return &IssueSearchResult{}, nil
-	}
-
-	entries := map[string]string{
-		"created":          fmt.Sprintf("is:issue is:open author:%s", username),
-		"assigned":         fmt.Sprintf("is:issue is:open assignee:%s", username),
-		"participatedUser": fmt.Sprintf("is:issue is:open involves:%s -author:%s -assignee:%s", username, username, username),
 	}
 
 	raw, err := Search(client, issueSearchQuery, entries, parseIssueSearchJSON)

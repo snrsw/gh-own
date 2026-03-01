@@ -66,8 +66,8 @@ func TestSearchIssues_EmptyUsernameWithTeams(t *testing.T) {
 	}
 }
 
-func TestSearchIssues_EmptyUsername(t *testing.T) {
-	results, err := SearchIssues(nil, "")
+func TestSearchIssues_EmptyEntries(t *testing.T) {
+	results, err := SearchIssues(nil, nil)
 
 	if err != nil {
 		t.Errorf("SearchIssues with empty username returned error: %v", err)
