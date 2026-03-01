@@ -29,6 +29,27 @@ func TestParsePRSearchResult_CustomKeyPreserved(t *testing.T) {
 	}
 }
 
+func TestParsePRSearchResult_NoCustomKeys(t *testing.T) {
+	parsed := map[string][]PRSearchNode{
+		"created":          {{Number: 1}},
+		"assigned":         {{Number: 2}},
+		"participatedUser": {{Number: 3}},
+		"reviewRequested":  {{Number: 4}},
+	}
+
+	result, err := parsePRSearchResult(parsed)
+	if err != nil {
+		t.Fatalf("parsePRSearchResult returned error: %v", err)
+	}
+
+	if result.Custom == nil {
+		t.Fatal("Custom should not be nil")
+	}
+	if len(result.Custom) != 0 {
+		t.Errorf("Custom has %d keys, want 0", len(result.Custom))
+	}
+}
+
 func TestPRSearchResult_CIStatus(t *testing.T) {
 	tests := []struct {
 		name     string

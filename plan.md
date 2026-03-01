@@ -39,7 +39,7 @@ No changes needed in `cmd/` — data flows through naturally.
 ### Search layer — PR (`internal/gh/pr_test.go`)
 
 - [x] `TestParsePRSearchResult_CustomKeyPreserved` — unknown key `"myTab"` lands in `result.Custom["myTab"]`
-- [ ] `TestParsePRSearchResult_NoCustomKeys` — standard keys only → `Custom` is empty map
+- [x] `TestParsePRSearchResult_NoCustomKeys` — standard keys only → `Custom` is empty map
 - [ ] `TestMergeSearchPRsResults_MergesCustom` — merges custom maps, concatenates overlapping keys
 
 ### Search layer — Issue (`internal/gh/issue_test.go`)
