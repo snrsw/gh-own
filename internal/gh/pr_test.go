@@ -53,14 +53,14 @@ func TestParsePRSearchResult_NoCustomKeys(t *testing.T) {
 func TestMergeSearchPRsResults_MergesCustom(t *testing.T) {
 	a := &PRSearchResult{
 		Custom: map[string][]PRSearchNode{
-			"alpha": {{Number: 1}},
-			"beta":  {{Number: 2}},
+			"alpha": {{Number: 1, URL: "https://github.com/org/repo/pull/1"}},
+			"beta":  {{Number: 2, URL: "https://github.com/org/repo/pull/2"}},
 		},
 	}
 	b := &PRSearchResult{
 		Custom: map[string][]PRSearchNode{
-			"beta":  {{Number: 3}},
-			"gamma": {{Number: 4}},
+			"beta":  {{Number: 3, URL: "https://github.com/org/repo/pull/3"}},
+			"gamma": {{Number: 4, URL: "https://github.com/org/repo/pull/4"}},
 		},
 	}
 
@@ -77,6 +77,28 @@ func TestMergeSearchPRsResults_MergesCustom(t *testing.T) {
 	}
 	if len(merged.Custom["gamma"]) != 1 {
 		t.Errorf("Custom[gamma] has %d nodes, want 1", len(merged.Custom["gamma"]))
+	}
+}
+
+func TestMergeSearchPRsResults_DeduplicatesCustomByURL(t *testing.T) {
+	a := &PRSearchResult{
+		Custom: map[string][]PRSearchNode{
+			"myTab": {{Number: 1, URL: "https://github.com/org/repo/pull/1"}},
+		},
+	}
+	b := &PRSearchResult{
+		Custom: map[string][]PRSearchNode{
+			"myTab": {
+				{Number: 1, URL: "https://github.com/org/repo/pull/1"},
+				{Number: 2, URL: "https://github.com/org/repo/pull/2"},
+			},
+		},
+	}
+
+	merged := MergeSearchPRsResults(a, b)
+
+	if len(merged.Custom["myTab"]) != 2 {
+		t.Errorf("Custom[myTab] has %d nodes, want 2 (deduplicated)", len(merged.Custom["myTab"]))
 	}
 }
 

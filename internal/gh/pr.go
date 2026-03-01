@@ -61,6 +61,9 @@ func MergeSearchPRsResults(a, b *PRSearchResult) *PRSearchResult {
 	for k, v := range b.Custom {
 		custom[k] = append(custom[k], v...)
 	}
+	for k, v := range custom {
+		custom[k] = deduplicatePRNodes(v)
+	}
 
 	merged := &PRSearchResult{
 		Created:         append(a.Created, b.Created...),

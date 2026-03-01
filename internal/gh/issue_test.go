@@ -50,14 +50,14 @@ func TestParseIssueSearchResult_NoCustomKeys(t *testing.T) {
 func TestMergeSearchIssuesResults_MergesCustom(t *testing.T) {
 	a := &IssueSearchResult{
 		Custom: map[string][]IssueSearchNode{
-			"alpha": {{Number: 1}},
-			"beta":  {{Number: 2}},
+			"alpha": {{Number: 1, URL: "https://github.com/org/repo/issues/1"}},
+			"beta":  {{Number: 2, URL: "https://github.com/org/repo/issues/2"}},
 		},
 	}
 	b := &IssueSearchResult{
 		Custom: map[string][]IssueSearchNode{
-			"beta":  {{Number: 3}},
-			"gamma": {{Number: 4}},
+			"beta":  {{Number: 3, URL: "https://github.com/org/repo/issues/3"}},
+			"gamma": {{Number: 4, URL: "https://github.com/org/repo/issues/4"}},
 		},
 	}
 
@@ -74,6 +74,28 @@ func TestMergeSearchIssuesResults_MergesCustom(t *testing.T) {
 	}
 	if len(merged.Custom["gamma"]) != 1 {
 		t.Errorf("Custom[gamma] has %d nodes, want 1", len(merged.Custom["gamma"]))
+	}
+}
+
+func TestMergeSearchIssuesResults_DeduplicatesCustomByURL(t *testing.T) {
+	a := &IssueSearchResult{
+		Custom: map[string][]IssueSearchNode{
+			"myTab": {{Number: 1, URL: "https://github.com/org/repo/issues/1"}},
+		},
+	}
+	b := &IssueSearchResult{
+		Custom: map[string][]IssueSearchNode{
+			"myTab": {
+				{Number: 1, URL: "https://github.com/org/repo/issues/1"},
+				{Number: 2, URL: "https://github.com/org/repo/issues/2"},
+			},
+		},
+	}
+
+	merged := MergeSearchIssuesResults(a, b)
+
+	if len(merged.Custom["myTab"]) != 2 {
+		t.Errorf("Custom[myTab] has %d nodes, want 2 (deduplicated)", len(merged.Custom["myTab"]))
 	}
 }
 

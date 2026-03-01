@@ -59,6 +59,9 @@ func MergeSearchIssuesResults(a, b *IssueSearchResult) *IssueSearchResult {
 	for k, v := range b.Custom {
 		custom[k] = append(custom[k], v...)
 	}
+	for k, v := range custom {
+		custom[k] = deduplicateIssueNodes(v)
+	}
 
 	merged := &IssueSearchResult{
 		Created:      append(a.Created, b.Created...),
