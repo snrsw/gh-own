@@ -12,7 +12,7 @@ import (
 
 func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchResult, error) {
 	if len(entries) == 0 {
-		return &PRSearchResult{}, nil
+		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
 	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
@@ -25,11 +25,11 @@ func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchR
 
 func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string) (*PRSearchResult, error) {
 	if username == "" {
-		return &PRSearchResult{}, nil
+		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
 	if len(teams) == 0 {
-		return &PRSearchResult{}, nil
+		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
 	entries := make(map[string]string, len(teams))

@@ -11,7 +11,7 @@ import (
 
 func SearchIssues(client *api.GraphQLClient, entries map[string]string) (*IssueSearchResult, error) {
 	if len(entries) == 0 {
-		return &IssueSearchResult{}, nil
+		return &IssueSearchResult{Custom: make(map[string][]IssueSearchNode)}, nil
 	}
 
 	raw, err := Search(client, issueSearchQuery, entries, parseIssueSearchJSON)
@@ -24,11 +24,11 @@ func SearchIssues(client *api.GraphQLClient, entries map[string]string) (*IssueS
 
 func SearchIssuesTeams(client *api.GraphQLClient, username string, teams []string) (*IssueSearchResult, error) {
 	if username == "" {
-		return &IssueSearchResult{}, nil
+		return &IssueSearchResult{Custom: make(map[string][]IssueSearchNode)}, nil
 	}
 
 	if len(teams) == 0 {
-		return &IssueSearchResult{}, nil
+		return &IssueSearchResult{Custom: make(map[string][]IssueSearchNode)}, nil
 	}
 
 	entries := map[string]string{}

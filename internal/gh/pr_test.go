@@ -140,6 +140,21 @@ func TestSearchPRs_EmptyEntries(t *testing.T) {
 	}
 }
 
+func TestSearchPRs_EmptyEntries_HasEmptyCustom(t *testing.T) {
+	results, err := SearchPRs(nil, nil)
+
+	if err != nil {
+		t.Fatalf("SearchPRs returned error: %v", err)
+	}
+
+	if results.Custom == nil {
+		t.Fatal("Custom should not be nil")
+	}
+	if len(results.Custom) != 0 {
+		t.Errorf("Custom has %d keys, want 0", len(results.Custom))
+	}
+}
+
 func TestSearchPRs_EmptyUsernameWithTeams(t *testing.T) {
 	results, err := SearchPRsTeams(nil, "", []string{"my-org/team-a"})
 

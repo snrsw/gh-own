@@ -63,7 +63,7 @@ No changes needed in `cmd/` — data flows through naturally.
 
 ### Existing test update (`internal/gh/pr_test.go`)
 
-- [ ] `TestSearchPRs_EmptyEntries_HasEmptyCustom` — assert `Custom` is not nil, length 0
+- [x] `TestSearchPRs_EmptyEntries_HasEmptyCustom` — assert `Custom` is not nil, length 0
 
 ## Verification
 
