@@ -77,6 +77,28 @@ gh own --debug
 | `/` | Filter items in current tab |
 | `ctrl+c` | Quit |
 
+## Configuration
+
+You can customize the search queries used for each tab by creating a config file at `$XDG_CONFIG_HOME/gh-own/config.yaml` (defaults to `~/.config/gh-own/config.yaml`).
+
+Use the `{user}` placeholder to reference the authenticated GitHub username.
+
+```yaml
+pr:
+  queries:
+    created: "is:pr is:open author:{user} label:team-a"
+    review_requested: "is:pr is:open review-requested:{user} label:urgent"
+issue:
+  queries:
+    participated: "is:issue is:open involves:{user}"
+```
+
+Any query you specify overrides the default for that tab. Tabs you don't specify keep their defaults. If no config file exists, the extension behaves exactly as before.
+
+Available query keys for `pr`: `created`, `assigned`, `review_requested`, `participated`
+
+Available query keys for `issue`: `created`, `assigned`, `participated`
+
 ## Requirements
 
 - [GitHub CLI](https://cli.github.com/) installed and authenticated
