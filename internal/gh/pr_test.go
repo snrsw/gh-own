@@ -50,6 +50,36 @@ func TestParsePRSearchResult_NoCustomKeys(t *testing.T) {
 	}
 }
 
+func TestMergeSearchPRsResults_MergesCustom(t *testing.T) {
+	a := &PRSearchResult{
+		Custom: map[string][]PRSearchNode{
+			"alpha": {{Number: 1}},
+			"beta":  {{Number: 2}},
+		},
+	}
+	b := &PRSearchResult{
+		Custom: map[string][]PRSearchNode{
+			"beta":  {{Number: 3}},
+			"gamma": {{Number: 4}},
+		},
+	}
+
+	merged := MergeSearchPRsResults(a, b)
+
+	if len(merged.Custom) != 3 {
+		t.Fatalf("Custom has %d keys, want 3", len(merged.Custom))
+	}
+	if len(merged.Custom["alpha"]) != 1 {
+		t.Errorf("Custom[alpha] has %d nodes, want 1", len(merged.Custom["alpha"]))
+	}
+	if len(merged.Custom["beta"]) != 2 {
+		t.Errorf("Custom[beta] has %d nodes, want 2", len(merged.Custom["beta"]))
+	}
+	if len(merged.Custom["gamma"]) != 1 {
+		t.Errorf("Custom[gamma] has %d nodes, want 1", len(merged.Custom["gamma"]))
+	}
+}
+
 func TestPRSearchResult_CIStatus(t *testing.T) {
 	tests := []struct {
 		name     string

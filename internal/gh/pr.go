@@ -54,11 +54,20 @@ type PRSearchResult struct {
 }
 
 func MergeSearchPRsResults(a, b *PRSearchResult) *PRSearchResult {
+	custom := make(map[string][]PRSearchNode)
+	for k, v := range a.Custom {
+		custom[k] = v
+	}
+	for k, v := range b.Custom {
+		custom[k] = append(custom[k], v...)
+	}
+
 	merged := &PRSearchResult{
 		Created:         append(a.Created, b.Created...),
 		Assigned:        append(a.Assigned, b.Assigned...),
 		Participated:    append(a.Participated, b.Participated...),
 		ReviewRequested: append(a.ReviewRequested, b.ReviewRequested...),
+		Custom:          custom,
 	}
 	return merged
 }
