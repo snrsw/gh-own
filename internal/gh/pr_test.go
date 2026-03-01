@@ -45,8 +45,8 @@ func TestPRSearchNode_RepositoryURL(t *testing.T) {
 	}
 }
 
-func TestSearchPRs_EmptyUsername(t *testing.T) {
-	results, err := SearchPRs(nil, "")
+func TestSearchPRs_EmptyEntries(t *testing.T) {
+	results, err := SearchPRs(nil, nil)
 
 	if err != nil {
 		t.Errorf("SearchPRs with empty username returned error: %v", err)

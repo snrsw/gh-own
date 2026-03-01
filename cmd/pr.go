@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/cache"
+	"github.com/snrsw/gh-own/internal/config"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/pr"
 	"github.com/snrsw/gh-own/internal/timing"
@@ -21,6 +22,13 @@ var prCmd = &cobra.Command{
 	RunE: func(_ *cobra.Command, _ []string) error {
 		defer timing.Track("pr:total")()
 
+		done := timing.Track("pr:config")
+		cfg, cfgErr := config.LoadFromPath(config.DefaultPath())
+		done()
+		if cfgErr != nil {
+			return cfgErr
+		}
+
 		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
 			done := timing.Track("pr:login")
 			username, err := gh.CurrentLogin()
@@ -28,6 +36,8 @@ var prCmd = &cobra.Command{
 			if err != nil {
 				return nil, err
 			}
+
+			entries := config.ResolveQueries(config.MergePRQueries(cfg.PR.Queries), username)
 
 			done = timing.Track("pr:rest-client")
 			restClient, err := api.DefaultRESTClient()
@@ -53,7 +63,7 @@ var prCmd = &cobra.Command{
 			userCh := make(chan result[*gh.PRSearchResult], 1)
 			go func() {
 				defer timing.Track("pr:search-user")()
-				prs, err := gh.SearchPRs(client, username)
+				prs, err := gh.SearchPRs(client, entries)
 				userCh <- result[*gh.PRSearchResult]{v: prs, err: err}
 			}()
 

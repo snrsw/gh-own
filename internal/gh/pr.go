@@ -9,16 +9,9 @@ import (
 	"github.com/snrsw/gh-own/internal/cistatus"
 )
 
-func SearchPRs(client *api.GraphQLClient, username string) (*PRSearchResult, error) {
-	if username == "" {
+func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchResult, error) {
+	if len(entries) == 0 {
 		return &PRSearchResult{}, nil
-	}
-
-	entries := map[string]string{
-		"created":          fmt.Sprintf("is:pr is:open author:%s", username),
-		"assigned":         fmt.Sprintf("is:pr is:open assignee:%s", username),
-		"participatedUser": fmt.Sprintf("is:pr is:open involves:%s -author:%s -assignee:%s -review-requested:%s", username, username, username, username),
-		"reviewRequested":  fmt.Sprintf("is:pr is:open review-requested:%s", username),
 	}
 
 	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
