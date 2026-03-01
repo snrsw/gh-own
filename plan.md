@@ -44,9 +44,9 @@ No changes needed in `cmd/` — data flows through naturally.
 
 ### Search layer — Issue (`internal/gh/issue_test.go`)
 
-- [ ] `TestParseIssueSearchResult_CustomKeyPreserved` — same for issues
-- [ ] `TestParseIssueSearchResult_NoCustomKeys` — same for issues
-- [ ] `TestMergeSearchIssuesResults_MergesCustom` — same for issues
+- [x] `TestParseIssueSearchResult_CustomKeyPreserved` — same for issues
+- [x] `TestParseIssueSearchResult_NoCustomKeys` — same for issues
+- [x] `TestMergeSearchIssuesResults_MergesCustom` — same for issues
 
 ### Domain layer — PR (`internal/pr/pr_test.go`)
 

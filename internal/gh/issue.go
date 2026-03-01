@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/snrsw/gh-own/internal/config"
 )
 
 func SearchIssues(client *api.GraphQLClient, entries map[string]string) (*IssueSearchResult, error) {
@@ -47,13 +48,23 @@ type IssueSearchResult struct {
 	Created      []IssueSearchNode
 	Assigned     []IssueSearchNode
 	Participated []IssueSearchNode
+	Custom       map[string][]IssueSearchNode
 }
 
 func MergeSearchIssuesResults(a, b *IssueSearchResult) *IssueSearchResult {
+	custom := make(map[string][]IssueSearchNode)
+	for k, v := range a.Custom {
+		custom[k] = v
+	}
+	for k, v := range b.Custom {
+		custom[k] = append(custom[k], v...)
+	}
+
 	merged := &IssueSearchResult{
 		Created:      append(a.Created, b.Created...),
 		Assigned:     append(a.Assigned, b.Assigned...),
 		Participated: append(a.Participated, b.Participated...),
+		Custom:       custom,
 	}
 	return merged
 }
@@ -89,11 +100,16 @@ const issueSearchQuery = `query($q: String!) {
 }`
 
 func parseIssueSearchResult(parsed map[string][]IssueSearchNode) (*IssueSearchResult, error) {
+	defaultKeys := config.DefaultIssueKeys()
 	var participated []IssueSearchNode
+	custom := make(map[string][]IssueSearchNode)
+
 	for key, nodes := range parsed {
 		switch {
 		case strings.HasPrefix(key, "participated"):
 			participated = append(participated, nodes...)
+		case !defaultKeys[key]:
+			custom[key] = nodes
 		}
 	}
 
@@ -101,6 +117,7 @@ func parseIssueSearchResult(parsed map[string][]IssueSearchNode) (*IssueSearchRe
 		Created:      parsed["created"],
 		Assigned:     parsed["assigned"],
 		Participated: deduplicateIssueNodes(participated),
+		Custom:       custom,
 	}, nil
 }
 
