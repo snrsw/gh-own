@@ -7,6 +7,66 @@ import (
 	"github.com/snrsw/gh-own/internal/gh"
 )
 
+func TestNewGroupedIssues_PropagatesCustom(t *testing.T) {
+	ghResult := &gh.IssueSearchResult{
+		Created: []gh.IssueSearchNode{{Number: 1}},
+		Custom: map[string][]gh.IssueSearchNode{
+			"myTab": {{Number: 10, Title: "Custom Issue"}},
+		},
+	}
+
+	grouped := NewGroupedIssues(ghResult)
+
+	if len(grouped.Custom) != 1 {
+		t.Fatalf("Custom has %d keys, want 1", len(grouped.Custom))
+	}
+	sr, ok := grouped.Custom["myTab"]
+	if !ok {
+		t.Fatal("Custom[\"myTab\"] not found")
+	}
+	if sr.TotalCount != 1 {
+		t.Errorf("TotalCount = %d, want 1", sr.TotalCount)
+	}
+}
+
+func TestBuildTabs_Issue_DefaultTabsOnly(t *testing.T) {
+	grouped := &GroupedIssues{
+		Created:      gh.SearchResult[issue]{TotalCount: 1, Items: []issue{{Number: 1}}},
+		Participated: gh.SearchResult[issue]{TotalCount: 0, Items: []issue{}},
+		Assigned:     gh.SearchResult[issue]{TotalCount: 0, Items: []issue{}},
+	}
+
+	tabs := grouped.BuildTabs()
+
+	if len(tabs) != 3 {
+		t.Fatalf("BuildTabs() returned %d tabs, want 3", len(tabs))
+	}
+}
+
+func TestBuildTabs_Issue_WithCustomTabs(t *testing.T) {
+	grouped := &GroupedIssues{
+		Created:      gh.SearchResult[issue]{TotalCount: 0, Items: []issue{}},
+		Participated: gh.SearchResult[issue]{TotalCount: 0, Items: []issue{}},
+		Assigned:     gh.SearchResult[issue]{TotalCount: 0, Items: []issue{}},
+		Custom: map[string]gh.SearchResult[issue]{
+			"zeta":  {TotalCount: 1, Items: []issue{{Number: 1}}},
+			"alpha": {TotalCount: 2, Items: []issue{{Number: 2}, {Number: 3}}},
+		},
+	}
+
+	tabs := grouped.BuildTabs()
+
+	if len(tabs) != 5 {
+		t.Fatalf("BuildTabs() returned %d tabs, want 5", len(tabs))
+	}
+	if tabs[3].Name() != "alpha (2)" {
+		t.Errorf("tabs[3].Name() = %q, want %q", tabs[3].Name(), "alpha (2)")
+	}
+	if tabs[4].Name() != "zeta (1)" {
+		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "zeta (1)")
+	}
+}
+
 func TestIssue_RepositoryFullName(t *testing.T) {
 	tests := []struct {
 		name          string

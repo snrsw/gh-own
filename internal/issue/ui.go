@@ -3,6 +3,7 @@ package issue
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/snrsw/gh-own/internal/gh"
@@ -11,11 +12,24 @@ import (
 
 // BuildTabs converts grouped issues into UI tabs.
 func (o *GroupedIssues) BuildTabs() []ui.Tab {
-	return []ui.Tab{
+	tabs := []ui.Tab{
 		ui.NewTab(fmt.Sprintf("Created (%d)", o.Created.TotalCount), ui.CreateList(o.issueItems(o.Created))),
 		ui.NewTab(fmt.Sprintf("Participated (%d)", o.Participated.TotalCount), ui.CreateList(o.issueItems(o.Participated))),
 		ui.NewTab(fmt.Sprintf("Assigned (%d)", o.Assigned.TotalCount), ui.CreateList(o.issueItems(o.Assigned))),
 	}
+
+	keys := make([]string, 0, len(o.Custom))
+	for k := range o.Custom {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		sr := o.Custom[k]
+		tabs = append(tabs, ui.NewTab(fmt.Sprintf("%s (%d)", k, sr.TotalCount), ui.CreateList(o.issueItems(sr))))
+	}
+
+	return tabs
 }
 
 func (i issue) toItem() ui.Item {

@@ -57,9 +57,9 @@ No changes needed in `cmd/` — data flows through naturally.
 
 ### Domain layer — Issue (`internal/issue/issue_test.go`)
 
-- [ ] `TestNewGroupedIssues_PropagatesCustom` — same for issues
-- [ ] `TestBuildTabs_Issue_DefaultTabsOnly` — no custom → exactly 3 tabs
-- [ ] `TestBuildTabs_Issue_WithCustomTabs` — custom tabs appended after 3 defaults, sorted
+- [x] `TestNewGroupedIssues_PropagatesCustom` — same for issues
+- [x] `TestBuildTabs_Issue_DefaultTabsOnly` — no custom → exactly 3 tabs
+- [x] `TestBuildTabs_Issue_WithCustomTabs` — custom tabs appended after 3 defaults, sorted
 
 ### Existing test update (`internal/gh/pr_test.go`)
 
