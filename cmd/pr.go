@@ -22,15 +22,15 @@ var prCmd = &cobra.Command{
 	RunE: func(_ *cobra.Command, _ []string) error {
 		defer timing.Track("pr:total")()
 
-		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
-			done := timing.Track("pr:config")
-			cfg, err := config.LoadFromPath(config.DefaultPath())
-			done()
-			if err != nil {
-				return nil, err
-			}
+		done := timing.Track("pr:config")
+		cfg, cfgErr := config.LoadFromPath(config.DefaultPath())
+		done()
+		if cfgErr != nil {
+			return cfgErr
+		}
 
-			done = timing.Track("pr:login")
+		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
+			done := timing.Track("pr:login")
 			username, err := gh.CurrentLogin()
 			done()
 			if err != nil {

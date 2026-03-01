@@ -55,25 +55,41 @@ func LoadFromPath(path string) (Config, error) {
 	return cfg, nil
 }
 
-var DefaultPRQueries = map[string]string{
+var defaultPRQueries = map[string]string{
 	"created":          "is:pr is:open author:{user}",
 	"assigned":         "is:pr is:open assignee:{user}",
 	"participatedUser": "is:pr is:open involves:{user} -author:{user} -assignee:{user} -review-requested:{user}",
 	"reviewRequested":  "is:pr is:open review-requested:{user}",
 }
 
-var DefaultIssueQueries = map[string]string{
+var defaultIssueQueries = map[string]string{
 	"created":          "is:issue is:open author:{user}",
 	"assigned":         "is:issue is:open assignee:{user}",
 	"participatedUser": "is:issue is:open involves:{user} -author:{user} -assignee:{user}",
 }
 
+func DefaultPRQueries() map[string]string {
+	return copyMap(defaultPRQueries)
+}
+
+func DefaultIssueQueries() map[string]string {
+	return copyMap(defaultIssueQueries)
+}
+
+func copyMap(m map[string]string) map[string]string {
+	cp := make(map[string]string, len(m))
+	for k, v := range m {
+		cp[k] = v
+	}
+	return cp
+}
+
 func MergePRQueries(override map[string]string) map[string]string {
-	return mergeQueries(DefaultPRQueries, override)
+	return mergeQueries(defaultPRQueries, override)
 }
 
 func MergeIssueQueries(override map[string]string) map[string]string {
-	return mergeQueries(DefaultIssueQueries, override)
+	return mergeQueries(defaultIssueQueries, override)
 }
 
 func mergeQueries(defaults, override map[string]string) map[string]string {

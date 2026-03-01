@@ -22,15 +22,15 @@ var issueCmd = &cobra.Command{
 	RunE: func(_ *cobra.Command, _ []string) error {
 		defer timing.Track("issue:total")()
 
-		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
-			done := timing.Track("issue:config")
-			cfg, err := config.LoadFromPath(config.DefaultPath())
-			done()
-			if err != nil {
-				return nil, err
-			}
+		done := timing.Track("issue:config")
+		cfg, cfgErr := config.LoadFromPath(config.DefaultPath())
+		done()
+		if cfgErr != nil {
+			return cfgErr
+		}
 
-			done = timing.Track("issue:login")
+		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
+			done := timing.Track("issue:login")
 			username, err := gh.CurrentLogin()
 			done()
 			if err != nil {

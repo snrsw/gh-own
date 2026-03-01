@@ -9,18 +9,18 @@ import (
 func TestDefaultPRQueries_ContainsExpectedKeys(t *testing.T) {
 	expectedKeys := []string{"created", "assigned", "participatedUser", "reviewRequested"}
 
-	if len(DefaultPRQueries) != len(expectedKeys) {
-		t.Fatalf("DefaultPRQueries has %d keys, want %d", len(DefaultPRQueries), len(expectedKeys))
+	if len(DefaultPRQueries()) != len(expectedKeys) {
+		t.Fatalf("DefaultPRQueries() has %d keys, want %d", len(DefaultPRQueries()), len(expectedKeys))
 	}
 
 	for _, key := range expectedKeys {
-		query, ok := DefaultPRQueries[key]
+		query, ok := DefaultPRQueries()[key]
 		if !ok {
-			t.Errorf("DefaultPRQueries missing key %q", key)
+			t.Errorf("DefaultPRQueries() missing key %q", key)
 			continue
 		}
 		if !strings.Contains(query, "{user}") {
-			t.Errorf("DefaultPRQueries[%q] = %q, want it to contain {user}", key, query)
+			t.Errorf("DefaultPRQueries()[%q] = %q, want it to contain {user}", key, query)
 		}
 	}
 }
@@ -28,18 +28,18 @@ func TestDefaultPRQueries_ContainsExpectedKeys(t *testing.T) {
 func TestDefaultIssueQueries_ContainsExpectedKeys(t *testing.T) {
 	expectedKeys := []string{"created", "assigned", "participatedUser"}
 
-	if len(DefaultIssueQueries) != len(expectedKeys) {
-		t.Fatalf("DefaultIssueQueries has %d keys, want %d", len(DefaultIssueQueries), len(expectedKeys))
+	if len(DefaultIssueQueries()) != len(expectedKeys) {
+		t.Fatalf("DefaultIssueQueries() has %d keys, want %d", len(DefaultIssueQueries()), len(expectedKeys))
 	}
 
 	for _, key := range expectedKeys {
-		query, ok := DefaultIssueQueries[key]
+		query, ok := DefaultIssueQueries()[key]
 		if !ok {
-			t.Errorf("DefaultIssueQueries missing key %q", key)
+			t.Errorf("DefaultIssueQueries() missing key %q", key)
 			continue
 		}
 		if !strings.Contains(query, "{user}") {
-			t.Errorf("DefaultIssueQueries[%q] = %q, want it to contain {user}", key, query)
+			t.Errorf("DefaultIssueQueries()[%q] = %q, want it to contain {user}", key, query)
 		}
 	}
 }
@@ -86,11 +86,11 @@ func TestResolveQueries_NoPlaceholder(t *testing.T) {
 func TestMergePRQueries_NilOverride_ReturnsDefaults(t *testing.T) {
 	merged := MergePRQueries(nil)
 
-	if len(merged) != len(DefaultPRQueries) {
-		t.Fatalf("MergePRQueries(nil) has %d keys, want %d", len(merged), len(DefaultPRQueries))
+	if len(merged) != len(DefaultPRQueries()) {
+		t.Fatalf("MergePRQueries(nil) has %d keys, want %d", len(merged), len(DefaultPRQueries()))
 	}
 
-	for key, want := range DefaultPRQueries {
+	for key, want := range DefaultPRQueries() {
 		if got := merged[key]; got != want {
 			t.Errorf("merged[%q] = %q, want %q", key, got, want)
 		}
@@ -104,8 +104,8 @@ func TestMergePRQueries_PartialOverride(t *testing.T) {
 
 	merged := MergePRQueries(override)
 
-	if len(merged) != len(DefaultPRQueries) {
-		t.Fatalf("merged has %d keys, want %d", len(merged), len(DefaultPRQueries))
+	if len(merged) != len(DefaultPRQueries()) {
+		t.Fatalf("merged has %d keys, want %d", len(merged), len(DefaultPRQueries()))
 	}
 
 	if got := merged["created"]; got != override["created"] {
@@ -113,8 +113,8 @@ func TestMergePRQueries_PartialOverride(t *testing.T) {
 	}
 
 	for _, key := range []string{"assigned", "participatedUser", "reviewRequested"} {
-		if got := merged[key]; got != DefaultPRQueries[key] {
-			t.Errorf("merged[%q] = %q, want default %q", key, got, DefaultPRQueries[key])
+		if got := merged[key]; got != DefaultPRQueries()[key] {
+			t.Errorf("merged[%q] = %q, want default %q", key, got, DefaultPRQueries()[key])
 		}
 	}
 }
@@ -139,11 +139,11 @@ func TestMergePRQueries_FullOverride(t *testing.T) {
 func TestMergeIssueQueries_NilOverride_ReturnsDefaults(t *testing.T) {
 	merged := MergeIssueQueries(nil)
 
-	if len(merged) != len(DefaultIssueQueries) {
-		t.Fatalf("MergeIssueQueries(nil) has %d keys, want %d", len(merged), len(DefaultIssueQueries))
+	if len(merged) != len(DefaultIssueQueries()) {
+		t.Fatalf("MergeIssueQueries(nil) has %d keys, want %d", len(merged), len(DefaultIssueQueries()))
 	}
 
-	for key, want := range DefaultIssueQueries {
+	for key, want := range DefaultIssueQueries() {
 		if got := merged[key]; got != want {
 			t.Errorf("merged[%q] = %q, want %q", key, got, want)
 		}
@@ -157,8 +157,8 @@ func TestMergeIssueQueries_PartialOverride(t *testing.T) {
 
 	merged := MergeIssueQueries(override)
 
-	if len(merged) != len(DefaultIssueQueries) {
-		t.Fatalf("merged has %d keys, want %d", len(merged), len(DefaultIssueQueries))
+	if len(merged) != len(DefaultIssueQueries()) {
+		t.Fatalf("merged has %d keys, want %d", len(merged), len(DefaultIssueQueries()))
 	}
 
 	if got := merged["assigned"]; got != override["assigned"] {
@@ -166,8 +166,31 @@ func TestMergeIssueQueries_PartialOverride(t *testing.T) {
 	}
 
 	for _, key := range []string{"created", "participatedUser"} {
-		if got := merged[key]; got != DefaultIssueQueries[key] {
-			t.Errorf("merged[%q] = %q, want default %q", key, got, DefaultIssueQueries[key])
+		if got := merged[key]; got != DefaultIssueQueries()[key] {
+			t.Errorf("merged[%q] = %q, want default %q", key, got, DefaultIssueQueries()[key])
+		}
+	}
+}
+
+func TestMergePRQueries_NewKeyOverride(t *testing.T) {
+	override := map[string]string{
+		"customTab": "is:pr is:open label:needs-triage",
+	}
+
+	merged := MergePRQueries(override)
+
+	wantLen := len(DefaultPRQueries()) + 1
+	if len(merged) != wantLen {
+		t.Fatalf("merged has %d keys, want %d", len(merged), wantLen)
+	}
+
+	if got := merged["customTab"]; got != override["customTab"] {
+		t.Errorf("merged[customTab] = %q, want %q", got, override["customTab"])
+	}
+
+	for key, want := range DefaultPRQueries() {
+		if got := merged[key]; got != want {
+			t.Errorf("merged[%q] = %q, want default %q", key, got, want)
 		}
 	}
 }
