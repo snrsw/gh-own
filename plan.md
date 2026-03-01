@@ -50,10 +50,10 @@ No changes needed in `cmd/` — data flows through naturally.
 
 ### Domain layer — PR (`internal/pr/pr_test.go`)
 
-- [ ] `TestNewGroupedPullRequests_PropagatesCustom` — custom nodes convert to `SearchResult[pullRequest]`
-- [ ] `TestBuildTabs_DefaultTabsOnly` — no custom → exactly 4 tabs
-- [ ] `TestBuildTabs_WithCustomTabs` — custom keys "zeta" and "alpha" → 6 tabs, custom sorted alphabetically at indices 4-5
-- [ ] `TestBuildTabs_CustomTabNameIncludesCount` — tab name format: `"myTab (3)"`
+- [x] `TestNewGroupedPullRequests_PropagatesCustom` — custom nodes convert to `SearchResult[pullRequest]`
+- [x] `TestBuildTabs_DefaultTabsOnly` — no custom → exactly 4 tabs
+- [x] `TestBuildTabs_WithCustomTabs` — custom keys "zeta" and "alpha" → 6 tabs, custom sorted alphabetically at indices 4-5
+- [x] `TestBuildTabs_CustomTabNameIncludesCount` — tab name format: `"myTab (3)"`
 
 ### Domain layer — Issue (`internal/issue/issue_test.go`)
 
