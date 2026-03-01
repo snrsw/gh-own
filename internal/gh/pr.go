@@ -7,6 +7,7 @@ import (
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/cistatus"
+	"github.com/snrsw/gh-own/internal/config"
 )
 
 func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchResult, error) {
@@ -49,6 +50,7 @@ type PRSearchResult struct {
 	Assigned        []PRSearchNode
 	Participated    []PRSearchNode
 	ReviewRequested []PRSearchNode
+	Custom          map[string][]PRSearchNode
 }
 
 func MergeSearchPRsResults(a, b *PRSearchResult) *PRSearchResult {
@@ -105,11 +107,16 @@ const prSearchQuery = `query($q: String!) {
 }`
 
 func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, error) {
+	defaultKeys := config.DefaultPRKeys()
 	var participated []PRSearchNode
+	custom := make(map[string][]PRSearchNode)
+
 	for key, nodes := range parsed {
 		switch {
 		case strings.HasPrefix(key, "participated"):
 			participated = append(participated, nodes...)
+		case !defaultKeys[key]:
+			custom[key] = nodes
 		}
 	}
 
@@ -118,6 +125,7 @@ func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, err
 		Assigned:        parsed["assigned"],
 		Participated:    deduplicatePRNodes(participated),
 		ReviewRequested: parsed["reviewRequested"],
+		Custom:          custom,
 	}, nil
 }
 

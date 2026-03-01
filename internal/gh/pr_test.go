@@ -6,6 +6,29 @@ import (
 	"github.com/snrsw/gh-own/internal/cistatus"
 )
 
+func TestParsePRSearchResult_CustomKeyPreserved(t *testing.T) {
+	parsed := map[string][]PRSearchNode{
+		"created": {{Number: 1, Title: "PR1"}},
+		"myTab":   {{Number: 2, Title: "PR2"}},
+	}
+
+	result, err := parsePRSearchResult(parsed)
+	if err != nil {
+		t.Fatalf("parsePRSearchResult returned error: %v", err)
+	}
+
+	if len(result.Custom) == 0 {
+		t.Fatal("Custom map is empty, want key \"myTab\"")
+	}
+	nodes, ok := result.Custom["myTab"]
+	if !ok {
+		t.Fatal("Custom[\"myTab\"] not found")
+	}
+	if len(nodes) != 1 || nodes[0].Number != 2 {
+		t.Errorf("Custom[\"myTab\"] = %v, want [{Number:2}]", nodes)
+	}
+}
+
 func TestPRSearchResult_CIStatus(t *testing.T) {
 	tests := []struct {
 		name     string
