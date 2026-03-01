@@ -59,11 +59,11 @@ func TestBuildTabs_Issue_WithCustomTabs(t *testing.T) {
 	if len(tabs) != 5 {
 		t.Fatalf("BuildTabs() returned %d tabs, want 5", len(tabs))
 	}
-	if tabs[3].Name() != "alpha (2)" {
-		t.Errorf("tabs[3].Name() = %q, want %q", tabs[3].Name(), "alpha (2)")
+	if tabs[3].Name() != "Alpha (2)" {
+		t.Errorf("tabs[3].Name() = %q, want %q", tabs[3].Name(), "Alpha (2)")
 	}
-	if tabs[4].Name() != "zeta (1)" {
-		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "zeta (1)")
+	if tabs[4].Name() != "Zeta (1)" {
+		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "Zeta (1)")
 	}
 }
 

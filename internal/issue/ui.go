@@ -26,7 +26,7 @@ func (o *GroupedIssues) BuildTabs() []ui.Tab {
 
 	for _, k := range keys {
 		sr := o.Custom[k]
-		tabs = append(tabs, ui.NewTab(fmt.Sprintf("%s (%d)", k, sr.TotalCount), ui.CreateList(o.issueItems(sr))))
+		tabs = append(tabs, ui.NewTab(fmt.Sprintf("%s (%d)", ui.HumanizeTabName(k), sr.TotalCount), ui.CreateList(o.issueItems(sr))))
 	}
 
 	return tabs

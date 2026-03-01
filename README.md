@@ -114,6 +114,22 @@ issue:
 
 Any query you specify overrides the default for that tab. Tabs you don't specify keep their defaults. If no config file exists, the extension behaves exactly as before.
 
+### Custom tabs
+
+You can add custom tabs by defining queries with non-default keys. Custom tabs appear after the default tabs, sorted alphabetically. The key name is used as the tab title (hyphens become spaces, each word capitalized).
+
+```yaml
+pr:
+  queries:
+    needs-triage: "is:pr is:open label:needs-triage"
+    team-review: "is:pr is:open team-review-requested:my-org/my-team"
+issue:
+  queries:
+    bugs: "is:issue is:open label:bug"
+```
+
+This adds tabs named "Needs Triage", "Team Review", and "Bugs" respectively.
+
 ### Default queries
 
 The built-in defaults are equivalent to the following config:

@@ -64,11 +64,11 @@ func TestBuildTabs_WithCustomTabs(t *testing.T) {
 		t.Fatalf("BuildTabs() returned %d tabs, want 6", len(tabs))
 	}
 	// Custom tabs should be sorted alphabetically at indices 4-5
-	if tabs[4].Name() != "alpha (2)" {
-		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "alpha (2)")
+	if tabs[4].Name() != "Alpha (2)" {
+		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "Alpha (2)")
 	}
-	if tabs[5].Name() != "zeta (1)" {
-		t.Errorf("tabs[5].Name() = %q, want %q", tabs[5].Name(), "zeta (1)")
+	if tabs[5].Name() != "Zeta (1)" {
+		t.Errorf("tabs[5].Name() = %q, want %q", tabs[5].Name(), "Zeta (1)")
 	}
 }
 
@@ -88,8 +88,8 @@ func TestBuildTabs_CustomTabNameIncludesCount(t *testing.T) {
 	if len(tabs) != 5 {
 		t.Fatalf("BuildTabs() returned %d tabs, want 5", len(tabs))
 	}
-	if tabs[4].Name() != "myTab (3)" {
-		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "myTab (3)")
+	if tabs[4].Name() != "MyTab (3)" {
+		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "MyTab (3)")
 	}
 }
 

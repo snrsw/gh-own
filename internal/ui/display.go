@@ -3,7 +3,9 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 	"time"
+	"unicode"
 )
 
 func UpdatedAgo(updatedAt string) string {
@@ -52,6 +54,23 @@ func CreatedOn(createdAt string) string {
 	}
 
 	return t.Format("2006-01-02")
+}
+
+// HumanizeTabName converts a kebab-case key like "needs-triage" to "Needs Triage".
+func HumanizeTabName(s string) string {
+	if s == "" {
+		return ""
+	}
+	words := strings.Split(s, "-")
+	for i, w := range words {
+		if w == "" {
+			continue
+		}
+		runes := []rune(w)
+		runes[0] = unicode.ToUpper(runes[0])
+		words[i] = string(runes)
+	}
+	return strings.Join(words, " ")
 }
 
 func humanizeDuration(d time.Duration) string {
