@@ -34,7 +34,7 @@ No changes needed in `cmd/` — data flows through naturally.
 ### Config layer (`internal/config/config_test.go`)
 
 - [x] `TestDefaultPRKeys_ReturnsKnownKeys` — returns set of {created, assigned, participatedUser, reviewRequested}
-- [ ] `TestDefaultIssueKeys_ReturnsKnownKeys` — returns set of {created, assigned, participatedUser}
+- [x] `TestDefaultIssueKeys_ReturnsKnownKeys` — returns set of {created, assigned, participatedUser}
 
 ### Search layer — PR (`internal/gh/pr_test.go`)
 

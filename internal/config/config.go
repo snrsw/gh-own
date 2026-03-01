@@ -80,6 +80,14 @@ func DefaultPRQueries() map[string]string {
 	return copyMap(defaultPRQueries)
 }
 
+func DefaultIssueKeys() map[string]bool {
+	keys := make(map[string]bool, len(defaultIssueQueries))
+	for k := range defaultIssueQueries {
+		keys[k] = true
+	}
+	return keys
+}
+
 func DefaultIssueQueries() map[string]string {
 	return copyMap(defaultIssueQueries)
 }

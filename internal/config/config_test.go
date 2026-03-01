@@ -45,6 +45,25 @@ func TestDefaultPRQueries_ContainsExpectedKeys(t *testing.T) {
 	}
 }
 
+func TestDefaultIssueKeys_ReturnsKnownKeys(t *testing.T) {
+	want := map[string]bool{
+		"created":          true,
+		"assigned":         true,
+		"participatedUser": true,
+	}
+
+	got := DefaultIssueKeys()
+
+	if len(got) != len(want) {
+		t.Fatalf("DefaultIssueKeys() has %d keys, want %d", len(got), len(want))
+	}
+	for key := range want {
+		if !got[key] {
+			t.Errorf("DefaultIssueKeys() missing key %q", key)
+		}
+	}
+}
+
 func TestDefaultIssueQueries_ContainsExpectedKeys(t *testing.T) {
 	expectedKeys := []string{"created", "assigned", "participatedUser"}
 
