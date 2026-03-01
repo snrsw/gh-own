@@ -95,9 +95,30 @@ issue:
 
 Any query you specify overrides the default for that tab. Tabs you don't specify keep their defaults. If no config file exists, the extension behaves exactly as before.
 
-Available query keys for `pr`: `created`, `assigned`, `review_requested`, `participated`
+### Default queries
 
-Available query keys for `issue`: `created`, `assigned`, `participated`
+The built-in defaults are equivalent to the following config:
+
+```yaml
+pr:
+  queries:
+    created: "is:pr is:open author:{user}"
+    assigned: "is:pr is:open assignee:{user}"
+    review_requested: "is:pr is:open review-requested:{user}"
+    participated: "is:pr is:open involves:{user} -author:{user} -assignee:{user} -review-requested:{user}"
+issue:
+  queries:
+    created: "is:issue is:open author:{user}"
+    assigned: "is:issue is:open assignee:{user}"
+    participated: "is:issue is:open involves:{user} -author:{user} -assignee:{user}"
+```
+
+### Available keys
+
+| Command | Keys |
+|---------|------|
+| `pr` | `created`, `assigned`, `review_requested`, `participated` |
+| `issue` | `created`, `assigned`, `participated` |
 
 ## Requirements
 
