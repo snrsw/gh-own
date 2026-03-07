@@ -3,7 +3,6 @@ Output demo/demo.gif
 Set FontSize 30
 Set Width 2400
 Set Height 1200
-Set BorderRadius 10
 Set Theme "Github"
 Set Shell "bash"
 Env PS1 ">> "
