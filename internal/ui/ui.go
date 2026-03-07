@@ -144,7 +144,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.tabs) == 0 {
 			m.tabs = []Tab{NewTab("Empty", CreateList(nil))}
 		}
-		m.activeTab = 0
+		if m.activeTab >= len(m.tabs) {
+			m.activeTab = 0
+		}
 		if m.width > 0 {
 			m = m.handleWindowSize(tea.WindowSizeMsg{Width: m.width, Height: m.height})
 		}
