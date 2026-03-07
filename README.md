@@ -31,10 +31,6 @@ Key features:
 gh extension install snrsw/gh-own
 ```
 
-## Demo
-
-![Demo](demo/demo.gif)
-
 ## Usage
 
 ```sh
