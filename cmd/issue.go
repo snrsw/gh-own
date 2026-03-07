@@ -8,6 +8,7 @@ import (
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/cache"
 	"github.com/snrsw/gh-own/internal/config"
+	demodata "github.com/snrsw/gh-own/internal/demo"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/issue"
 	"github.com/snrsw/gh-own/internal/timing"
@@ -30,6 +31,11 @@ var issueCmd = &cobra.Command{
 		}
 
 		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
+			if demo {
+				ig := issue.NewGroupedIssues(demodata.IssueSearchResult())
+				return ig.BuildTabs(), nil
+			}
+
 			done := timing.Track("issue:login")
 			username, err := gh.CurrentLogin()
 			done()

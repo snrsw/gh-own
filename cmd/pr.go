@@ -8,6 +8,7 @@ import (
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/snrsw/gh-own/internal/cache"
 	"github.com/snrsw/gh-own/internal/config"
+	demodata "github.com/snrsw/gh-own/internal/demo"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/pr"
 	"github.com/snrsw/gh-own/internal/timing"
@@ -30,6 +31,11 @@ var prCmd = &cobra.Command{
 		}
 
 		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
+			if demo {
+				prg := pr.NewGroupedPullRequests(demodata.PRSearchResult())
+				return prg.BuildTabs(), nil
+			}
+
 			done := timing.Track("pr:login")
 			username, err := gh.CurrentLogin()
 			done()

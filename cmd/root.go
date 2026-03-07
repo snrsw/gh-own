@@ -39,8 +39,10 @@ func Execute() {
 }
 
 var debug bool
+var demo bool
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug logging")
+	rootCmd.PersistentFlags().BoolVar(&demo, "demo", false, "use demo data (no GitHub API calls)")
 	rootCmd.AddCommand(prCmd, issueCmd)
 }

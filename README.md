@@ -31,6 +31,10 @@ Key features:
 gh extension install snrsw/gh-own
 ```
 
+## Demo
+
+![Demo](demo/demo.gif)
+
 ## Usage
 
 ```sh
@@ -65,6 +69,7 @@ gh own issue
 
 # Enable debug logging
 gh own --debug
+
 ```
 
 ### Keyboard shortcuts
