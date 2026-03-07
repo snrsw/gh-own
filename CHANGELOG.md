@@ -2,6 +2,10 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.1.2](https://github.com/snrsw/gh-own/compare/0.1.1...0.1.2) - 2026-03-07
+### Other Changes
+- Add demo GIF to README with browser-open status feedback by @snrsw in https://github.com/snrsw/gh-own/pull/57
+
 ## [0.1.1](https://github.com/snrsw/gh-own/compare/0.1.0...0.1.1) - 2026-03-07
 ### Other Changes
 - Add --demo flag for README recording by @snrsw in https://github.com/snrsw/gh-own/pull/54
