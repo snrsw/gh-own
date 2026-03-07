@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -62,6 +63,9 @@ func (t Tab) Name() string {
 	return t.name
 }
 
+// clearStatusMsg is sent after a delay to clear the status bar.
+type clearStatusMsg struct{}
+
 type Model struct {
 	tabs      []Tab
 	activeTab int
@@ -73,6 +77,7 @@ type Model struct {
 	spinner   spinner.Model
 	err       error
 	fetchCmd  tea.Cmd
+	statusMsg string
 }
 
 // TabsMsg signals that data loading is complete and tabs are ready.
@@ -158,6 +163,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 		return m, nil
+	case clearStatusMsg:
+		m.statusMsg = ""
+		return m, nil
 	}
 
 	var cmd tea.Cmd
@@ -182,7 +190,11 @@ func (m Model) View() string {
 	)
 
 	doc.WriteString("\n")
-	doc.WriteString(helpView(m.tabs[m.activeTab].list.FilterState()))
+	if m.statusMsg != "" {
+		doc.WriteString(StatusStyle.Render(m.statusMsg))
+	} else {
+		doc.WriteString(helpView(m.tabs[m.activeTab].list.FilterState()))
+	}
 
 	out := DocStyle.Render(doc.String())
 	return out
@@ -294,5 +306,7 @@ func (m Model) handleEnter() (Model, tea.Cmd, bool) {
 		return m, nil, true
 	}
 
-	return m, openURLCmd(it.url), true
+	m.statusMsg = "→ Opening " + it.url + " in browser…"
+	clearCmd := tea.Tick(2*time.Second, func(time.Time) tea.Msg { return clearStatusMsg{} })
+	return m, tea.Batch(openURLCmd(it.url), clearCmd), true
 }
