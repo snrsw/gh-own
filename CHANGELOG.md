@@ -2,6 +2,10 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.1.0](https://github.com/snrsw/gh-own/compare/0.0.11...0.1.0) - 2026-03-07
+### Other Changes
+- Fix active tab index out of bounds when tabs are removed by @snrsw in https://github.com/snrsw/gh-own/pull/52
+
 ## [0.0.11](https://github.com/snrsw/gh-own/compare/0.0.10...0.0.11) - 2026-03-01
 ### Other Changes
 - Sync README and CLAUDE.md with current codebase by @snrsw in https://github.com/snrsw/gh-own/pull/44
