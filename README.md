@@ -65,6 +65,7 @@ gh own issue
 
 # Enable debug logging
 gh own --debug
+
 ```
 
 ### Keyboard shortcuts
