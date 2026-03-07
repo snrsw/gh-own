@@ -78,4 +78,5 @@ func helpView(state list.FilterState) string {
 var (
 	DocStyle    = lipgloss.NewStyle().Padding(1, 2, 1, 2)
 	WindowStyle = lipgloss.NewStyle().Align(lipgloss.Left)
+	StatusStyle = lipgloss.NewStyle().Foreground(colorAccent)
 )

@@ -45,6 +45,9 @@
 
               # https://github.com/golangci/golangci-lint
               golangci-lint
+
+              # demo tools
+              vhs
             ];
           };
         }

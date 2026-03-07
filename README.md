@@ -8,6 +8,8 @@
 
 GitHub CLI extension to list your owned PRs and issues across repositories unlike `gh pr list` and `gh issue list`, which are repo-scoped.
 
+![demo](demo/demo.gif)
+
 Key features:
 
 - List your pull requests across all repositories grouped into:
