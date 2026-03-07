@@ -45,9 +45,6 @@
 
               # https://github.com/golangci/golangci-lint
               golangci-lint
-
-              # https://github.com/charmbracelet/vhs — record terminal GIFs
-              vhs
             ];
           };
         }
