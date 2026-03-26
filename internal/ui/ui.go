@@ -18,13 +18,6 @@ type Item struct {
 	repoName, titleText, titleSuffix, description, url string
 }
 
-// WithSuffix returns a copy of the item with the given pre-styled suffix appended
-// to the title line as-is (preserving its ANSI colors) during rendering.
-func (i Item) WithSuffix(s string) Item {
-	i.titleSuffix = s
-	return i
-}
-
 func NewItem(repoName, titleText, description, url string) Item {
 	return Item{
 		repoName:    repoName,
@@ -32,6 +25,13 @@ func NewItem(repoName, titleText, description, url string) Item {
 		description: description,
 		url:         url,
 	}
+}
+
+// WithSuffix returns a copy of the item with the given pre-styled suffix appended
+// to the title line as-is (preserving its ANSI colors) during rendering.
+func (i Item) WithSuffix(s string) Item {
+	i.titleSuffix = s
+	return i
 }
 
 func (i Item) Title() string {
