@@ -15,7 +15,7 @@ func TestNewGroupedIssues_PropagatesCustom(t *testing.T) {
 		},
 	}
 
-	grouped := NewGroupedIssues(ghResult)
+	grouped := NewGroupedIssues(ghResult, "")
 
 	if len(grouped.Custom) != 1 {
 		t.Fatalf("Custom has %d keys, want 1", len(grouped.Custom))
@@ -133,7 +133,7 @@ func TestIssue_ToItem_NoActivity(t *testing.T) {
 		UpdatedAt:     "2024-03-10T12:00:00Z",
 	}
 
-	desc := i.toItem().Description()
+	desc := i.toItem("").Description()
 
 	if !strings.Contains(desc, "updated") {
 		t.Errorf("Description() = %q, should contain %q", desc, "updated")
@@ -154,10 +154,10 @@ func TestIssue_ToItem_WithActivity(t *testing.T) {
 		},
 	}
 
-	desc := i.toItem().Description()
+	desc := i.toItem("").Description()
 
-	if !strings.Contains(desc, ", commented by alice") {
-		t.Errorf("Description() = %q, should contain %q", desc, ", commented by alice")
+	if !strings.Contains(desc, ", commented by @alice") {
+		t.Errorf("Description() = %q, should contain %q", desc, ", commented by @alice")
 	}
 }
 
@@ -173,26 +173,27 @@ func TestIssue_ToItem(t *testing.T) {
 		CreatedAt:     "2024-03-10T08:00:00Z",
 	}
 
-	item := _issue.toItem()
+	item := _issue.toItem("")
 
-	// Verify title format: "owner/repo Title"
-	expectedTitle := "owner/repo Fix the bug"
-	if got := item.Title(); got != expectedTitle {
-		t.Errorf("Title() = %q, want %q", got, expectedTitle)
+	// Title is just the repo name; number and title text are on the title line
+	if got := item.Title(); got != "owner/repo" {
+		t.Errorf("Title() = %q, want %q", got, "owner/repo")
 	}
 
-	// Verify description contains expected components
-	desc := item.Description()
-	expectedParts := []string{"#42", "2024-03-10", "testuser"}
-	for _, part := range expectedParts {
-		if !strings.Contains(desc, part) {
-			t.Errorf("Description() = %q, should contain %q", desc, part)
+	// FilterValue includes number and title for search
+	filterVal := item.FilterValue()
+	for _, part := range []string{"#42", "Fix the bug"} {
+		if !strings.Contains(filterVal, part) {
+			t.Errorf("FilterValue() = %q, should contain %q", filterVal, part)
 		}
 	}
 
-	// FilterValue should match title for search
-	if got := item.FilterValue(); got != expectedTitle {
-		t.Errorf("FilterValue() = %q, want %q", got, expectedTitle)
+	// Description contains date and author; number has moved to the title line
+	desc := item.Description()
+	for _, part := range []string{"2024-03-10", "@testuser"} {
+		if !strings.Contains(desc, part) {
+			t.Errorf("Description() = %q, should contain %q", desc, part)
+		}
 	}
 }
 

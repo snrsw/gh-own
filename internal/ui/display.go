@@ -6,7 +6,19 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/charmbracelet/lipgloss"
 )
+
+var userStyle = lipgloss.NewStyle().Foreground(colorUser)
+
+// RenderUser returns "@login" highlighted if login != currentLogin, plain otherwise.
+func RenderUser(login, currentLogin string) string {
+	if login == currentLogin {
+		return "@" + login
+	}
+	return userStyle.Render("@" + login)
+}
 
 func UpdatedAgo(updatedAt string) string {
 	if updatedAt == "" {

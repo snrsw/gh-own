@@ -36,45 +36,44 @@ func (o *GroupedPullRequests) BuildTabs() []ui.Tab {
 	return tabs
 }
 
-func (p pullRequest) toItem() ui.Item {
+func (p pullRequest) toItem(currentLogin string) ui.Item {
 	var desc string
 	if p.LatestActivity.Login != "" {
 		desc = fmt.Sprintf(
-			"%s opened on %s by %s, %s by %s %s",
-			RenderPRNumber(p.Number, p.Draft),
+			"opened on %s by %s, %s by %s %s",
 			ui.CreatedOn(p.CreatedAt),
-			p.User.Login,
+			ui.RenderUser(p.User.Login, currentLogin),
 			p.LatestActivity.Kind,
-			p.LatestActivity.Login,
+			ui.RenderUser(p.LatestActivity.Login, currentLogin),
 			ui.UpdatedAgo(p.LatestActivity.At),
 		)
 	} else {
 		desc = fmt.Sprintf(
-			"%s opened on %s by %s, updated %s",
-			RenderPRNumber(p.Number, p.Draft),
+			"opened on %s by %s, updated %s",
 			ui.CreatedOn(p.CreatedAt),
-			p.User.Login,
+			ui.RenderUser(p.User.Login, currentLogin),
 			ui.UpdatedAgo(p.UpdatedAt),
 		)
 	}
-	titleText := p.Title
+	titleText := RenderPRNumber(p.Number, p.Draft) + " " + p.Title
+
+	suffix := " " + cistatus.RenderCIStatus(p.CIStatus)
 	if rs := reviewstatus.RenderReviewStatus(p.ReviewStatus); rs != "" {
-		titleText += " " + rs
+		suffix = " " + rs + suffix
 	}
-	titleText += " " + cistatus.RenderCIStatus(p.CIStatus)
 
 	return ui.NewItem(
 		p.repositoryFullName(),
 		titleText,
 		desc,
 		p.HTMLURL,
-	)
+	).WithSuffix(suffix)
 }
 
 func (o *GroupedPullRequests) prItems(prs gh.SearchResult[pullRequest]) []list.Item {
 	items := make([]list.Item, 0, len(prs.Items))
 	for _, pr := range prs.Items {
-		items = append(items, pr.toItem())
+		items = append(items, pr.toItem(o.currentLogin))
 	}
 	return items
 }

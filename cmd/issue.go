@@ -32,7 +32,7 @@ var issueCmd = &cobra.Command{
 
 		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
 			if demo {
-				ig := issue.NewGroupedIssues(demodata.IssueSearchResult())
+				ig := issue.NewGroupedIssues(demodata.IssueSearchResult(), "")
 				return ig.BuildTabs(), nil
 			}
 
@@ -110,7 +110,7 @@ var issueCmd = &cobra.Command{
 			done()
 
 			done = timing.Track("issue:group")
-			ig := issue.NewGroupedIssues(issues)
+			ig := issue.NewGroupedIssues(issues, username)
 			done()
 
 			return ig.BuildTabs(), nil

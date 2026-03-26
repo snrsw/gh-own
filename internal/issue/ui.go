@@ -32,30 +32,28 @@ func (o *GroupedIssues) BuildTabs() []ui.Tab {
 	return tabs
 }
 
-func (i issue) toItem() ui.Item {
+func (i issue) toItem(currentLogin string) ui.Item {
 	var desc string
 	if i.LatestActivity.Login != "" {
 		desc = fmt.Sprintf(
-			"#%d opened on %s by %s, %s by %s %s",
-			i.Number,
+			"opened on %s by %s, %s by %s %s",
 			ui.CreatedOn(i.CreatedAt),
-			i.User.Login,
+			ui.RenderUser(i.User.Login, currentLogin),
 			i.LatestActivity.Kind,
-			i.LatestActivity.Login,
+			ui.RenderUser(i.LatestActivity.Login, currentLogin),
 			ui.UpdatedAgo(i.LatestActivity.At),
 		)
 	} else {
 		desc = fmt.Sprintf(
-			"#%d opened on %s by %s, updated %s",
-			i.Number,
+			"opened on %s by %s, updated %s",
 			ui.CreatedOn(i.CreatedAt),
-			i.User.Login,
+			ui.RenderUser(i.User.Login, currentLogin),
 			ui.UpdatedAgo(i.UpdatedAt),
 		)
 	}
 	return ui.NewItem(
 		i.repositoryFullName(),
-		i.Title,
+		fmt.Sprintf("#%d %s", i.Number, i.Title),
 		desc,
 		i.HTMLURL,
 	)
@@ -64,7 +62,7 @@ func (i issue) toItem() ui.Item {
 func (o *GroupedIssues) issueItems(issues gh.SearchResult[issue]) []list.Item {
 	items := make([]list.Item, 0, len(issues.Items))
 	for _, issue := range issues.Items {
-		items = append(items, issue.toItem())
+		items = append(items, issue.toItem(o.currentLogin))
 	}
 	return items
 }
