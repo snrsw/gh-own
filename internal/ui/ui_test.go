@@ -12,36 +12,40 @@ import (
 
 func TestNewItem(t *testing.T) {
 	tests := []struct {
-		name          string
-		repoName      string
-		titleText     string
-		description   string
-		url           string
-		wantTitle     string
+		name            string
+		repoName        string
+		titleText       string
+		description     string
+		url             string
+		wantTitle       string
+		wantFilterValue string
 	}{
 		{
-			name:        "with repo name",
-			repoName:    "owner/repo",
-			titleText:   "Test Title",
-			description: "Test Description",
-			url:         "https://example.com",
-			wantTitle:   "owner/repo Test Title",
+			name:            "with repo name",
+			repoName:        "owner/repo",
+			titleText:       "Test Title",
+			description:     "Test Description",
+			url:             "https://example.com",
+			wantTitle:       "owner/repo",
+			wantFilterValue: "owner/repo Test Title",
 		},
 		{
-			name:        "empty values",
-			repoName:    "",
-			titleText:   "",
-			description: "",
-			url:         "",
-			wantTitle:   "",
+			name:            "empty values",
+			repoName:        "",
+			titleText:       "",
+			description:     "",
+			url:             "",
+			wantTitle:       "",
+			wantFilterValue: "",
 		},
 		{
-			name:        "without repo name",
-			repoName:    "",
-			titleText:   "Searchable Title",
-			description: "Description",
-			url:         "url",
-			wantTitle:   "Searchable Title",
+			name:            "without repo name",
+			repoName:        "",
+			titleText:       "Searchable Title",
+			description:     "Description",
+			url:             "url",
+			wantTitle:       "Searchable Title",
+			wantFilterValue: "Searchable Title",
 		},
 	}
 
@@ -55,8 +59,8 @@ func TestNewItem(t *testing.T) {
 			if got := item.Description(); got != tt.description {
 				t.Errorf("Description() = %q, want %q", got, tt.description)
 			}
-			if got := item.FilterValue(); got != tt.wantTitle {
-				t.Errorf("FilterValue() = %q, want %q", got, tt.wantTitle)
+			if got := item.FilterValue(); got != tt.wantFilterValue {
+				t.Errorf("FilterValue() = %q, want %q", got, tt.wantFilterValue)
 			}
 		})
 	}

@@ -23,29 +23,26 @@ func (d githubDelegate) Render(w io.Writer, m list.Model, index int, listItem li
 		return
 	}
 
-	title := item.Title()
-	desc := item.Description()
-	title = ansi.Truncate(title, m.Width(), "…")
-	desc = ansi.Truncate(desc, m.Width(), "…")
+	repo  := ansi.Truncate(item.repoName,    m.Width(), "…")
+	title := ansi.Truncate(item.titleText,   m.Width(), "…")
+	desc  := ansi.Truncate(item.description, m.Width(), "…")
 
 	isSelected := index == m.Index() && m.FilterState() != list.Filtering
 
 	if isSelected {
-		title = d.Styles.SelectedTitle.Render(title)
-		desc = d.Styles.SelectedDesc.Render(desc)
+		repo  = d.Styles.SelectedTitle.Render(repo)
+		title = d.Styles.SelectedTitle.Render(ansi.Strip(title)) + item.titleSuffix
+		desc  = d.Styles.SelectedDesc.Render(desc)
 	} else {
-		if item.repoName != "" && len(title) > len(item.repoName) {
-			title = d.repoNameStyle.Render(title[:len(item.repoName)]) + d.Styles.NormalTitle.Render(title[len(item.repoName):])
-		} else {
-			title = d.Styles.NormalTitle.Render(title)
-		}
-		desc = d.Styles.NormalDesc.Render(desc)
+		repo  = d.repoNameStyle.Render(repo)
+		title = d.Styles.NormalTitle.Render(title) + item.titleSuffix
+		desc  = d.Styles.NormalDesc.Render(desc)
 	}
 
 	if d.ShowDescription {
-		fmt.Fprintf(w, "%s\n%s", title, desc)
+		fmt.Fprintf(w, "%s\n%s\n%s", repo, title, desc)
 	} else {
-		fmt.Fprintf(w, "%s", title)
+		fmt.Fprintf(w, "%s\n%s", repo, title)
 	}
 }
 
@@ -64,6 +61,8 @@ func newGithubDelegate() githubDelegate {
 
 	d.Styles.NormalDesc = lipgloss.NewStyle().
 		Foreground(colorMuted)
+
+	d.SetHeight(3)
 
 	return githubDelegate{
 		DefaultDelegate: d,
