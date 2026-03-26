@@ -15,7 +15,7 @@ import (
 )
 
 type Item struct {
-	repoName, titleText, description, url string
+	repoName, titleText, titleSuffix, description, url string
 }
 
 func NewItem(repoName, titleText, description, url string) Item {
@@ -27,14 +27,26 @@ func NewItem(repoName, titleText, description, url string) Item {
 	}
 }
 
+// WithSuffix returns a copy of the item with the given pre-styled suffix appended
+// to the title line as-is (preserving its ANSI colors) during rendering.
+func (i Item) WithSuffix(s string) Item {
+	i.titleSuffix = s
+	return i
+}
+
 func (i Item) Title() string {
+	if i.repoName == "" {
+		return i.titleText
+	}
+	return i.repoName
+}
+func (i Item) Description() string { return i.description }
+func (i Item) FilterValue() string {
 	if i.repoName == "" {
 		return i.titleText
 	}
 	return i.repoName + " " + i.titleText
 }
-func (i Item) Description() string { return i.description }
-func (i Item) FilterValue() string { return i.Title() }
 
 func CreateList(items []list.Item) list.Model {
 	delegate := newGithubDelegate()

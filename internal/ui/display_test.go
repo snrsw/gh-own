@@ -4,7 +4,35 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
+
+func TestRenderUser_OtherUser_IsStyled(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	t.Cleanup(func() { lipgloss.SetColorProfile(termenv.Ascii) })
+
+	got := RenderUser("alice", "me")
+	plain := "@alice"
+	if got == plain {
+		t.Errorf("RenderUser(other) = %q, want styled (not plain %q)", got, plain)
+	}
+	if !strings.Contains(got, "alice") {
+		t.Errorf("RenderUser(other) = %q, want it to contain %q", got, "alice")
+	}
+}
+
+func TestRenderUser_CurrentUser_IsPlain(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	t.Cleanup(func() { lipgloss.SetColorProfile(termenv.Ascii) })
+
+	got := RenderUser("me", "me")
+	want := "@me"
+	if got != want {
+		t.Errorf("RenderUser(self) = %q, want %q", got, want)
+	}
+}
 
 func TestHumanizeDuration(t *testing.T) {
 	tests := []struct {

@@ -17,7 +17,7 @@ func TestNewGroupedPullRequests_PropagatesCustom(t *testing.T) {
 		},
 	}
 
-	grouped := NewGroupedPullRequests(ghResult)
+	grouped := NewGroupedPullRequests(ghResult, "")
 
 	if len(grouped.Custom) != 1 {
 		t.Fatalf("Custom has %d keys, want 1", len(grouped.Custom))
@@ -159,7 +159,7 @@ func TestPullRequest_ToItem_NoActivity(t *testing.T) {
 		UpdatedAt:     "2024-03-10T12:00:00Z",
 	}
 
-	desc := pr.toItem().Description()
+	desc := pr.toItem("").Description()
 
 	if !strings.Contains(desc, "updated") {
 		t.Errorf("Description() = %q, should contain %q", desc, "updated")
@@ -180,19 +180,20 @@ func TestPullRequest_ToItem_WithActivity(t *testing.T) {
 		},
 	}
 
-	desc := pr.toItem().Description()
+	desc := pr.toItem("").Description()
 
-	if !strings.Contains(desc, ", approved by bob") {
-		t.Errorf("Description() = %q, should contain %q", desc, ", approved by bob")
+	if !strings.Contains(desc, ", approved by @bob") {
+		t.Errorf("Description() = %q, should contain %q", desc, ", approved by @bob")
 	}
 }
 
 func TestPullRequest_ToItem(t *testing.T) {
 	tests := []struct {
-		name          string
-		pr            pullRequest
-		expectedTitle string
-		descContains  []string
+		name           string
+		pr             pullRequest
+		expectedTitle  string
+		filterContains []string
+		descContains   []string
 	}{
 		{
 			name: "regular PR",
@@ -204,8 +205,9 @@ func TestPullRequest_ToItem(t *testing.T) {
 				Draft:         false,
 				CreatedAt:     "2024-03-10T08:00:00Z",
 			},
-			expectedTitle: "owner/repo Add new feature -",
-			descContains:  []string{"#123", "2024-03-10", "contributor"},
+			expectedTitle:  "owner/repo",
+			filterContains: []string{"#123", "Add new feature"},
+			descContains:   []string{"2024-03-10", "@contributor"},
 		},
 		{
 			name: "draft PR",
@@ -217,8 +219,9 @@ func TestPullRequest_ToItem(t *testing.T) {
 				Draft:         true,
 				CreatedAt:     "2024-01-15T12:00:00Z",
 			},
-			expectedTitle: "org/project Work in progress -",
-			descContains:  []string{"#456", "2024-01-15", "author"},
+			expectedTitle:  "org/project",
+			filterContains: []string{"#456", "Work in progress"},
+			descContains:   []string{"2024-01-15", "@author"},
 		},
 		{
 			name: "PR with CI status success",
@@ -231,8 +234,8 @@ func TestPullRequest_ToItem(t *testing.T) {
 				CreatedAt:     "2024-03-15T10:00:00Z",
 				CIStatus:      cistatus.CIStatusSuccess,
 			},
-			expectedTitle: "owner/repo Feature with CI ✓",
-			descContains:  []string{"#789"},
+			expectedTitle:  "owner/repo",
+			filterContains: []string{"#789", "Feature with CI"},
 		},
 		{
 			name: "PR with CI status failure",
@@ -245,8 +248,8 @@ func TestPullRequest_ToItem(t *testing.T) {
 				CreatedAt:     "2024-03-15T10:00:00Z",
 				CIStatus:      cistatus.CIStatusFailure,
 			},
-			expectedTitle: "owner/repo Failing CI ✗",
-			descContains:  []string{"#101"},
+			expectedTitle:  "owner/repo",
+			filterContains: []string{"#101", "Failing CI"},
 		},
 		{
 			name: "PR with approved review and CI success",
@@ -260,8 +263,8 @@ func TestPullRequest_ToItem(t *testing.T) {
 				CIStatus:      cistatus.CIStatusSuccess,
 				ReviewStatus:  reviewstatus.ReviewStatusApproved,
 			},
-			expectedTitle: "owner/repo Ready to merge ✔ ✓",
-			descContains:  []string{"#200"},
+			expectedTitle:  "owner/repo",
+			filterContains: []string{"#200", "Ready to merge"},
 		},
 		{
 			name: "PR with changes requested",
@@ -274,8 +277,8 @@ func TestPullRequest_ToItem(t *testing.T) {
 				CreatedAt:     "2024-03-15T10:00:00Z",
 				ReviewStatus:  reviewstatus.ReviewStatusChangesRequested,
 			},
-			expectedTitle: "owner/repo Needs work ⊘ -",
-			descContains:  []string{"#201"},
+			expectedTitle:  "owner/repo",
+			filterContains: []string{"#201", "Needs work"},
 		},
 		{
 			name: "PR with review required",
@@ -288,17 +291,24 @@ func TestPullRequest_ToItem(t *testing.T) {
 				CreatedAt:     "2024-03-15T10:00:00Z",
 				ReviewStatus:  reviewstatus.ReviewStatusReviewRequired,
 			},
-			expectedTitle: "owner/repo Awaiting review ◇ -",
-			descContains:  []string{"#202"},
+			expectedTitle:  "owner/repo",
+			filterContains: []string{"#202", "Awaiting review"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			item := tt.pr.toItem()
+			item := tt.pr.toItem("")
 
 			if got := item.Title(); got != tt.expectedTitle {
 				t.Errorf("Title() = %q, want %q", got, tt.expectedTitle)
+			}
+
+			filterVal := item.FilterValue()
+			for _, part := range tt.filterContains {
+				if !strings.Contains(filterVal, part) {
+					t.Errorf("FilterValue() = %q, should contain %q", filterVal, part)
+				}
 			}
 
 			desc := item.Description()
@@ -306,10 +316,6 @@ func TestPullRequest_ToItem(t *testing.T) {
 				if !strings.Contains(desc, part) {
 					t.Errorf("Description() = %q, should contain %q", desc, part)
 				}
-			}
-
-			if got := item.FilterValue(); got != tt.expectedTitle {
-				t.Errorf("FilterValue() = %q, want %q", got, tt.expectedTitle)
 			}
 		})
 	}

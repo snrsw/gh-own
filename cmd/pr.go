@@ -32,7 +32,7 @@ var prCmd = &cobra.Command{
 
 		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
 			if demo {
-				prg := pr.NewGroupedPullRequests(demodata.PRSearchResult())
+				prg := pr.NewGroupedPullRequests(demodata.PRSearchResult(), "")
 				return prg.BuildTabs(), nil
 			}
 
@@ -110,7 +110,7 @@ var prCmd = &cobra.Command{
 			done()
 
 			done = timing.Track("pr:group")
-			prg := pr.NewGroupedPullRequests(prs)
+			prg := pr.NewGroupedPullRequests(prs, username)
 			done()
 
 			return prg.BuildTabs(), nil

@@ -12,9 +12,10 @@ type GroupedIssues struct {
 	Assigned     gh.SearchResult[issue]
 	Participated gh.SearchResult[issue]
 	Custom       map[string]gh.SearchResult[issue]
+	currentLogin string
 }
 
-func NewGroupedIssues(ghResult *gh.IssueSearchResult) *GroupedIssues {
+func NewGroupedIssues(ghResult *gh.IssueSearchResult, currentLogin string) *GroupedIssues {
 	custom := make(map[string]gh.SearchResult[issue], len(ghResult.Custom))
 	for k, nodes := range ghResult.Custom {
 		custom[k] = toSearchResult(nodes)
@@ -25,6 +26,7 @@ func NewGroupedIssues(ghResult *gh.IssueSearchResult) *GroupedIssues {
 		Assigned:     toSearchResult(ghResult.Assigned),
 		Participated: toSearchResult(ghResult.Participated),
 		Custom:       custom,
+		currentLogin: currentLogin,
 	}
 }
 
