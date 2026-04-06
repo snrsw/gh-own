@@ -164,6 +164,9 @@ func TestPullRequest_ToItem_NoActivity(t *testing.T) {
 	if !strings.Contains(desc, "updated") {
 		t.Errorf("Description() = %q, should contain %q", desc, "updated")
 	}
+	if !strings.Contains(desc, "opened on") {
+		t.Errorf("Description() = %q, should contain %q", desc, "opened on")
+	}
 }
 
 func TestPullRequest_ToItem_WithActivity(t *testing.T) {
@@ -182,8 +185,15 @@ func TestPullRequest_ToItem_WithActivity(t *testing.T) {
 
 	desc := pr.toItem("").Description()
 
-	if !strings.Contains(desc, ", approved by @bob") {
-		t.Errorf("Description() = %q, should contain %q", desc, ", approved by @bob")
+	// Activity now comes first in description, styled via RenderActivityKind
+	if !strings.Contains(desc, "approved") {
+		t.Errorf("Description() = %q, should contain %q", desc, "approved")
+	}
+	if !strings.Contains(desc, "by @bob") {
+		t.Errorf("Description() = %q, should contain %q", desc, "by @bob")
+	}
+	if !strings.Contains(desc, "opened on") {
+		t.Errorf("Description() = %q, should contain %q", desc, "opened on")
 	}
 }
 

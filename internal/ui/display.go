@@ -10,7 +10,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var userStyle = lipgloss.NewStyle().Foreground(colorUser)
+var (
+	userStyle = lipgloss.NewStyle().Foreground(colorUser)
+
+	activityApprovedStyle         = lipgloss.NewStyle().Foreground(colorActivityApproved)
+	activityChangesRequestedStyle = lipgloss.NewStyle().Foreground(colorActivityChangesRequested)
+	activityDefaultStyle          = lipgloss.NewStyle().Foreground(colorActivityDefault)
+)
 
 // RenderUser returns "@login" highlighted if login != currentLogin, plain otherwise.
 func RenderUser(login, currentLogin string) string {
@@ -18,6 +24,19 @@ func RenderUser(login, currentLogin string) string {
 		return "@" + login
 	}
 	return userStyle.Render("@" + login)
+}
+
+// RenderActivityKind returns the activity kind styled with a color that reflects
+// its nature: green for "approved", red for "changes requested", blue for others.
+func RenderActivityKind(kind string) string {
+	switch kind {
+	case "approved":
+		return activityApprovedStyle.Render(kind)
+	case "changes requested":
+		return activityChangesRequestedStyle.Render(kind)
+	default:
+		return activityDefaultStyle.Render(kind)
+	}
 }
 
 func UpdatedAgo(updatedAt string) string {

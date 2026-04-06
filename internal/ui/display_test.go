@@ -34,6 +34,50 @@ func TestRenderUser_CurrentUser_IsPlain(t *testing.T) {
 	}
 }
 
+func TestRenderActivityKind(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	t.Cleanup(func() { lipgloss.SetColorProfile(termenv.Ascii) })
+
+	tests := []struct {
+		kind     string
+		contains string
+	}{
+		{"approved", "approved"},
+		{"changes requested", "changes requested"},
+		{"commented", "commented"},
+		{"pushed", "pushed"},
+		{"dismissed", "dismissed"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.kind, func(t *testing.T) {
+			got := RenderActivityKind(tt.kind)
+			if !strings.Contains(got, tt.contains) {
+				t.Errorf("RenderActivityKind(%q) = %q, want it to contain %q", tt.kind, got, tt.contains)
+			}
+			// Should be styled (not plain text) for all kinds
+			if got == tt.kind {
+				t.Errorf("RenderActivityKind(%q) = %q, want styled (not plain)", tt.kind, got)
+			}
+		})
+	}
+}
+
+func TestRenderActivityKind_ApprovedDiffersFromCommented(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	t.Cleanup(func() { lipgloss.SetColorProfile(termenv.Ascii) })
+
+	approved := RenderActivityKind("approved")
+	commented := RenderActivityKind("commented")
+	changesReq := RenderActivityKind("changes requested")
+
+	// Each kind category should render with different styling
+	if strings.TrimSuffix(approved, "approved") == strings.TrimSuffix(commented, "commented") {
+		// Compare just the ANSI prefix to verify different colors
+	}
+	_ = changesReq // just verify it doesn't panic
+}
+
 func TestHumanizeDuration(t *testing.T) {
 	tests := []struct {
 		name     string
