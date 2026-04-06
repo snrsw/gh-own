@@ -63,19 +63,21 @@ func TestRenderActivityKind(t *testing.T) {
 	}
 }
 
-func TestRenderActivityKind_ApprovedDiffersFromCommented(t *testing.T) {
+func TestRenderActivityKind_DifferentKindsHaveDifferentStyles(t *testing.T) {
 	lipgloss.SetColorProfile(termenv.TrueColor)
 	t.Cleanup(func() { lipgloss.SetColorProfile(termenv.Ascii) })
 
-	approved := RenderActivityKind("approved")
-	commented := RenderActivityKind("commented")
-	changesReq := RenderActivityKind("changes requested")
+	// Use same text so only the style differs.
+	approvedStyle := strings.ReplaceAll(RenderActivityKind("approved"), "approved", "X")
+	changesStyle := strings.ReplaceAll(RenderActivityKind("changes requested"), "changes requested", "X")
+	commentedStyle := strings.ReplaceAll(RenderActivityKind("commented"), "commented", "X")
 
-	// Each kind category should render with different styling
-	if strings.TrimSuffix(approved, "approved") == strings.TrimSuffix(commented, "commented") {
-		// Compare just the ANSI prefix to verify different colors
+	if approvedStyle == changesStyle {
+		t.Error("approved and changes requested should have different styles")
 	}
-	_ = changesReq // just verify it doesn't panic
+	if approvedStyle == commentedStyle {
+		t.Error("approved and commented should have different styles")
+	}
 }
 
 func TestHumanizeDuration(t *testing.T) {
