@@ -178,7 +178,7 @@ func TestSearchPRs_EmptyEntries_HasEmptyCustom(t *testing.T) {
 }
 
 func TestSearchPRs_EmptyUsernameWithTeams(t *testing.T) {
-	results, err := SearchPRsTeams(nil, "", []string{"my-org/team-a"})
+	results, err := SearchPRsTeams(nil, "", []string{"my-org/team-a"}, "")
 
 	if err != nil {
 		t.Errorf("SearchPRs with empty username returned error: %v", err)

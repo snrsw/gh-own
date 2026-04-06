@@ -40,9 +40,11 @@ func Execute() {
 
 var debug bool
 var demo bool
+var org string
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug logging")
 	rootCmd.PersistentFlags().BoolVar(&demo, "demo", false, "use demo data (no GitHub API calls)")
+	rootCmd.PersistentFlags().StringVar(&org, "org", "", "filter by organization")
 	rootCmd.AddCommand(prCmd, issueCmd)
 }

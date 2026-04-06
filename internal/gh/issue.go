@@ -22,7 +22,7 @@ func SearchIssues(client *api.GraphQLClient, entries map[string]string) (*IssueS
 	return parseIssueSearchResult(raw)
 }
 
-func SearchIssuesTeams(client *api.GraphQLClient, username string, teams []string) (*IssueSearchResult, error) {
+func SearchIssuesTeams(client *api.GraphQLClient, username string, teams []string, org string) (*IssueSearchResult, error) {
 	if username == "" {
 		return &IssueSearchResult{Custom: make(map[string][]IssueSearchNode)}, nil
 	}
@@ -33,7 +33,11 @@ func SearchIssuesTeams(client *api.GraphQLClient, username string, teams []strin
 
 	entries := map[string]string{}
 	for i, team := range teams {
-		entries[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:issue is:open team:%s", team)
+		q := fmt.Sprintf("is:issue is:open team:%s", team)
+		if org != "" {
+			q += " org:" + org
+		}
+		entries[fmt.Sprintf("participatedTeam%d", i)] = q
 	}
 
 	raw, err := Search(client, issueSearchQuery, entries, parseIssueSearchJSON)

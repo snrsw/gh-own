@@ -362,6 +362,37 @@ func writeTempYAML(t *testing.T, content string) string {
 	return path
 }
 
+func TestAppendOrg_EmptyOrg_ReturnsOriginal(t *testing.T) {
+	queries := map[string]string{
+		"created": "is:pr is:open author:octocat",
+	}
+
+	got := AppendOrg(queries, "")
+
+	if got["created"] != queries["created"] {
+		t.Errorf("AppendOrg with empty org = %q, want %q", got["created"], queries["created"])
+	}
+}
+
+func TestAppendOrg_NonEmptyOrg_AppendsQualifier(t *testing.T) {
+	queries := map[string]string{
+		"created":  "is:pr is:open author:octocat",
+		"assigned": "is:pr is:open assignee:octocat",
+	}
+
+	got := AppendOrg(queries, "my-org")
+
+	wantCreated := "is:pr is:open author:octocat org:my-org"
+	if got["created"] != wantCreated {
+		t.Errorf("AppendOrg[created] = %q, want %q", got["created"], wantCreated)
+	}
+
+	wantAssigned := "is:pr is:open assignee:octocat org:my-org"
+	if got["assigned"] != wantAssigned {
+		t.Errorf("AppendOrg[assigned] = %q, want %q", got["assigned"], wantAssigned)
+	}
+}
+
 func TestDefaultPath_UsesXDGConfigHome(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "/tmp/xdg-test")
 
