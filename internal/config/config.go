@@ -143,3 +143,14 @@ func ResolveQueries(queries map[string]string, username string) map[string]strin
 	}
 	return resolved
 }
+
+func AppendOrg(queries map[string]string, org string) map[string]string {
+	if org == "" {
+		return queries
+	}
+	result := make(map[string]string, len(queries))
+	for key, query := range queries {
+		result[key] = query + " org:" + org
+	}
+	return result
+}

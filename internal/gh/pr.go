@@ -23,7 +23,7 @@ func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchR
 	return parsePRSearchResult(raw)
 }
 
-func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string) (*PRSearchResult, error) {
+func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, org string) (*PRSearchResult, error) {
 	if username == "" {
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
@@ -34,7 +34,11 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string) 
 
 	entries := make(map[string]string, len(teams))
 	for i, team := range teams {
-		entries[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:pr is:open team:%s", team)
+		q := fmt.Sprintf("is:pr is:open team:%s", team)
+		if org != "" {
+			q += " org:" + org
+		}
+		entries[fmt.Sprintf("participatedTeam%d", i)] = q
 	}
 
 	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)

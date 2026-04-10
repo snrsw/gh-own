@@ -147,7 +147,7 @@ func TestIssueSearchNode_Fields(t *testing.T) {
 }
 
 func TestSearchIssues_EmptyUsernameWithTeams(t *testing.T) {
-	results, err := SearchIssuesTeams(nil, "", []string{"my-org/team-a"})
+	results, err := SearchIssuesTeams(nil, "", []string{"my-org/team-a"}, "")
 
 	if err != nil {
 		t.Errorf("SearchIssues with empty username returned error: %v", err)
