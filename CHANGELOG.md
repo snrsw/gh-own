@@ -2,6 +2,11 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.1.3](https://github.com/snrsw/gh-own/compare/0.1.2...0.1.3) - 2026-04-10
+### Other Changes
+- Make latest activity more prominent in item description by @snrsw in https://github.com/snrsw/gh-own/pull/60
+- Add `--org` flag to filter by GitHub organization by @snrsw in https://github.com/snrsw/gh-own/pull/61
+
 ## [0.1.2](https://github.com/snrsw/gh-own/compare/0.1.1...0.1.2) - 2026-03-26
 ### Other Changes
 - Add demo GIF to README with browser-open status feedback by @snrsw in https://github.com/snrsw/gh-own/pull/57
