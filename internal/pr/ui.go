@@ -40,19 +40,19 @@ func (p pullRequest) toItem(currentLogin string) ui.Item {
 	var desc string
 	if p.LatestActivity.Login != "" {
 		desc = fmt.Sprintf(
-			"opened on %s by %s, %s by %s %s",
-			ui.CreatedOn(p.CreatedAt),
-			ui.RenderUser(p.User.Login, currentLogin),
-			p.LatestActivity.Kind,
+			"%s by %s %s · opened on %s by %s",
+			ui.RenderActivityKind(p.LatestActivity.Kind),
 			ui.RenderUser(p.LatestActivity.Login, currentLogin),
 			ui.UpdatedAgo(p.LatestActivity.At),
+			ui.CreatedOn(p.CreatedAt),
+			ui.RenderUser(p.User.Login, currentLogin),
 		)
 	} else {
 		desc = fmt.Sprintf(
-			"opened on %s by %s, updated %s",
+			"updated %s · opened on %s by %s",
+			ui.UpdatedAgo(p.UpdatedAt),
 			ui.CreatedOn(p.CreatedAt),
 			ui.RenderUser(p.User.Login, currentLogin),
-			ui.UpdatedAgo(p.UpdatedAt),
 		)
 	}
 	titleText := RenderPRNumber(p.Number, p.Draft) + " " + p.Title

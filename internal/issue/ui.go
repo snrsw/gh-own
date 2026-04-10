@@ -36,19 +36,19 @@ func (i issue) toItem(currentLogin string) ui.Item {
 	var desc string
 	if i.LatestActivity.Login != "" {
 		desc = fmt.Sprintf(
-			"opened on %s by %s, %s by %s %s",
-			ui.CreatedOn(i.CreatedAt),
-			ui.RenderUser(i.User.Login, currentLogin),
-			i.LatestActivity.Kind,
+			"%s by %s %s · opened on %s by %s",
+			ui.RenderActivityKind(i.LatestActivity.Kind),
 			ui.RenderUser(i.LatestActivity.Login, currentLogin),
 			ui.UpdatedAgo(i.LatestActivity.At),
+			ui.CreatedOn(i.CreatedAt),
+			ui.RenderUser(i.User.Login, currentLogin),
 		)
 	} else {
 		desc = fmt.Sprintf(
-			"opened on %s by %s, updated %s",
+			"updated %s · opened on %s by %s",
+			ui.UpdatedAgo(i.UpdatedAt),
 			ui.CreatedOn(i.CreatedAt),
 			ui.RenderUser(i.User.Login, currentLogin),
-			ui.UpdatedAgo(i.UpdatedAt),
 		)
 	}
 	return ui.NewItem(

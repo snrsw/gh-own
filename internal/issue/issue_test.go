@@ -156,8 +156,15 @@ func TestIssue_ToItem_WithActivity(t *testing.T) {
 
 	desc := i.toItem("").Description()
 
-	if !strings.Contains(desc, ", commented by @alice") {
-		t.Errorf("Description() = %q, should contain %q", desc, ", commented by @alice")
+	// Activity now comes first in description, styled via RenderActivityKind
+	if !strings.Contains(desc, "commented") {
+		t.Errorf("Description() = %q, should contain %q", desc, "commented")
+	}
+	if !strings.Contains(desc, "by @alice") {
+		t.Errorf("Description() = %q, should contain %q", desc, "by @alice")
+	}
+	if !strings.Contains(desc, "opened on") {
+		t.Errorf("Description() = %q, should contain %q", desc, "opened on")
 	}
 }
 

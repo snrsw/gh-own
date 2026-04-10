@@ -14,6 +14,10 @@ var (
 	colorTitle     = lipgloss.AdaptiveColor{Light: "#000000", Dark: "#D1D5DB"} // slightly light
 	colorMuted     = lipgloss.AdaptiveColor{Light: "#6E7781", Dark: "#6E7681"} // GitHub muted
 	colorUser      = lipgloss.AdaptiveColor{Light: "#0969DA", Dark: "#2F81F7"} // GitHub blue for mentions
+
+	colorActivityApproved         = lipgloss.AdaptiveColor{Light: "#1A7F37", Dark: "#3FB950"} // green
+	colorActivityChangesRequested = lipgloss.AdaptiveColor{Light: "#CF222E", Dark: "#F85149"} // red
+	colorActivityDefault          = lipgloss.AdaptiveColor{Light: "#0969DA", Dark: "#2F81F7"} // blue
 )
 
 func GithubTabStyles() (active, inactive lipgloss.Style) {
