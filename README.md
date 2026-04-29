@@ -26,6 +26,7 @@ Key features:
 - Includes draft PR indication
 - Fetches results for all teams you belong to, merged and deduplicated with your personal results
 - Team slugs are cached for 6 hours to avoid repeated API calls
+- Filter results to a single GitHub organization with `--org`
 
 ## Installation
 
@@ -51,6 +52,8 @@ gh own [command] [flags]
 
 | Flag | Description |
 |------|-------------|
+| `--org <name>` | Filter results to a single GitHub organization |
+| `--demo` | Use built-in demo data without calling the GitHub API (useful for screenshots and recordings) |
 | `--debug` | Enable debug logging to stderr (includes timing instrumentation) |
 
 ### Examples
@@ -64,6 +67,9 @@ gh own pr
 
 # List your issues
 gh own issue
+
+# Filter to a specific organization
+gh own --org my-org
 
 # Enable debug logging
 gh own --debug
