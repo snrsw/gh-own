@@ -8,10 +8,16 @@ import (
 
 func TestDefaultPRKeys_ReturnsKnownKeys(t *testing.T) {
 	want := map[string]bool{
-		"created":          true,
-		"assigned":         true,
-		"participatedUser": true,
-		"reviewRequested":  true,
+		"draftsAuthored":       true,
+		"draftsAssigned":       true,
+		"needsActionAuthored":  true,
+		"needsActionAssigned":  true,
+		"readyToMergeAuthored": true,
+		"readyToMergeAssigned": true,
+		"waitingAuthored":      true,
+		"waitingAssigned":      true,
+		"participatedUser":     true,
+		"reviewRequested":      true,
 	}
 
 	got := DefaultPRKeys()
@@ -27,7 +33,13 @@ func TestDefaultPRKeys_ReturnsKnownKeys(t *testing.T) {
 }
 
 func TestDefaultPRQueries_ContainsExpectedKeys(t *testing.T) {
-	expectedKeys := []string{"created", "assigned", "participatedUser", "reviewRequested"}
+	expectedKeys := []string{
+		"draftsAuthored", "draftsAssigned",
+		"needsActionAuthored", "needsActionAssigned",
+		"readyToMergeAuthored", "readyToMergeAssigned",
+		"waitingAuthored", "waitingAssigned",
+		"participatedUser", "reviewRequested",
+	}
 
 	if len(DefaultPRQueries()) != len(expectedKeys) {
 		t.Fatalf("DefaultPRQueries() has %d keys, want %d", len(DefaultPRQueries()), len(expectedKeys))
@@ -138,7 +150,7 @@ func TestMergePRQueries_NilOverride_ReturnsDefaults(t *testing.T) {
 
 func TestMergePRQueries_PartialOverride(t *testing.T) {
 	override := map[string]string{
-		"created": "is:pr is:open author:{user} label:custom",
+		"reviewRequested": "is:pr is:open review-requested:{user} label:custom",
 	}
 
 	merged := MergePRQueries(override)
@@ -147,11 +159,11 @@ func TestMergePRQueries_PartialOverride(t *testing.T) {
 		t.Fatalf("merged has %d keys, want %d", len(merged), len(DefaultPRQueries()))
 	}
 
-	if got := merged["created"]; got != override["created"] {
-		t.Errorf("merged[created] = %q, want %q", got, override["created"])
+	if got := merged["reviewRequested"]; got != override["reviewRequested"] {
+		t.Errorf("merged[reviewRequested] = %q, want %q", got, override["reviewRequested"])
 	}
 
-	for _, key := range []string{"assigned", "participatedUser", "reviewRequested"} {
+	for _, key := range []string{"draftsAuthored", "needsActionAuthored", "readyToMergeAuthored", "waitingAuthored", "participatedUser"} {
 		if got := merged[key]; got != DefaultPRQueries()[key] {
 			t.Errorf("merged[%q] = %q, want default %q", key, got, DefaultPRQueries()[key])
 		}
@@ -160,10 +172,10 @@ func TestMergePRQueries_PartialOverride(t *testing.T) {
 
 func TestMergePRQueries_FullOverride(t *testing.T) {
 	override := map[string]string{
-		"created":          "custom-created",
-		"assigned":         "custom-assigned",
-		"participatedUser": "custom-participated",
-		"reviewRequested":  "custom-review",
+		"draftsAuthored":      "custom-drafts",
+		"needsActionAuthored": "custom-needs-action",
+		"participatedUser":    "custom-participated",
+		"reviewRequested":     "custom-review",
 	}
 
 	merged := MergePRQueries(override)

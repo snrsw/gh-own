@@ -50,8 +50,10 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, 
 }
 
 type PRSearchResult struct {
-	Created         []PRSearchNode
-	Assigned        []PRSearchNode
+	Drafts          []PRSearchNode
+	NeedsAction     []PRSearchNode
+	ReadyToMerge    []PRSearchNode
+	Waiting         []PRSearchNode
 	Participated    []PRSearchNode
 	ReviewRequested []PRSearchNode
 	Custom          map[string][]PRSearchNode
@@ -70,10 +72,12 @@ func MergeSearchPRsResults(a, b *PRSearchResult) *PRSearchResult {
 	}
 
 	merged := &PRSearchResult{
-		Created:         append(a.Created, b.Created...),
-		Assigned:        append(a.Assigned, b.Assigned...),
-		Participated:    append(a.Participated, b.Participated...),
-		ReviewRequested: append(a.ReviewRequested, b.ReviewRequested...),
+		Drafts:          deduplicatePRNodes(append(a.Drafts, b.Drafts...)),
+		NeedsAction:     deduplicatePRNodes(append(a.NeedsAction, b.NeedsAction...)),
+		ReadyToMerge:    deduplicatePRNodes(append(a.ReadyToMerge, b.ReadyToMerge...)),
+		Waiting:         deduplicatePRNodes(append(a.Waiting, b.Waiting...)),
+		Participated:    deduplicatePRNodes(append(a.Participated, b.Participated...)),
+		ReviewRequested: deduplicatePRNodes(append(a.ReviewRequested, b.ReviewRequested...)),
 		Custom:          custom,
 	}
 	return merged
@@ -124,11 +128,19 @@ const prSearchQuery = `query($q: String!) {
 
 func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, error) {
 	defaultKeys := config.DefaultPRKeys()
-	var participated []PRSearchNode
+	var drafts, needsAction, readyToMerge, waiting, participated []PRSearchNode
 	custom := make(map[string][]PRSearchNode)
 
 	for key, nodes := range parsed {
 		switch {
+		case strings.HasPrefix(key, "drafts"):
+			drafts = append(drafts, nodes...)
+		case strings.HasPrefix(key, "needsAction"):
+			needsAction = append(needsAction, nodes...)
+		case strings.HasPrefix(key, "readyToMerge"):
+			readyToMerge = append(readyToMerge, nodes...)
+		case strings.HasPrefix(key, "waiting"):
+			waiting = append(waiting, nodes...)
 		case strings.HasPrefix(key, "participated"):
 			participated = append(participated, nodes...)
 		case !defaultKeys[key]:
@@ -137,10 +149,12 @@ func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, err
 	}
 
 	return &PRSearchResult{
-		Created:         parsed["created"],
-		Assigned:        parsed["assigned"],
+		Drafts:          deduplicatePRNodes(drafts),
+		NeedsAction:     deduplicatePRNodes(needsAction),
+		ReadyToMerge:    deduplicatePRNodes(readyToMerge),
+		Waiting:         deduplicatePRNodes(waiting),
 		Participated:    deduplicatePRNodes(participated),
-		ReviewRequested: parsed["reviewRequested"],
+		ReviewRequested: deduplicatePRNodes(parsed["reviewRequested"]),
 		Custom:          custom,
 	}, nil
 }

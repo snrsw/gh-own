@@ -11,7 +11,7 @@ import (
 
 func TestNewGroupedPullRequests_PropagatesCustom(t *testing.T) {
 	ghResult := &gh.PRSearchResult{
-		Created: []gh.PRSearchNode{{Number: 1}},
+		Drafts: []gh.PRSearchNode{{Number: 1}},
 		Custom: map[string][]gh.PRSearchNode{
 			"myTab": {{Number: 10, Title: "Custom PR"}},
 		},
@@ -33,24 +33,41 @@ func TestNewGroupedPullRequests_PropagatesCustom(t *testing.T) {
 
 func TestBuildTabs_DefaultTabsOnly(t *testing.T) {
 	grouped := &GroupedPullRequests{
-		Created:         gh.SearchResult[pullRequest]{TotalCount: 1, Items: []pullRequest{{Number: 1}}},
+		Drafts:          gh.SearchResult[pullRequest]{TotalCount: 1, Items: []pullRequest{{Number: 1}}},
+		NeedsAction:     gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		ReadyToMerge:    gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Waiting:         gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
 		Participated:    gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
-		Assigned:        gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
 		ReviewRequested: gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
 	}
 
 	tabs := grouped.BuildTabs()
 
-	if len(tabs) != 4 {
-		t.Fatalf("BuildTabs() returned %d tabs, want 4", len(tabs))
+	if len(tabs) != 6 {
+		t.Fatalf("BuildTabs() returned %d tabs, want 6", len(tabs))
+	}
+	want := []string{
+		"Drafts (1)",
+		"Needs action (0)",
+		"Ready to merge (0)",
+		"Waiting for review or checks (0)",
+		"Participated (0)",
+		"Review Requested (0)",
+	}
+	for i, name := range want {
+		if tabs[i].Name() != name {
+			t.Errorf("tabs[%d].Name() = %q, want %q", i, tabs[i].Name(), name)
+		}
 	}
 }
 
 func TestBuildTabs_WithCustomTabs(t *testing.T) {
 	grouped := &GroupedPullRequests{
-		Created:         gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Drafts:          gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		NeedsAction:     gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		ReadyToMerge:    gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Waiting:         gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
 		Participated:    gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
-		Assigned:        gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
 		ReviewRequested: gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
 		Custom: map[string]gh.SearchResult[pullRequest]{
 			"zeta":  {TotalCount: 1, Items: []pullRequest{{Number: 1}}},
@@ -60,23 +77,25 @@ func TestBuildTabs_WithCustomTabs(t *testing.T) {
 
 	tabs := grouped.BuildTabs()
 
-	if len(tabs) != 6 {
-		t.Fatalf("BuildTabs() returned %d tabs, want 6", len(tabs))
+	if len(tabs) != 8 {
+		t.Fatalf("BuildTabs() returned %d tabs, want 8", len(tabs))
 	}
-	// Custom tabs should be sorted alphabetically at indices 4-5
-	if tabs[4].Name() != "Alpha (2)" {
-		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "Alpha (2)")
+	// Custom tabs should be sorted alphabetically after the 6 default tabs (indices 6-7)
+	if tabs[6].Name() != "Alpha (2)" {
+		t.Errorf("tabs[6].Name() = %q, want %q", tabs[6].Name(), "Alpha (2)")
 	}
-	if tabs[5].Name() != "Zeta (1)" {
-		t.Errorf("tabs[5].Name() = %q, want %q", tabs[5].Name(), "Zeta (1)")
+	if tabs[7].Name() != "Zeta (1)" {
+		t.Errorf("tabs[7].Name() = %q, want %q", tabs[7].Name(), "Zeta (1)")
 	}
 }
 
 func TestBuildTabs_CustomTabNameIncludesCount(t *testing.T) {
 	grouped := &GroupedPullRequests{
-		Created:         gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Drafts:          gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		NeedsAction:     gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		ReadyToMerge:    gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
+		Waiting:         gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
 		Participated:    gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
-		Assigned:        gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
 		ReviewRequested: gh.SearchResult[pullRequest]{TotalCount: 0, Items: []pullRequest{}},
 		Custom: map[string]gh.SearchResult[pullRequest]{
 			"myTab": {TotalCount: 3, Items: []pullRequest{{Number: 1}, {Number: 2}, {Number: 3}}},
@@ -85,11 +104,11 @@ func TestBuildTabs_CustomTabNameIncludesCount(t *testing.T) {
 
 	tabs := grouped.BuildTabs()
 
-	if len(tabs) != 5 {
-		t.Fatalf("BuildTabs() returned %d tabs, want 5", len(tabs))
+	if len(tabs) != 7 {
+		t.Fatalf("BuildTabs() returned %d tabs, want 7", len(tabs))
 	}
-	if tabs[4].Name() != "MyTab (3)" {
-		t.Errorf("tabs[4].Name() = %q, want %q", tabs[4].Name(), "MyTab (3)")
+	if tabs[6].Name() != "MyTab (3)" {
+		t.Errorf("tabs[6].Name() = %q, want %q", tabs[6].Name(), "MyTab (3)")
 	}
 }
 
@@ -407,8 +426,8 @@ func TestGroupedPullRequests_PRItems(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			grouped := &GroupedPullRequests{Created: tt.input}
-			items := grouped.prItems(grouped.Created)
+			grouped := &GroupedPullRequests{Drafts: tt.input}
+			items := grouped.prItems(grouped.Drafts)
 
 			if len(items) != tt.expected {
 				t.Errorf("prItems() returned %d items, want %d", len(items), tt.expected)

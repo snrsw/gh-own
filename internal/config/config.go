@@ -56,10 +56,16 @@ func LoadFromPath(path string) (Config, error) {
 }
 
 var defaultPRQueries = map[string]string{
-	"created":          "is:pr is:open author:{user}",
-	"assigned":         "is:pr is:open assignee:{user}",
-	"participatedUser": "is:pr is:open involves:{user} -author:{user} -assignee:{user} -review-requested:{user}",
-	"reviewRequested":  "is:pr is:open review-requested:{user}",
+	"draftsAuthored":       "is:pr is:open draft:true author:{user}",
+	"draftsAssigned":       "is:pr is:open draft:true assignee:{user}",
+	"needsActionAuthored":  "is:pr is:open draft:false review:changes-requested author:{user}",
+	"needsActionAssigned":  "is:pr is:open draft:false review:changes-requested assignee:{user}",
+	"readyToMergeAuthored": "is:pr is:open draft:false review:approved author:{user}",
+	"readyToMergeAssigned": "is:pr is:open draft:false review:approved assignee:{user}",
+	"waitingAuthored":      "is:pr is:open draft:false -review:approved -review:changes-requested author:{user}",
+	"waitingAssigned":      "is:pr is:open draft:false -review:approved -review:changes-requested assignee:{user}",
+	"participatedUser":     "is:pr is:open involves:{user} -author:{user} -assignee:{user} -review-requested:{user}",
+	"reviewRequested":      "is:pr is:open review-requested:{user}",
 }
 
 var defaultIssueQueries = map[string]string{
