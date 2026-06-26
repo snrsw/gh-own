@@ -118,7 +118,7 @@ Use the `{user}` placeholder to reference the authenticated GitHub username.
 ```yaml
 pr:
   queries:
-    readyToMergeAuthored: "is:pr is:open draft:false review:approved author:{user} label:team-a"
+    readyToMerge: "is:pr is:open draft:false review:approved {owner} label:team-a"
     review_requested: "is:pr is:open review-requested:{user} label:urgent"
 issue:
   queries:
@@ -127,7 +127,7 @@ issue:
 
 Any query you specify overrides the default for that tab. Tabs you don't specify keep their defaults. If no config file exists, the extension behaves exactly as before.
 
-The four state-based PR tabs (Drafts, Needs action, Ready to merge, Waiting) each combine an `…Authored` query and an `…Assigned` query, because GitHub search cannot match `author:` or `assignee:` in a single query. Both variants merge into one tab, so override the variant you care about.
+The four state-based PR tabs (Drafts, Needs action, Ready to merge, Waiting) use the `{owner}` placeholder, which expands to both `author:{user}` and `assignee:{user}` — because GitHub search cannot match `author:` or `assignee:` in a single query. The two searches merge into one tab, so a single `{owner}` query covers both the PRs you authored and the ones assigned to you.
 
 > **Migration note:** the `pr` command previously had `created` and `assigned` tabs. They have been replaced by the four state-based tabs above. If your config still overrides `created` or `assigned` under `pr.queries`, those keys now render as extra [custom tabs](#custom-tabs) rather than replacing a default — rename them to the new keys to restore the intended behavior.
 
@@ -154,14 +154,10 @@ The built-in defaults are equivalent to the following config:
 ```yaml
 pr:
   queries:
-    draftsAuthored: "is:pr is:open draft:true author:{user}"
-    draftsAssigned: "is:pr is:open draft:true assignee:{user}"
-    needsActionAuthored: "is:pr is:open draft:false review:changes-requested author:{user}"
-    needsActionAssigned: "is:pr is:open draft:false review:changes-requested assignee:{user}"
-    readyToMergeAuthored: "is:pr is:open draft:false review:approved author:{user}"
-    readyToMergeAssigned: "is:pr is:open draft:false review:approved assignee:{user}"
-    waitingAuthored: "is:pr is:open draft:false -review:approved -review:changes-requested author:{user}"
-    waitingAssigned: "is:pr is:open draft:false -review:approved -review:changes-requested assignee:{user}"
+    drafts: "is:pr is:open draft:true {owner}"
+    needsAction: "is:pr is:open draft:false review:changes-requested {owner}"
+    readyToMerge: "is:pr is:open draft:false review:approved {owner}"
+    waiting: "is:pr is:open draft:false -review:approved -review:changes-requested {owner}"
     review_requested: "is:pr is:open review-requested:{user}"
     participated: "is:pr is:open involves:{user} -author:{user} -assignee:{user} -review-requested:{user}"
 issue:
@@ -175,7 +171,7 @@ issue:
 
 | Command | Keys |
 |---------|------|
-| `pr` | `draftsAuthored`, `draftsAssigned`, `needsActionAuthored`, `needsActionAssigned`, `readyToMergeAuthored`, `readyToMergeAssigned`, `waitingAuthored`, `waitingAssigned`, `review_requested`, `participated` |
+| `pr` | `drafts`, `needsAction`, `readyToMerge`, `waiting`, `review_requested`, `participated` |
 | `issue` | `created`, `assigned`, `participated` |
 
 ## Requirements

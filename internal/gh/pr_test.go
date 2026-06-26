@@ -8,8 +8,8 @@ import (
 
 func TestParsePRSearchResult_CustomKeyPreserved(t *testing.T) {
 	parsed := map[string][]PRSearchNode{
-		"draftsAuthored": {{Number: 1, Title: "PR1"}},
-		"myTab":          {{Number: 2, Title: "PR2"}},
+		"drafts": {{Number: 1, Title: "PR1"}},
+		"myTab":  {{Number: 2, Title: "PR2"}},
 	}
 
 	result, err := parsePRSearchResult(parsed)
@@ -31,12 +31,12 @@ func TestParsePRSearchResult_CustomKeyPreserved(t *testing.T) {
 
 func TestParsePRSearchResult_NoCustomKeys(t *testing.T) {
 	parsed := map[string][]PRSearchNode{
-		"draftsAuthored":       {{Number: 1}},
-		"needsActionAuthored":  {{Number: 2}},
-		"readyToMergeAuthored": {{Number: 3}},
-		"waitingAuthored":      {{Number: 4}},
-		"participatedUser":     {{Number: 5}},
-		"reviewRequested":      {{Number: 6}},
+		"drafts":           {{Number: 1}},
+		"needsAction":      {{Number: 2}},
+		"readyToMerge":     {{Number: 3}},
+		"waiting":          {{Number: 4}},
+		"participatedUser": {{Number: 5}},
+		"reviewRequested":  {{Number: 6}},
 	}
 
 	result, err := parsePRSearchResult(parsed)
@@ -54,9 +54,10 @@ func TestParsePRSearchResult_NoCustomKeys(t *testing.T) {
 
 func TestParsePRSearchResult_MergesAuthoredAndAssigned(t *testing.T) {
 	// Each state bucket is fed by an author-variant and an assignee-variant
-	// query; both must merge into one bucket and dedup by URL.
+	// query (the {owner} expansion: "drafts" + "draftsAssigned"); both must
+	// merge into one bucket and dedup by URL.
 	parsed := map[string][]PRSearchNode{
-		"draftsAuthored": {{Number: 1, URL: "https://github.com/org/repo/pull/1"}},
+		"drafts": {{Number: 1, URL: "https://github.com/org/repo/pull/1"}},
 		"draftsAssigned": {
 			{Number: 1, URL: "https://github.com/org/repo/pull/1"}, // duplicate (authored & assigned)
 			{Number: 2, URL: "https://github.com/org/repo/pull/2"},
