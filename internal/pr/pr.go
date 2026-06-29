@@ -10,8 +10,10 @@ import (
 )
 
 type GroupedPullRequests struct {
-	Created         gh.SearchResult[pullRequest]
-	Assigned        gh.SearchResult[pullRequest]
+	Drafts          gh.SearchResult[pullRequest]
+	NeedsAction     gh.SearchResult[pullRequest]
+	ReadyToMerge    gh.SearchResult[pullRequest]
+	Waiting         gh.SearchResult[pullRequest]
 	ReviewRequested gh.SearchResult[pullRequest]
 	Participated    gh.SearchResult[pullRequest]
 	Custom          map[string]gh.SearchResult[pullRequest]
@@ -25,8 +27,10 @@ func NewGroupedPullRequests(ghResult *gh.PRSearchResult, currentLogin string) *G
 	}
 
 	return &GroupedPullRequests{
-		Created:         toSearchResult(ghResult.Created),
-		Assigned:        toSearchResult(ghResult.Assigned),
+		Drafts:          toSearchResult(ghResult.Drafts),
+		NeedsAction:     toSearchResult(ghResult.NeedsAction),
+		ReadyToMerge:    toSearchResult(ghResult.ReadyToMerge),
+		Waiting:         toSearchResult(ghResult.Waiting),
 		ReviewRequested: toSearchResult(ghResult.ReviewRequested),
 		Participated:    toSearchResult(ghResult.Participated),
 		Custom:          custom,

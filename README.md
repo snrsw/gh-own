@@ -12,11 +12,15 @@ GitHub CLI extension to list your owned PRs and issues across repositories unlik
 
 Key features:
 
-- List your pull requests across all repositories grouped into:
-  - Created by you
-  - Assigned to you
+- List your pull requests across all repositories grouped by what to do next:
+  - Needs action — non-draft PRs where reviewers requested changes
+  - Ready to merge — non-draft PRs that are approved
   - Requested your review (including teams)
+  - Waiting for review or checks — non-draft PRs not yet approved and without changes requested
+  - Drafts — your open draft PRs
   - You have participated in mentioned or commented (including teams)
+
+  The state-based tabs (Needs action, Ready to merge, Waiting, Drafts) cover PRs you authored or are assigned to.
 - List your issues across all repositories grouped into:
   - Created by you
   - Assigned to you
@@ -114,7 +118,7 @@ Use the `{user}` placeholder to reference the authenticated GitHub username.
 ```yaml
 pr:
   queries:
-    created: "is:pr is:open author:{user} label:team-a"
+    readyToMerge: "is:pr is:open draft:false review:approved {owner} label:team-a"
     review_requested: "is:pr is:open review-requested:{user} label:urgent"
 issue:
   queries:
@@ -122,6 +126,10 @@ issue:
 ```
 
 Any query you specify overrides the default for that tab. Tabs you don't specify keep their defaults. If no config file exists, the extension behaves exactly as before.
+
+The four state-based PR tabs (Drafts, Needs action, Ready to merge, Waiting) use the `{owner}` placeholder, which expands to both `author:{user}` and `assignee:{user}` — because GitHub search cannot match `author:` or `assignee:` in a single query. The two searches merge into one tab, so a single `{owner}` query covers both the PRs you authored and the ones assigned to you.
+
+> **Migration note:** the `pr` command previously had `created` and `assigned` tabs. They have been replaced by the four state-based tabs above. If your config still overrides `created` or `assigned` under `pr.queries`, those keys now render as extra [custom tabs](#custom-tabs) rather than replacing a default — rename them to the new keys to restore the intended behavior.
 
 ### Custom tabs
 
@@ -146,8 +154,10 @@ The built-in defaults are equivalent to the following config:
 ```yaml
 pr:
   queries:
-    created: "is:pr is:open author:{user}"
-    assigned: "is:pr is:open assignee:{user}"
+    drafts: "is:pr is:open draft:true {owner}"
+    needsAction: "is:pr is:open draft:false review:changes-requested {owner}"
+    readyToMerge: "is:pr is:open draft:false review:approved {owner}"
+    waiting: "is:pr is:open draft:false -review:approved -review:changes-requested {owner}"
     review_requested: "is:pr is:open review-requested:{user}"
     participated: "is:pr is:open involves:{user} -author:{user} -assignee:{user} -review-requested:{user}"
 issue:
@@ -161,7 +171,7 @@ issue:
 
 | Command | Keys |
 |---------|------|
-| `pr` | `created`, `assigned`, `review_requested`, `participated` |
+| `pr` | `drafts`, `needsAction`, `readyToMerge`, `waiting`, `review_requested`, `participated` |
 | `issue` | `created`, `assigned`, `participated` |
 
 ## Requirements

@@ -16,10 +16,12 @@ import (
 // BuildTabs converts grouped pull requests into UI tabs.
 func (o *GroupedPullRequests) BuildTabs() []ui.Tab {
 	tabs := []ui.Tab{
-		ui.NewTab(fmt.Sprintf("Created (%d)", o.Created.TotalCount), ui.CreateList(o.prItems(o.Created))),
-		ui.NewTab(fmt.Sprintf("Participated (%d)", o.Participated.TotalCount), ui.CreateList(o.prItems(o.Participated))),
-		ui.NewTab(fmt.Sprintf("Assigned (%d)", o.Assigned.TotalCount), ui.CreateList(o.prItems(o.Assigned))),
+		ui.NewTab(fmt.Sprintf("Needs action (%d)", o.NeedsAction.TotalCount), ui.CreateList(o.prItems(o.NeedsAction))),
+		ui.NewTab(fmt.Sprintf("Ready to merge (%d)", o.ReadyToMerge.TotalCount), ui.CreateList(o.prItems(o.ReadyToMerge))),
 		ui.NewTab(fmt.Sprintf("Review Requested (%d)", o.ReviewRequested.TotalCount), ui.CreateList(o.prItems(o.ReviewRequested))),
+		ui.NewTab(fmt.Sprintf("Waiting for review or checks (%d)", o.Waiting.TotalCount), ui.CreateList(o.prItems(o.Waiting))),
+		ui.NewTab(fmt.Sprintf("Drafts (%d)", o.Drafts.TotalCount), ui.CreateList(o.prItems(o.Drafts))),
+		ui.NewTab(fmt.Sprintf("Participated (%d)", o.Participated.TotalCount), ui.CreateList(o.prItems(o.Participated))),
 	}
 
 	keys := make([]string, 0, len(o.Custom))

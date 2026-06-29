@@ -56,8 +56,10 @@ func LoadFromPath(path string) (Config, error) {
 }
 
 var defaultPRQueries = map[string]string{
-	"created":          "is:pr is:open author:{user}",
-	"assigned":         "is:pr is:open assignee:{user}",
+	"drafts":           "is:pr is:open draft:true {owner}",
+	"needsAction":      "is:pr is:open draft:false review:changes-requested {owner}",
+	"readyToMerge":     "is:pr is:open draft:false review:approved {owner}",
+	"waiting":          "is:pr is:open draft:false -review:approved -review:changes-requested {owner}",
 	"participatedUser": "is:pr is:open involves:{user} -author:{user} -assignee:{user} -review-requested:{user}",
 	"reviewRequested":  "is:pr is:open review-requested:{user}",
 }
@@ -136,10 +138,27 @@ func NormalizeKeys(queries map[string]string) map[string]string {
 	return normalized
 }
 
+// ownerAssignedSuffix is appended to a query key when an {owner} query is
+// expanded into its assignee variant. The suffixed key keeps the original key
+// as a prefix so it still routes into the same tab bucket (see parsePRSearchResult).
+const ownerAssignedSuffix = "Assigned"
+
+// ResolveQueries substitutes placeholders with the authenticated username.
+//
+// {user} is replaced verbatim. {owner} is structural: it expands a single query
+// into two — one matching author:{user} and one matching assignee:{user} — since
+// GitHub search cannot match author OR assignee in a single query. Both expanded
+// queries share the original key as a prefix so they merge into the same tab.
 func ResolveQueries(queries map[string]string, username string) map[string]string {
 	resolved := make(map[string]string, len(queries))
 	for key, query := range queries {
-		resolved[key] = strings.ReplaceAll(query, "{user}", username)
+		q := strings.ReplaceAll(query, "{user}", username)
+		if strings.Contains(q, "{owner}") {
+			resolved[key] = strings.ReplaceAll(q, "{owner}", "author:"+username)
+			resolved[key+ownerAssignedSuffix] = strings.ReplaceAll(q, "{owner}", "assignee:"+username)
+			continue
+		}
+		resolved[key] = q
 	}
 	return resolved
 }

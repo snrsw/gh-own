@@ -10,25 +10,29 @@ import (
 // PRSearchResult returns a populated fake PRSearchResult for demo use.
 func PRSearchResult() *gh.PRSearchResult {
 	return &gh.PRSearchResult{
-		Created: []gh.PRSearchNode{
-			prNode(101, "feat: add dark mode to dashboard",
-				"acme-corp/frontend", false, "SUCCESS", "APPROVED",
-				gh.LatestActivity{Kind: "approved", Login: "alice", At: "2026-03-06T14:30:00Z"},
-				"bob", "2026-03-01T09:00:00Z"),
-			prNode(42, "fix: resolve memory leak in worker",
-				"acme-corp/backend", false, "FAILURE", "",
-				gh.LatestActivity{Kind: "commented", Login: "carol", At: "2026-03-05T11:20:00Z"},
-				"bob", "2026-02-25T08:00:00Z"),
+		Drafts: []gh.PRSearchNode{
 			prNode(7, "chore: update CI configuration",
 				"demo-org/api-gateway", true, "PENDING", "REVIEW_REQUIRED",
 				gh.LatestActivity{},
 				"bob", "2026-03-03T16:00:00Z"),
 		},
-		Assigned: []gh.PRSearchNode{
+		NeedsAction: []gh.PRSearchNode{
 			prNode(88, "refactor: extract auth middleware",
 				"acme-corp/backend", false, "SUCCESS", "CHANGES_REQUESTED",
 				gh.LatestActivity{Kind: "changes requested", Login: "dave", At: "2026-03-06T09:00:00Z"},
 				"alice", "2026-02-28T10:00:00Z"),
+		},
+		ReadyToMerge: []gh.PRSearchNode{
+			prNode(101, "feat: add dark mode to dashboard",
+				"acme-corp/frontend", false, "SUCCESS", "APPROVED",
+				gh.LatestActivity{Kind: "approved", Login: "alice", At: "2026-03-06T14:30:00Z"},
+				"bob", "2026-03-01T09:00:00Z"),
+		},
+		Waiting: []gh.PRSearchNode{
+			prNode(42, "fix: resolve memory leak in worker",
+				"acme-corp/backend", false, "FAILURE", "",
+				gh.LatestActivity{Kind: "commented", Login: "carol", At: "2026-03-05T11:20:00Z"},
+				"bob", "2026-02-25T08:00:00Z"),
 		},
 		ReviewRequested: []gh.PRSearchNode{
 			prNode(55, "docs: add API usage examples",
