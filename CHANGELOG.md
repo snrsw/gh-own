@@ -2,6 +2,13 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.1.4](https://github.com/snrsw/gh-own/compare/0.1.3...0.1.4) - 2026-06-29
+
+### Other Changes
+- Update demo GIF by @snrsw in https://github.com/snrsw/gh-own/pull/63
+- Document --org and --demo flags in README by @snrsw in https://github.com/snrsw/gh-own/pull/65
+- Replace authored/assigned PR tabs with state-based tabs by @snrsw in https://github.com/snrsw/gh-own/pull/66
+
 ## [0.1.3](https://github.com/snrsw/gh-own/compare/0.1.2...0.1.3) - 2026-04-10
 ### Other Changes
 - Make latest activity more prominent in item description by @snrsw in https://github.com/snrsw/gh-own/pull/60
