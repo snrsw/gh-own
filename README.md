@@ -13,14 +13,14 @@ GitHub CLI extension to list your owned PRs and issues across repositories unlik
 Key features:
 
 - List your pull requests across all repositories grouped by what to do next:
-  - Drafts — your open draft PRs
   - Needs action — non-draft PRs where reviewers requested changes
   - Ready to merge — non-draft PRs that are approved
-  - Waiting for review or checks — non-draft PRs not yet approved and without changes requested
   - Requested your review (including teams)
+  - Waiting for review or checks — non-draft PRs not yet approved and without changes requested
+  - Drafts — your open draft PRs
   - You have participated in mentioned or commented (including teams)
 
-  The first four tabs cover PRs you authored or are assigned to.
+  The state-based tabs (Needs action, Ready to merge, Waiting, Drafts) cover PRs you authored or are assigned to.
 - List your issues across all repositories grouped into:
   - Created by you
   - Assigned to you

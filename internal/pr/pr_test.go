@@ -47,12 +47,12 @@ func TestBuildTabs_DefaultTabsOnly(t *testing.T) {
 		t.Fatalf("BuildTabs() returned %d tabs, want 6", len(tabs))
 	}
 	want := []string{
-		"Drafts (1)",
 		"Needs action (0)",
 		"Ready to merge (0)",
-		"Waiting for review or checks (0)",
-		"Participated (0)",
 		"Review Requested (0)",
+		"Waiting for review or checks (0)",
+		"Drafts (1)",
+		"Participated (0)",
 	}
 	for i, name := range want {
 		if tabs[i].Name() != name {
