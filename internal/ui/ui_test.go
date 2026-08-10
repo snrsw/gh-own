@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -697,5 +698,153 @@ func TestModel_View_ShowsFilterHelpWhenFiltering(t *testing.T) {
 
 	if !strings.Contains(m.View(), "esc") {
 		t.Error("View() should contain 'esc' when filtering is active")
+	}
+}
+
+func sortedItemTab() Tab {
+	// Deliberately built newest first, the order BuildTabs produces.
+	items := []list.Item{
+		NewItem("repo", "newest", "desc", "url-new").
+			WithSortAt(time.Date(2024, 3, 20, 0, 0, 0, 0, time.UTC)),
+		NewItem("repo", "middle", "desc", "url-mid").
+			WithSortAt(time.Date(2024, 3, 10, 0, 0, 0, 0, time.UTC)),
+		NewItem("repo", "oldest", "desc", "url-old").
+			WithSortAt(time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)),
+	}
+	return NewTab("Tab 1", CreateList(items))
+}
+
+func itemTitles(t *testing.T, l list.Model) []string {
+	t.Helper()
+	titles := make([]string, 0, len(l.Items()))
+	for _, li := range l.Items() {
+		it, ok := li.(Item)
+		if !ok {
+			t.Fatalf("list item is %T, want Item", li)
+		}
+		titles = append(titles, it.titleText)
+	}
+	return titles
+}
+
+func pressKey(t *testing.T, m Model, r rune) Model {
+	t.Helper()
+	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	got, ok := newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+	return got
+}
+
+func TestModel_Update_SortKey_TogglesOrder(t *testing.T) {
+	m := NewModel([]Tab{sortedItemTab()})
+
+	m = pressKey(t, m, 's')
+	want := []string{"oldest", "middle", "newest"}
+	if got := itemTitles(t, m.tabs[0].list); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("after first 's' = %v, want %v", got, want)
+	}
+	if m.statusMsg == "" {
+		t.Error("pressing 's' should set a status message")
+	}
+
+	m = pressKey(t, m, 's')
+	want = []string{"newest", "middle", "oldest"}
+	if got := itemTitles(t, m.tabs[0].list); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("after second 's' = %v, want %v", got, want)
+	}
+}
+
+func TestModel_Update_SortKey_AppliesToAllTabs(t *testing.T) {
+	m := NewModel([]Tab{sortedItemTab(), sortedItemTab()})
+
+	m = pressKey(t, m, 's')
+
+	want := []string{"oldest", "middle", "newest"}
+	for i := range m.tabs {
+		if got := itemTitles(t, m.tabs[i].list); strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Errorf("tab %d = %v, want %v", i, got, want)
+		}
+	}
+}
+
+func TestModel_Update_SortKey_IgnoredDuringFiltering(t *testing.T) {
+	m := NewModel([]Tab{sortedItemTab()})
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m, ok := newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	m = pressKey(t, m, '/')
+	if m.tabs[m.activeTab].list.FilterState() != list.Filtering {
+		t.Fatal("expected to be in filtering state")
+	}
+
+	m = pressKey(t, m, 's')
+
+	if m.sortAsc {
+		t.Error("pressing 's' during filter mode should not toggle the sort order")
+	}
+	want := []string{"newest", "middle", "oldest"}
+	if got := itemTitles(t, m.tabs[0].list); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("items = %v, want %v (unchanged)", got, want)
+	}
+}
+
+func TestModel_Update_SortKey_IgnoredDuringLoading(t *testing.T) {
+	m := NewLoadingModel(FetchCmd(func() ([]Tab, error) { return nil, nil }))
+
+	m = pressKey(t, m, 's')
+
+	if m.sortAsc {
+		t.Error("pressing 's' while loading should not toggle the sort order")
+	}
+}
+
+func TestModel_Update_TabsMsg_ReappliesSortOrder(t *testing.T) {
+	m := NewModel([]Tab{sortedItemTab()})
+	m = pressKey(t, m, 's')
+
+	// A refresh delivers freshly built tabs, which are always newest first.
+	newModel, _ := m.Update(TabsMsg([]Tab{sortedItemTab()}))
+	m, ok := newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	want := []string{"oldest", "middle", "newest"}
+	if got := itemTitles(t, m.tabs[0].list); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("after refresh = %v, want %v", got, want)
+	}
+}
+
+func TestSortItems_UnknownTimestampsSortLast(t *testing.T) {
+	items := []list.Item{
+		NewItem("repo", "undated", "desc", "url-none"),
+		NewItem("repo", "dated", "desc", "url-dated").
+			WithSortAt(time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)),
+	}
+
+	sortItems(items, false)
+
+	first, ok := items[0].(Item)
+	if !ok {
+		t.Fatalf("list item is %T, want Item", items[0])
+	}
+	if first.titleText != "dated" {
+		t.Errorf("sortItems() put %q first, want %q", first.titleText, "dated")
+	}
+}
+
+func TestHelpView_ContainsSort(t *testing.T) {
+	for _, state := range []list.FilterState{list.Unfiltered, list.FilterApplied} {
+		if view := helpView(state); !strings.Contains(view, "sort") {
+			t.Errorf("helpView(%v) should contain 'sort'", state)
+		}
+	}
+	if view := helpView(list.Filtering); strings.Contains(view, "sort") {
+		t.Error("helpView(Filtering) should not contain 'sort'")
 	}
 }

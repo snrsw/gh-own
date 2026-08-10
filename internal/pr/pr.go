@@ -3,6 +3,7 @@ package pr
 
 import (
 	"strings"
+	"time"
 
 	"github.com/snrsw/gh-own/internal/cistatus"
 	"github.com/snrsw/gh-own/internal/gh"
@@ -39,18 +40,21 @@ func NewGroupedPullRequests(ghResult *gh.PRSearchResult, currentLogin string) *G
 }
 
 type pullRequest struct {
-	Number         int               `json:"number"`
-	User           gh.User           `json:"user"`
-	RepositoryURL  string            `json:"repository_url"`
-	Title          string            `json:"title"`
-	State          string            `json:"state"`
-	HTMLURL        string            `json:"html_url"`
-	Draft          bool              `json:"draft"`
-	UpdatedAt      string            `json:"updated_at"`
-	CreatedAt      string            `json:"created_at"`
-	CIStatus       cistatus.CIStatus           `json:"-"`
-	ReviewStatus   reviewstatus.ReviewStatus   `json:"-"`
-	LatestActivity gh.LatestActivity           `json:"-"`
+	Number         int                       `json:"number"`
+	User           gh.User                   `json:"user"`
+	RepositoryURL  string                    `json:"repository_url"`
+	Title          string                    `json:"title"`
+	State          string                    `json:"state"`
+	HTMLURL        string                    `json:"html_url"`
+	Draft          bool                      `json:"draft"`
+	UpdatedAt      string                    `json:"updated_at"`
+	CreatedAt      string                    `json:"created_at"`
+	CIStatus       cistatus.CIStatus         `json:"-"`
+	ReviewStatus   reviewstatus.ReviewStatus `json:"-"`
+	LatestActivity gh.LatestActivity         `json:"-"`
+	// SortAt is the timestamp the list is ordered by. It matches the time shown
+	// on the description line (see toItem).
+	SortAt time.Time `json:"-"`
 }
 
 func (p *pullRequest) repositoryFullName() string {
@@ -64,6 +68,7 @@ func (p *pullRequest) repositoryFullName() string {
 
 func toSearchResult(nodes []gh.PRSearchNode) gh.SearchResult[pullRequest] {
 	prs := fromGraphQLNodes(nodes)
+	gh.SortByUpdatedDesc(prs, func(p pullRequest) time.Time { return p.SortAt })
 	return gh.SearchResult[pullRequest]{
 		TotalCount: len(prs),
 		Items:      prs,
@@ -91,5 +96,6 @@ func fromGraphQL(node gh.PRSearchNode) pullRequest {
 		CIStatus:       node.CIStatus(),
 		ReviewStatus:   reviewstatus.ParseReviewDecision(node.ReviewDecision),
 		LatestActivity: node.LatestActivity,
+		SortAt:         gh.SortAt(node.LatestActivity, node.UpdatedAt),
 	}
 }

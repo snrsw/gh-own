@@ -441,3 +441,33 @@ func TestParsePRSearchNodes_ReviewDecision(t *testing.T) {
 		})
 	}
 }
+
+func TestParsePRSearchResult_DeterministicBucketOrder(t *testing.T) {
+	// Buckets fed by several queries are assembled from a map filled by
+	// parallel searches, so the concatenation order must not depend on map
+	// iteration order. A single run would pass by chance; loop to be sure.
+	parsed := map[string][]PRSearchNode{
+		"drafts":         {{Number: 1, URL: "https://github.com/org/repo/pull/1"}},
+		"draftsAssigned": {{Number: 2, URL: "https://github.com/org/repo/pull/2"}},
+	}
+
+	want := []int{1, 2}
+	for i := 0; i < 20; i++ {
+		result, err := parsePRSearchResult(parsed)
+		if err != nil {
+			t.Fatalf("parsePRSearchResult returned error: %v", err)
+		}
+		got := make([]int, 0, len(result.Drafts))
+		for _, node := range result.Drafts {
+			got = append(got, node.Number)
+		}
+		if len(got) != len(want) {
+			t.Fatalf("Drafts = %v, want %v", got, want)
+		}
+		for j := range want {
+			if got[j] != want[j] {
+				t.Fatalf("Drafts = %v, want %v (iteration %d)", got, want, i)
+			}
+		}
+	}
+}

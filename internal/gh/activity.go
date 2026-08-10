@@ -1,7 +1,5 @@
 package gh
 
-import "time"
-
 type LatestActivity struct {
 	Kind  string
 	Login string
@@ -27,13 +25,9 @@ func mostRecent(candidates []LatestActivity) LatestActivity {
 		return LatestActivity{}
 	}
 	best := candidates[0]
-	var bestTime time.Time
-	if t, err := time.Parse(time.RFC3339, best.At); err == nil {
-		bestTime = t
-	}
+	bestTime := ParseTimestamp(best.At)
 	for _, c := range candidates[1:] {
-		t, err := time.Parse(time.RFC3339, c.At)
-		if err == nil && t.After(bestTime) {
+		if t := ParseTimestamp(c.At); t.After(bestTime) {
 			best = c
 			bestTime = t
 		}

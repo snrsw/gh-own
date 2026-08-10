@@ -131,7 +131,8 @@ func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, err
 	var drafts, needsAction, readyToMerge, waiting, participated []PRSearchNode
 	custom := make(map[string][]PRSearchNode)
 
-	for key, nodes := range parsed {
+	for _, key := range sortedKeys(parsed) {
+		nodes := parsed[key]
 		switch {
 		case strings.HasPrefix(key, "drafts"):
 			drafts = append(drafts, nodes...)

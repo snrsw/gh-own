@@ -87,8 +87,16 @@ gh own --debug
 | `tab` / `shift+tab` | Switch between tabs |
 | `enter` | Open selected item in browser |
 | `r` | Refresh data |
+| `s` | Toggle sort order (newest / oldest first) |
 | `/` | Filter items in current tab |
 | `ctrl+c` | Quit |
+
+## Sort order
+
+Every tab lists items newest first, using the same timestamp shown on each item's
+description line — the latest activity (comment, review, or push) when there is
+one, and the item's last-updated time otherwise. Press `s` to flip to oldest
+first; the choice applies to all tabs and survives a refresh.
 
 ## Symbol legend
 

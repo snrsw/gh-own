@@ -56,7 +56,7 @@ func (i issue) toItem(currentLogin string) ui.Item {
 		fmt.Sprintf("#%d %s", i.Number, i.Title),
 		desc,
 		i.HTMLURL,
-	)
+	).WithSortAt(i.SortAt)
 }
 
 func (o *GroupedIssues) issueItems(issues gh.SearchResult[issue]) []list.Item {

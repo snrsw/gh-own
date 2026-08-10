@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 type Item struct {
 	repoName, titleText, titleSuffix, description, url string
+	sortAt                                             time.Time
 }
 
 func NewItem(repoName, titleText, description, url string) Item {
@@ -31,6 +33,13 @@ func NewItem(repoName, titleText, description, url string) Item {
 // to the title line as-is (preserving its ANSI colors) during rendering.
 func (i Item) WithSuffix(s string) Item {
 	i.titleSuffix = s
+	return i
+}
+
+// WithSortAt returns a copy of the item carrying the timestamp the list is
+// ordered by, so the sort order can be flipped without refetching.
+func (i Item) WithSortAt(t time.Time) Item {
+	i.sortAt = t
 	return i
 }
 
@@ -90,6 +99,9 @@ type Model struct {
 	err       error
 	fetchCmd  tea.Cmd
 	statusMsg string
+	// sortAsc flips the list order to oldest first. Tabs arrive newest first,
+	// so the zero value is the order they are built with.
+	sortAsc bool
 }
 
 // TabsMsg signals that data loading is complete and tabs are ready.
@@ -166,6 +178,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.width > 0 {
 			m = m.handleWindowSize(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+		}
+		// Freshly built tabs are newest first; re-apply the chosen order so a
+		// refresh does not silently discard it.
+		if m.sortAsc {
+			cmd := m.applySort()
+			return m, cmd
 		}
 		return m, nil
 	case spinner.TickMsg:
@@ -292,8 +310,62 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 
 	case "r":
 		return m.handleRefresh()
+
+	case "s":
+		return m.handleToggleSort()
 	}
 	return m, nil, false
+}
+
+func (m Model) handleToggleSort() (Model, tea.Cmd, bool) {
+	if m.loading {
+		return m, nil, true
+	}
+	if m.tabs[m.activeTab].list.FilterState() == list.Filtering {
+		return m, nil, false
+	}
+
+	m.sortAsc = !m.sortAsc
+	sortCmd := m.applySort()
+
+	order := "newest first"
+	if m.sortAsc {
+		order = "oldest first"
+	}
+	m.statusMsg = "↕ sorted by updated: " + order
+	clearCmd := tea.Tick(2*time.Second, func(time.Time) tea.Msg { return clearStatusMsg{} })
+	return m, tea.Batch(sortCmd, clearCmd), true
+}
+
+// applySort reorders every tab, not just the active one, so switching tabs
+// never lands on a list ordered the other way.
+func (m *Model) applySort() tea.Cmd {
+	cmds := make([]tea.Cmd, 0, len(m.tabs))
+	for i := range m.tabs {
+		items := m.tabs[i].list.Items()
+		sortItems(items, m.sortAsc)
+		cmds = append(cmds, m.tabs[i].list.SetItems(items))
+		m.tabs[i].list.Select(0)
+	}
+	return tea.Batch(cmds...)
+}
+
+func sortItems(items []list.Item, asc bool) {
+	sort.SliceStable(items, func(i, j int) bool {
+		a, b := itemSortAt(items[i]), itemSortAt(items[j])
+		if asc {
+			return a.Before(b)
+		}
+		return a.After(b)
+	})
+}
+
+func itemSortAt(i list.Item) time.Time {
+	it, ok := i.(Item)
+	if !ok {
+		return time.Time{}
+	}
+	return it.sortAt
 }
 
 func (m Model) handleRefresh() (Model, tea.Cmd, bool) {

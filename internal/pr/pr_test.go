@@ -545,3 +545,105 @@ func TestFromGraphQLNodes(t *testing.T) {
 		t.Errorf("prs[1].CIStatus = %v, want %v", prs[1].CIStatus, cistatus.CIStatusFailure)
 	}
 }
+
+func prNumbers(items []pullRequest) []int {
+	numbers := make([]int, len(items))
+	for i, p := range items {
+		numbers[i] = p.Number
+	}
+	return numbers
+}
+
+func equalNumbers(got, want []int) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestNewGroupedPullRequests_SortsByUpdatedDesc(t *testing.T) {
+	ghResult := &gh.PRSearchResult{
+		Drafts: []gh.PRSearchNode{
+			{Number: 1, UpdatedAt: "2024-03-01T00:00:00Z"},
+			{Number: 2, UpdatedAt: "2024-03-20T00:00:00Z"},
+			{Number: 3, UpdatedAt: "2024-03-10T00:00:00Z"},
+		},
+	}
+
+	grouped := NewGroupedPullRequests(ghResult, "")
+
+	want := []int{2, 3, 1}
+	if got := prNumbers(grouped.Drafts.Items); !equalNumbers(got, want) {
+		t.Errorf("Drafts.Items = %v, want %v", got, want)
+	}
+	if grouped.Drafts.TotalCount != 3 {
+		t.Errorf("Drafts.TotalCount = %d, want 3", grouped.Drafts.TotalCount)
+	}
+}
+
+func TestNewGroupedPullRequests_SortsCustomTabs(t *testing.T) {
+	ghResult := &gh.PRSearchResult{
+		Custom: map[string][]gh.PRSearchNode{
+			"myTab": {
+				{Number: 1, UpdatedAt: "2024-03-01T00:00:00Z"},
+				{Number: 2, UpdatedAt: "2024-03-20T00:00:00Z"},
+			},
+		},
+	}
+
+	grouped := NewGroupedPullRequests(ghResult, "")
+
+	want := []int{2, 1}
+	if got := prNumbers(grouped.Custom["myTab"].Items); !equalNumbers(got, want) {
+		t.Errorf("Custom[\"myTab\"].Items = %v, want %v", got, want)
+	}
+}
+
+func TestNewGroupedPullRequests_SortsByDisplayedTime(t *testing.T) {
+	// The description line shows the latest activity time when there is one and
+	// updatedAt otherwise, so the order has to follow the same rule. PR 1 has
+	// the newest updatedAt but its activity is the oldest of the three.
+	ghResult := &gh.PRSearchResult{
+		Drafts: []gh.PRSearchNode{
+			{
+				Number:         1,
+				UpdatedAt:      "2024-03-20T00:00:00Z",
+				LatestActivity: gh.LatestActivity{Kind: "commented", Login: "alice", At: "2024-03-01T00:00:00Z"},
+			},
+			{
+				Number:         2,
+				UpdatedAt:      "2024-03-05T00:00:00Z",
+				LatestActivity: gh.LatestActivity{Kind: "pushed", Login: "bob", At: "2024-03-05T00:00:00Z"},
+			},
+			{Number: 3, UpdatedAt: "2024-03-10T00:00:00Z"},
+		},
+	}
+
+	grouped := NewGroupedPullRequests(ghResult, "")
+
+	want := []int{3, 2, 1}
+	if got := prNumbers(grouped.Drafts.Items); !equalNumbers(got, want) {
+		t.Errorf("Drafts.Items = %v, want %v", got, want)
+	}
+}
+
+func TestNewGroupedPullRequests_MissingTimestampSortsLast(t *testing.T) {
+	ghResult := &gh.PRSearchResult{
+		Drafts: []gh.PRSearchNode{
+			{Number: 1},
+			{Number: 2, UpdatedAt: "2024-03-01T00:00:00Z"},
+		},
+	}
+
+	grouped := NewGroupedPullRequests(ghResult, "")
+
+	want := []int{2, 1}
+	if got := prNumbers(grouped.Drafts.Items); !equalNumbers(got, want) {
+		t.Errorf("Drafts.Items = %v, want %v", got, want)
+	}
+}

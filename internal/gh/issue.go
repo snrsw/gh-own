@@ -111,7 +111,8 @@ func parseIssueSearchResult(parsed map[string][]IssueSearchNode) (*IssueSearchRe
 	var participated []IssueSearchNode
 	custom := make(map[string][]IssueSearchNode)
 
-	for key, nodes := range parsed {
+	for _, key := range sortedKeys(parsed) {
+		nodes := parsed[key]
 		switch {
 		case strings.HasPrefix(key, "participated"):
 			participated = append(participated, nodes...)
