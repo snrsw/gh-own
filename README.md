@@ -98,6 +98,11 @@ description line — the latest activity (comment, review, or push) when there i
 one, and the item's last-updated time otherwise. Press `s` to flip to oldest
 first; the choice applies to all tabs and survives a refresh.
 
+Searches are also issued with `sort:updated-desc` so that the page GitHub returns
+is the most recently updated items rather than the most relevant ones. If one of
+your [configured queries](#configuration) already specifies its own `sort:`
+qualifier, that one is used instead.
+
 ## Symbol legend
 
 ### CI status

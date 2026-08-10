@@ -163,6 +163,34 @@ func ResolveQueries(queries map[string]string, username string) map[string]strin
 	return resolved
 }
 
+// updatedDescQualifier orders search results by last update, newest first.
+// Queries are capped at a fixed page size, so without it the window GitHub
+// returns is the most *relevant* results rather than the most recent ones.
+const updatedDescQualifier = "sort:updated-desc"
+
+// EnsureSort appends the newest-first qualifier to every query that does not
+// already carry a sort of its own, so a user-supplied "sort:" always wins.
+func EnsureSort(queries map[string]string) map[string]string {
+	result := make(map[string]string, len(queries))
+	for key, query := range queries {
+		if hasSortQualifier(query) {
+			result[key] = query
+			continue
+		}
+		result[key] = query + " " + updatedDescQualifier
+	}
+	return result
+}
+
+func hasSortQualifier(query string) bool {
+	for _, field := range strings.Fields(query) {
+		if strings.HasPrefix(field, "sort:") {
+			return true
+		}
+	}
+	return false
+}
+
 func AppendOrg(queries map[string]string, org string) map[string]string {
 	if org == "" {
 		return queries

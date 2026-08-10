@@ -40,6 +40,7 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, 
 		}
 		entries[fmt.Sprintf("participatedTeam%d", i)] = q
 	}
+	entries = config.EnsureSort(entries)
 
 	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
 	if err != nil {

@@ -43,7 +43,8 @@ var prCmd = &cobra.Command{
 				return nil, err
 			}
 
-			entries := config.AppendOrg(config.ResolveQueries(config.MergePRQueries(cfg.PR.Queries), username), org)
+			entries := config.MergePRQueries(cfg.PR.Queries)
+			entries = config.EnsureSort(config.AppendOrg(config.ResolveQueries(entries, username), org))
 
 			done = timing.Track("pr:rest-client")
 			restClient, err := api.DefaultRESTClient()

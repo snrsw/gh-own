@@ -39,6 +39,7 @@ func SearchIssuesTeams(client *api.GraphQLClient, username string, teams []strin
 		}
 		entries[fmt.Sprintf("participatedTeam%d", i)] = q
 	}
+	entries = config.EnsureSort(entries)
 
 	raw, err := Search(client, issueSearchQuery, entries, parseIssueSearchJSON)
 	if err != nil {

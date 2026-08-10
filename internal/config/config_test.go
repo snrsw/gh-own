@@ -444,3 +444,65 @@ func TestDefaultPath_FallsBackToHomeDotConfig(t *testing.T) {
 		t.Errorf("DefaultPath() = %q, want %q", got, want)
 	}
 }
+
+func TestEnsureSort_AppendsQualifier(t *testing.T) {
+	queries := map[string]string{
+		"drafts":  "is:pr is:open draft:true author:me",
+		"waiting": "is:pr is:open",
+	}
+
+	got := EnsureSort(queries)
+
+	want := map[string]string{
+		"drafts":  "is:pr is:open draft:true author:me sort:updated-desc",
+		"waiting": "is:pr is:open sort:updated-desc",
+	}
+	for key, wantQuery := range want {
+		if got[key] != wantQuery {
+			t.Errorf("EnsureSort()[%q] = %q, want %q", key, got[key], wantQuery)
+		}
+	}
+}
+
+func TestEnsureSort_RespectsExistingSort(t *testing.T) {
+	tests := []struct {
+		name  string
+		query string
+	}{
+		{name: "explicit ascending", query: "is:pr is:open sort:updated-asc"},
+		{name: "unrelated sort", query: "is:pr is:open sort:reactions"},
+		{name: "sort in the middle", query: "is:pr sort:comments is:open"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := EnsureSort(map[string]string{"custom": tt.query})
+			if got["custom"] != tt.query {
+				t.Errorf("EnsureSort()[%q] = %q, want %q", "custom", got["custom"], tt.query)
+			}
+		})
+	}
+}
+
+func TestEnsureSort_DoesNotMatchSubstring(t *testing.T) {
+	// "resort:" is a title term, not a sort qualifier.
+	query := "is:pr is:open resort:foo"
+
+	got := EnsureSort(map[string]string{"custom": query})
+
+	want := query + " sort:updated-desc"
+	if got["custom"] != want {
+		t.Errorf("EnsureSort()[%q] = %q, want %q", "custom", got["custom"], want)
+	}
+}
+
+func TestEnsureSort_EmptyMap(t *testing.T) {
+	got := EnsureSort(map[string]string{})
+
+	if got == nil {
+		t.Fatal("EnsureSort() returned nil, want empty map")
+	}
+	if len(got) != 0 {
+		t.Errorf("EnsureSort() has %d keys, want 0", len(got))
+	}
+}
