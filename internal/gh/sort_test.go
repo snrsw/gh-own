@@ -1,6 +1,8 @@
 package gh
 
 import (
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 )
@@ -21,15 +23,15 @@ func TestParseTimestamp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParseTimestamp(tt.input)
+			got := parseTimestamp(tt.input)
 			if tt.isZero {
 				if !got.IsZero() {
-					t.Errorf("ParseTimestamp(%q) = %v, want zero time", tt.input, got)
+					t.Errorf("parseTimestamp(%q) = %v, want zero time", tt.input, got)
 				}
 				return
 			}
 			if !got.Equal(tt.want) {
-				t.Errorf("ParseTimestamp(%q) = %v, want %v", tt.input, got, tt.want)
+				t.Errorf("parseTimestamp(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
 	}
@@ -64,7 +66,7 @@ func TestSortAt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			want := ParseTimestamp(tt.want)
+			want := parseTimestamp(tt.want)
 			if got := SortAt(tt.activity, tt.updatedAt); !got.Equal(want) {
 				t.Errorf("SortAt() = %v, want %v", got, want)
 			}
@@ -83,7 +85,7 @@ type sortable struct {
 	at   string
 }
 
-func sortableAt(s sortable) time.Time { return ParseTimestamp(s.at) }
+func sortableAt(s sortable) time.Time { return parseTimestamp(s.at) }
 
 func names(items []sortable) []string {
 	out := make([]string, len(items))
@@ -91,18 +93,6 @@ func names(items []sortable) []string {
 		out[i] = it.name
 	}
 	return out
-}
-
-func equalNames(got, want []string) bool {
-	if len(got) != len(want) {
-		return false
-	}
-	for i := range got {
-		if got[i] != want[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func TestSortByUpdatedDesc(t *testing.T) {
@@ -165,7 +155,7 @@ func TestSortByUpdatedDesc(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			SortByUpdatedDesc(tt.input, sortableAt)
-			if got := names(tt.input); !equalNames(got, tt.want) {
+			if got := names(tt.input); !slices.Equal(got, tt.want) {
 				t.Errorf("SortByUpdatedDesc() = %v, want %v", got, tt.want)
 			}
 		})
@@ -173,16 +163,21 @@ func TestSortByUpdatedDesc(t *testing.T) {
 }
 
 func TestSortByUpdatedDesc_StableOnTies(t *testing.T) {
-	items := []sortable{
-		{name: "first", at: "2024-03-01T00:00:00Z"},
-		{name: "second", at: "2024-03-01T00:00:00Z"},
-		{name: "third", at: "2024-03-01T00:00:00Z"},
+	// Go's sort falls back to insertion sort — which is stable — below 12
+	// elements, so a smaller fixture could not tell a stable sort from an
+	// unstable one.
+	const n = 32
+	items := make([]sortable, 0, n)
+	want := make([]string, 0, n)
+	for i := range n {
+		name := fmt.Sprintf("item%02d", i)
+		items = append(items, sortable{name: name, at: "2024-03-01T00:00:00Z"})
+		want = append(want, name)
 	}
 
 	SortByUpdatedDesc(items, sortableAt)
 
-	want := []string{"first", "second", "third"}
-	if got := names(items); !equalNames(got, want) {
+	if got := names(items); !slices.Equal(got, want) {
 		t.Errorf("SortByUpdatedDesc() = %v, want %v", got, want)
 	}
 }

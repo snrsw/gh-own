@@ -25,9 +25,9 @@ func mostRecent(candidates []LatestActivity) LatestActivity {
 		return LatestActivity{}
 	}
 	best := candidates[0]
-	bestTime := ParseTimestamp(best.At)
+	bestTime := parseTimestamp(best.At)
 	for _, c := range candidates[1:] {
-		if t := ParseTimestamp(c.At); t.After(bestTime) {
+		if t := parseTimestamp(c.At); t.After(bestTime) {
 			best = c
 			bestTime = t
 		}

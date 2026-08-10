@@ -4,6 +4,7 @@ package gh
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
@@ -121,4 +122,16 @@ func Search[T any](
 		merged[r.key] = r.nodes
 	}
 	return merged, nil
+}
+
+// sortedKeys returns the map's keys in ascending order so that iterating over
+// search results — which arrive in a map filled by parallel queries — produces
+// a deterministic order.
+func sortedKeys[T any](m map[string][]T) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

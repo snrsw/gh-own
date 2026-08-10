@@ -163,6 +163,23 @@ func ResolveQueries(queries map[string]string, username string) map[string]strin
 	return resolved
 }
 
+// PRSearchEntries builds the search queries for the pr command: defaults merged
+// with the user's overrides, placeholders resolved, scoped to org when given,
+// and ordered newest first.
+func PRSearchEntries(override map[string]string, username, org string) map[string]string {
+	return searchEntries(MergePRQueries(override), username, org)
+}
+
+// IssueSearchEntries builds the search queries for the issue command. See
+// PRSearchEntries.
+func IssueSearchEntries(override map[string]string, username, org string) map[string]string {
+	return searchEntries(MergeIssueQueries(override), username, org)
+}
+
+func searchEntries(queries map[string]string, username, org string) map[string]string {
+	return EnsureSort(AppendOrg(ResolveQueries(queries, username), org))
+}
+
 // updatedDescQualifier orders search results by last update, newest first.
 // Queries are capped at a fixed page size, so without it the window GitHub
 // returns is the most *relevant* results rather than the most recent ones.

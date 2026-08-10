@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -198,8 +199,10 @@ func TestParseIssueSearchNodes_NoActivity(t *testing.T) {
 func TestParseIssueSearchNodes_WithComment(t *testing.T) {
 	node := issueSearchRawNode{Number: 1, Title: "Test"}
 	node.Comments.Nodes = []struct {
-		Author    struct{ Login string `json:"login"` } `json:"author"`
-		CreatedAt string                                `json:"createdAt"`
+		Author struct {
+			Login string `json:"login"`
+		} `json:"author"`
+		CreatedAt string `json:"createdAt"`
 	}{{CreatedAt: "2024-03-10T12:00:00Z"}}
 	node.Comments.Nodes[0].Author.Login = "alice"
 
@@ -263,5 +266,40 @@ func TestParseIssueSearchNodes(t *testing.T) {
 
 	if nodes[1].Number != 2 {
 		t.Errorf("nodes[1].Number = %d, want 2", nodes[1].Number)
+	}
+}
+
+func TestIssueTeamEntries(t *testing.T) {
+	got := issueTeamEntries([]string{"my-org/team-a"}, "my-org")
+
+	want := "is:issue is:open team:my-org/team-a org:my-org sort:updated-desc"
+	if got["participatedTeam0"] != want {
+		t.Errorf("issueTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
+	}
+}
+
+func TestParseIssueSearchResult_DeterministicBucketOrder(t *testing.T) {
+	// The Participated bucket is fed by several queries whose results arrive in
+	// a map filled by parallel searches, so the concatenation order must not
+	// depend on map iteration order. A single run would pass by chance.
+	parsed := map[string][]IssueSearchNode{
+		"participatedUser":  {{Number: 1, URL: "https://github.com/org/repo/issues/1"}},
+		"participatedTeam0": {{Number: 2, URL: "https://github.com/org/repo/issues/2"}},
+		"participatedTeam1": {{Number: 3, URL: "https://github.com/org/repo/issues/3"}},
+	}
+
+	want := []int{2, 3, 1} // participatedTeam0, participatedTeam1, participatedUser
+	for i := 0; i < 20; i++ {
+		result, err := parseIssueSearchResult(parsed)
+		if err != nil {
+			t.Fatalf("parseIssueSearchResult returned error: %v", err)
+		}
+		got := make([]int, 0, len(result.Participated))
+		for _, node := range result.Participated {
+			got = append(got, node.Number)
+		}
+		if !slices.Equal(got, want) {
+			t.Fatalf("Participated = %v, want %v (iteration %d)", got, want, i)
+		}
 	}
 }

@@ -19,11 +19,12 @@ gh-own is a GitHub CLI extension that displays the user's owned PRs and issues i
 ### Package Structure
 
 - **cmd/** - Cobra command definitions (`root`, `pr`, `issue`); `root` has a persistent `--debug` flag that enables slog debug output
-- **internal/gh/** - GitHub API client wrapper using `cli/go-gh/v2`; split across four files:
-  - `gh.go` — `CurrentLogin()`, generic `Search[T]` (runs parallel GraphQL queries)
+- **internal/gh/** - GitHub API client wrapper using `cli/go-gh/v2`; split across five files:
+  - `gh.go` — `CurrentLogin()`, generic `Search[T]` (runs parallel GraphQL queries), `sortedKeys` (deterministic iteration over the per-query result map)
   - `pr.go` — `SearchPRs`, `SearchPRsTeams`, `MergeSearchPRsResults`, `PRSearchNode`, `PRSearchResult`
   - `issue.go` — `SearchIssues`, `SearchIssuesTeams`, `MergeSearchIssuesResults`, `IssueSearchNode`, `IssueSearchResult`
   - `activity.go` — `LatestActivity`, `NewLatestActivity` (picks most recent of comment / review / push)
+  - `sort.go` — `SortAt` (the timestamp a list entry is ordered by), `SortByUpdatedDesc`
 - **internal/pr/** - PR data types and search logic (groups by: created, assigned, review-requested, participated); `BuildTabs()` produces `[]ui.Tab`
 - **internal/issue/** - Issue data types and search logic (groups by: created, assigned, participated); `BuildTabs()` produces `[]ui.Tab`
 - **internal/ui/** - Bubbletea TUI with tabbed interface; `Model` manages tabs, `Item` represents list entries, `NewLoadingModel` shows a spinner while data is fetched
@@ -39,6 +40,8 @@ gh-own is a GitHub CLI extension that displays the user's owned PRs and issues i
    - **User search** — `gh.SearchPRs` / `gh.SearchIssues` via GraphQL
    - **Team search** — `gh.GetTeamSlugsWithCache` (REST, cached 6 h) → `gh.SearchPRsTeams` / `gh.SearchIssuesTeams`
 3. Results are merged with `gh.MergeSearch*Results` (deduplicates by URL)
-4. Domain packages (`pr`, `issue`) group results and call `BuildTabs()` to produce `[]ui.Tab`
+4. Domain packages (`pr`, `issue`) group results, order every bucket newest first by `gh.SortAt`, and call `BuildTabs()` to produce `[]ui.Tab`
 5. `ui.NewLoadingModel` starts Bubbletea with a spinner; `ui.FetchCmd` wraps the fetch function and delivers `TabsMsg` (success) or `ErrMsg` (failure)
-6. Keyboard: `enter` opens the selected item URL in the system browser; `r` refreshes; `tab`/`shift+tab` switch tabs; `/` filters
+6. Keyboard: `enter` opens the selected item URL in the system browser; `r` refreshes; `s` toggles newest/oldest first (`Model.applySort` re-sorts every tab and is re-applied on `TabsMsg`); `tab`/`shift+tab` switch tabs; `/` filters
+
+Search queries carry `sort:updated-desc` unless the user's own query specifies a `sort:` — `config.PRSearchEntries` / `config.IssueSearchEntries` build the user queries, `gh.prTeamEntries` / `gh.issueTeamEntries` the team ones.

@@ -31,7 +31,17 @@ func SearchIssuesTeams(client *api.GraphQLClient, username string, teams []strin
 		return &IssueSearchResult{Custom: make(map[string][]IssueSearchNode)}, nil
 	}
 
-	entries := map[string]string{}
+	raw, err := Search(client, issueSearchQuery, issueTeamEntries(teams, org), parseIssueSearchJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseIssueSearchResult(raw)
+}
+
+// issueTeamEntries builds one query per team. See prTeamEntries.
+func issueTeamEntries(teams []string, org string) map[string]string {
+	entries := make(map[string]string, len(teams))
 	for i, team := range teams {
 		q := fmt.Sprintf("is:issue is:open team:%s", team)
 		if org != "" {
@@ -39,14 +49,7 @@ func SearchIssuesTeams(client *api.GraphQLClient, username string, teams []strin
 		}
 		entries[fmt.Sprintf("participatedTeam%d", i)] = q
 	}
-	entries = config.EnsureSort(entries)
-
-	raw, err := Search(client, issueSearchQuery, entries, parseIssueSearchJSON)
-	if err != nil {
-		return nil, err
-	}
-
-	return parseIssueSearchResult(raw)
+	return config.EnsureSort(entries)
 }
 
 type IssueSearchResult struct {

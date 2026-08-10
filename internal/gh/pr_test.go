@@ -471,3 +471,29 @@ func TestParsePRSearchResult_DeterministicBucketOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestPRTeamEntries(t *testing.T) {
+	got := prTeamEntries([]string{"my-org/team-a", "my-org/team-b"}, "my-org")
+
+	want := map[string]string{
+		"participatedTeam0": "is:pr is:open team:my-org/team-a org:my-org sort:updated-desc",
+		"participatedTeam1": "is:pr is:open team:my-org/team-b org:my-org sort:updated-desc",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("prTeamEntries() has %d entries, want %d", len(got), len(want))
+	}
+	for key, wantQuery := range want {
+		if got[key] != wantQuery {
+			t.Errorf("prTeamEntries()[%q] = %q, want %q", key, got[key], wantQuery)
+		}
+	}
+}
+
+func TestPRTeamEntries_WithoutOrg(t *testing.T) {
+	got := prTeamEntries([]string{"my-org/team-a"}, "")
+
+	want := "is:pr is:open team:my-org/team-a sort:updated-desc"
+	if got["participatedTeam0"] != want {
+		t.Errorf("prTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
+	}
+}

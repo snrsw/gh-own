@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os/exec"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -50,6 +51,10 @@ func (i Item) Title() string {
 	return i.repoName
 }
 func (i Item) Description() string { return i.description }
+
+// SortAt reports the timestamp the item is ordered by.
+func (i Item) SortAt() time.Time { return i.sortAt }
+
 func (i Item) FilterValue() string {
 	if i.repoName == "" {
 		return i.titleText
@@ -182,8 +187,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Freshly built tabs are newest first; re-apply the chosen order so a
 		// refresh does not silently discard it.
 		if m.sortAsc {
-			cmd := m.applySort()
-			return m, cmd
+			m.applySort()
 		}
 		return m, nil
 	case spinner.TickMsg:
@@ -326,28 +330,43 @@ func (m Model) handleToggleSort() (Model, tea.Cmd, bool) {
 	}
 
 	m.sortAsc = !m.sortAsc
-	sortCmd := m.applySort()
+	m.applySort()
 
 	order := "newest first"
 	if m.sortAsc {
 		order = "oldest first"
 	}
-	m.statusMsg = "↕ sorted by updated: " + order
+	m.statusMsg = "↕ Sorted by updated: " + order
 	clearCmd := tea.Tick(2*time.Second, func(time.Time) tea.Msg { return clearStatusMsg{} })
-	return m, tea.Batch(sortCmd, clearCmd), true
+	return m, clearCmd, true
 }
 
 // applySort reorders every tab, not just the active one, so switching tabs
 // never lands on a list ordered the other way.
-func (m *Model) applySort() tea.Cmd {
-	cmds := make([]tea.Cmd, 0, len(m.tabs))
+//
+// A tab that still holds a filter has it dropped and re-applied around the
+// swap. Handing new items to a filtered list makes bubbles re-run the filter
+// asynchronously, and that reply would be routed to whichever tab is active by
+// then — blanking the filtered tab, or showing it another tab's matches.
+// SetFilterText re-filters synchronously, so no reply is ever in flight.
+func (m *Model) applySort() {
 	for i := range m.tabs {
-		items := m.tabs[i].list.Items()
+		l := &m.tabs[i].list
+
+		filter := l.FilterValue()
+		l.ResetFilter()
+
+		// Sort a copy: the slice Items returns is the list's own, and a filter
+		// command from an earlier keystroke may still be reading it.
+		items := slices.Clone(l.Items())
 		sortItems(items, m.sortAsc)
-		cmds = append(cmds, m.tabs[i].list.SetItems(items))
-		m.tabs[i].list.Select(0)
+		l.SetItems(items) // unfiltered by now, so there is no command to run
+
+		if filter != "" {
+			l.SetFilterText(filter)
+		}
+		l.Select(0)
 	}
-	return tea.Batch(cmds...)
 }
 
 func sortItems(items []list.Item, asc bool) {
@@ -365,7 +384,7 @@ func itemSortAt(i list.Item) time.Time {
 	if !ok {
 		return time.Time{}
 	}
-	return it.sortAt
+	return it.SortAt()
 }
 
 func (m Model) handleRefresh() (Model, tea.Cmd, bool) {

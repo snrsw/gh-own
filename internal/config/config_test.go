@@ -506,3 +506,64 @@ func TestEnsureSort_EmptyMap(t *testing.T) {
 		t.Errorf("EnsureSort() has %d keys, want 0", len(got))
 	}
 }
+
+func TestPRSearchEntries_AppliesFullPipeline(t *testing.T) {
+	got := PRSearchEntries(map[string]string{
+		"myTab": "is:pr is:open label:mine",
+	}, "octocat", "my-org")
+
+	tests := []struct {
+		name string
+		key  string
+		want string
+	}{
+		{
+			name: "{owner} expands to the author variant",
+			key:  "drafts",
+			want: "is:pr is:open draft:true author:octocat org:my-org sort:updated-desc",
+		},
+		{
+			name: "{owner} expands to the assignee variant",
+			key:  "draftsAssigned",
+			want: "is:pr is:open draft:true assignee:octocat org:my-org sort:updated-desc",
+		},
+		{
+			name: "{user} is substituted",
+			key:  "reviewRequested",
+			want: "is:pr is:open review-requested:octocat org:my-org sort:updated-desc",
+		},
+		{
+			name: "custom tabs get the same treatment",
+			key:  "myTab",
+			want: "is:pr is:open label:mine org:my-org sort:updated-desc",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got[tt.key] != tt.want {
+				t.Errorf("PRSearchEntries()[%q] = %q, want %q", tt.key, got[tt.key], tt.want)
+			}
+		})
+	}
+}
+
+func TestPRSearchEntries_KeepsUserSort(t *testing.T) {
+	got := PRSearchEntries(map[string]string{
+		"waiting": "is:pr is:open sort:created-asc",
+	}, "octocat", "")
+
+	want := "is:pr is:open sort:created-asc"
+	if got["waiting"] != want {
+		t.Errorf("PRSearchEntries()[%q] = %q, want %q", "waiting", got["waiting"], want)
+	}
+}
+
+func TestIssueSearchEntries_AppliesFullPipeline(t *testing.T) {
+	got := IssueSearchEntries(nil, "octocat", "")
+
+	want := "is:issue is:open author:octocat sort:updated-desc"
+	if got["created"] != want {
+		t.Errorf("IssueSearchEntries()[%q] = %q, want %q", "created", got["created"], want)
+	}
+}

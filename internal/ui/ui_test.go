@@ -2,6 +2,8 @@ package ui
 
 import (
 	"errors"
+	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -114,25 +116,25 @@ func TestNewTab(t *testing.T) {
 
 func TestNewModel(t *testing.T) {
 	tests := []struct {
-		name            string
-		tabs            []Tab
-		expectedTabs    int
-		expectedActive  int
-		firstTabName    string
+		name           string
+		tabs           []Tab
+		expectedTabs   int
+		expectedActive int
+		firstTabName   string
 	}{
 		{
-			name:            "nil tabs creates default",
-			tabs:            nil,
-			expectedTabs:    1,
-			expectedActive:  0,
-			firstTabName:    "Empty",
+			name:           "nil tabs creates default",
+			tabs:           nil,
+			expectedTabs:   1,
+			expectedActive: 0,
+			firstTabName:   "Empty",
 		},
 		{
-			name:            "empty slice creates default",
-			tabs:            []Tab{},
-			expectedTabs:    1,
-			expectedActive:  0,
-			firstTabName:    "Empty",
+			name:           "empty slice creates default",
+			tabs:           []Tab{},
+			expectedTabs:   1,
+			expectedActive: 0,
+			firstTabName:   "Empty",
 		},
 		{
 			name: "two tabs",
@@ -742,7 +744,7 @@ func TestModel_Update_SortKey_TogglesOrder(t *testing.T) {
 
 	m = pressKey(t, m, 's')
 	want := []string{"oldest", "middle", "newest"}
-	if got := itemTitles(t, m.tabs[0].list); strings.Join(got, ",") != strings.Join(want, ",") {
+	if got := itemTitles(t, m.tabs[0].list); !slices.Equal(got, want) {
 		t.Errorf("after first 's' = %v, want %v", got, want)
 	}
 	if m.statusMsg == "" {
@@ -751,7 +753,7 @@ func TestModel_Update_SortKey_TogglesOrder(t *testing.T) {
 
 	m = pressKey(t, m, 's')
 	want = []string{"newest", "middle", "oldest"}
-	if got := itemTitles(t, m.tabs[0].list); strings.Join(got, ",") != strings.Join(want, ",") {
+	if got := itemTitles(t, m.tabs[0].list); !slices.Equal(got, want) {
 		t.Errorf("after second 's' = %v, want %v", got, want)
 	}
 }
@@ -763,7 +765,7 @@ func TestModel_Update_SortKey_AppliesToAllTabs(t *testing.T) {
 
 	want := []string{"oldest", "middle", "newest"}
 	for i := range m.tabs {
-		if got := itemTitles(t, m.tabs[i].list); strings.Join(got, ",") != strings.Join(want, ",") {
+		if got := itemTitles(t, m.tabs[i].list); !slices.Equal(got, want) {
 			t.Errorf("tab %d = %v, want %v", i, got, want)
 		}
 	}
@@ -788,7 +790,7 @@ func TestModel_Update_SortKey_IgnoredDuringFiltering(t *testing.T) {
 		t.Error("pressing 's' during filter mode should not toggle the sort order")
 	}
 	want := []string{"newest", "middle", "oldest"}
-	if got := itemTitles(t, m.tabs[0].list); strings.Join(got, ",") != strings.Join(want, ",") {
+	if got := itemTitles(t, m.tabs[0].list); !slices.Equal(got, want) {
 		t.Errorf("items = %v, want %v (unchanged)", got, want)
 	}
 }
@@ -815,7 +817,7 @@ func TestModel_Update_TabsMsg_ReappliesSortOrder(t *testing.T) {
 	}
 
 	want := []string{"oldest", "middle", "newest"}
-	if got := itemTitles(t, m.tabs[0].list); strings.Join(got, ",") != strings.Join(want, ",") {
+	if got := itemTitles(t, m.tabs[0].list); !slices.Equal(got, want) {
 		t.Errorf("after refresh = %v, want %v", got, want)
 	}
 }
@@ -846,5 +848,128 @@ func TestHelpView_ContainsSort(t *testing.T) {
 	}
 	if view := helpView(list.Filtering); strings.Contains(view, "sort") {
 		t.Error("helpView(Filtering) should not contain 'sort'")
+	}
+}
+
+// filterableTab builds a list whose titles share a prefix so a filter can match
+// a known subset. SetFilterText filters synchronously, which is how a list ends
+// up in FilterApplied without a running bubbletea program.
+func filterableTab(filter string) Tab {
+	items := []list.Item{
+		NewItem("repo", "zeta newest", "d", "u1").
+			WithSortAt(time.Date(2024, 3, 20, 0, 0, 0, 0, time.UTC)),
+		NewItem("repo", "beta middle", "d", "u2").
+			WithSortAt(time.Date(2024, 3, 10, 0, 0, 0, 0, time.UTC)),
+		NewItem("repo", "zeta oldest", "d", "u3").
+			WithSortAt(time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)),
+	}
+	l := CreateList(items)
+	if filter != "" {
+		l.SetFilterText(filter)
+	}
+	return NewTab("T", l)
+}
+
+func visibleTitles(t *testing.T, l list.Model) []string {
+	t.Helper()
+	titles := make([]string, 0, len(l.VisibleItems()))
+	for _, li := range l.VisibleItems() {
+		it, ok := li.(Item)
+		if !ok {
+			t.Fatalf("list item is %T, want Item", li)
+		}
+		titles = append(titles, it.titleText)
+	}
+	return titles
+}
+
+func TestModel_Update_SortKey_KeepsFilterOnInactiveTab(t *testing.T) {
+	// Handing new items to a filtered list makes bubbles re-filter
+	// asynchronously, and Update only routes messages to the active tab — so a
+	// filtered background tab would otherwise end up permanently empty.
+	m := NewModel([]Tab{filterableTab("zeta"), filterableTab("")})
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m, ok := newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+	if got := len(visibleTitles(t, m.tabs[0].list)); got != 2 {
+		t.Fatalf("filtered tab shows %d items, want 2", got)
+	}
+
+	// Sort from the other tab, which is the one Update routes messages to.
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m, ok = newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+	m = pressKey(t, m, 's')
+
+	want := []string{"zeta oldest", "zeta newest"}
+	if got := visibleTitles(t, m.tabs[0].list); !slices.Equal(got, want) {
+		t.Errorf("filtered tab shows %v, want %v", got, want)
+	}
+	if got := m.tabs[0].list.FilterValue(); got != "zeta" {
+		t.Errorf("FilterValue() = %q, want %q", got, "zeta")
+	}
+}
+
+func TestModel_Update_SortKey_KeepsTabsIndependentWhenBothFiltered(t *testing.T) {
+	// Two filtered lists would otherwise emit two async filter replies that both
+	// landed on the active tab, so one tab could render the other's matches.
+	m := NewModel([]Tab{filterableTab("zeta"), filterableTab("beta")})
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m, ok := newModel.(Model)
+	if !ok {
+		t.Fatal("expected Model type")
+	}
+
+	m = pressKey(t, m, 's')
+
+	wantTab0 := []string{"zeta oldest", "zeta newest"}
+	if got := visibleTitles(t, m.tabs[0].list); !slices.Equal(got, wantTab0) {
+		t.Errorf("tab 0 shows %v, want %v", got, wantTab0)
+	}
+	wantTab1 := []string{"beta middle"}
+	if got := visibleTitles(t, m.tabs[1].list); !slices.Equal(got, wantTab1) {
+		t.Errorf("tab 1 shows %v, want %v", got, wantTab1)
+	}
+}
+
+func TestModel_Update_SortKey_EmptyTab(t *testing.T) {
+	m := NewModel([]Tab{NewTab("Empty", CreateList(nil))})
+
+	m = pressKey(t, m, 's')
+
+	if !m.sortAsc {
+		t.Error("pressing 's' on an empty tab should still toggle the sort order")
+	}
+}
+
+func TestSortItems_StableOnTies(t *testing.T) {
+	// Below 12 elements Go falls back to a stable insertion sort, so the fixture
+	// has to be larger to distinguish stable from unstable.
+	const n = 32
+	at := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	items := make([]list.Item, 0, n)
+	want := make([]string, 0, n)
+	for i := range n {
+		title := fmt.Sprintf("item%02d", i)
+		items = append(items, NewItem("repo", title, "d", "u").WithSortAt(at))
+		want = append(want, title)
+	}
+
+	sortItems(items, false)
+
+	got := make([]string, 0, n)
+	for _, li := range items {
+		it, ok := li.(Item)
+		if !ok {
+			t.Fatalf("list item is %T, want Item", li)
+		}
+		got = append(got, it.titleText)
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("sortItems() = %v, want %v", got, want)
 	}
 }
