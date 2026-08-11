@@ -2,6 +2,13 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.1.5](https://github.com/snrsw/gh-own/compare/0.1.4...0.1.5) - 2026-08-11
+
+### Other Changes
+- Sort tabs by last update, newest first by @snrsw in https://github.com/snrsw/gh-own/pull/67
+- Mark draft PRs with [DRAFT] prefix by @snrsw in https://github.com/snrsw/gh-own/pull/69
+- Add --no-bots and --exclude-author to hide bot-authored items by @snrsw in https://github.com/snrsw/gh-own/pull/70
+
 ## [0.1.4](https://github.com/snrsw/gh-own/compare/0.1.3...0.1.4) - 2026-06-29
 
 ### Other Changes
