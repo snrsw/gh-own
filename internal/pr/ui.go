@@ -83,7 +83,7 @@ func (o *GroupedPullRequests) prItems(prs gh.SearchResult[pullRequest]) []list.I
 func RenderPRNumber(n int, draft bool) string {
 	s := fmt.Sprintf("#%d", n)
 	if draft {
-		return numberDraftStyle.Render(s)
+		return numberDraftStyle.Render("[DRAFT] " + s)
 	}
 	return numberStyle.Render(s)
 }
