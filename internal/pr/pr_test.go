@@ -370,7 +370,7 @@ func TestRenderPRNumber(t *testing.T) {
 			name:     "draft PR",
 			number:   99,
 			draft:    true,
-			contains: "#99",
+			contains: "[DRAFT] #99",
 		},
 		{
 			name:     "large number",
@@ -385,6 +385,9 @@ func TestRenderPRNumber(t *testing.T) {
 			result := RenderPRNumber(tt.number, tt.draft)
 			if !strings.Contains(result, tt.contains) {
 				t.Errorf("RenderPRNumber(%d, %v) = %q, should contain %q", tt.number, tt.draft, result, tt.contains)
+			}
+			if !tt.draft && strings.Contains(result, "[DRAFT]") {
+				t.Errorf("RenderPRNumber(%d, %v) = %q, should not contain [DRAFT]", tt.number, tt.draft, result)
 			}
 		})
 	}
