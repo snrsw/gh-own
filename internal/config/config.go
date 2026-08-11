@@ -163,21 +163,29 @@ func ResolveQueries(queries map[string]string, username string) map[string]strin
 	return resolved
 }
 
+// Filters carries the narrowing options that apply to every search query,
+// whether the query came from the defaults, from the user's config, or from the
+// team searches in the gh package.
+type Filters struct {
+	// Org restricts results to a single organization. Empty means no restriction.
+	Org string
+}
+
 // PRSearchEntries builds the search queries for the pr command: defaults merged
-// with the user's overrides, placeholders resolved, scoped to org when given,
-// and ordered newest first.
-func PRSearchEntries(override map[string]string, username, org string) map[string]string {
-	return searchEntries(MergePRQueries(override), username, org)
+// with the user's overrides, placeholders resolved, narrowed by filters, and
+// ordered newest first.
+func PRSearchEntries(override map[string]string, username string, filters Filters) map[string]string {
+	return searchEntries(MergePRQueries(override), username, filters)
 }
 
 // IssueSearchEntries builds the search queries for the issue command. See
 // PRSearchEntries.
-func IssueSearchEntries(override map[string]string, username, org string) map[string]string {
-	return searchEntries(MergeIssueQueries(override), username, org)
+func IssueSearchEntries(override map[string]string, username string, filters Filters) map[string]string {
+	return searchEntries(MergeIssueQueries(override), username, filters)
 }
 
-func searchEntries(queries map[string]string, username, org string) map[string]string {
-	return EnsureSort(AppendOrg(ResolveQueries(queries, username), org))
+func searchEntries(queries map[string]string, username string, filters Filters) map[string]string {
+	return EnsureSort(AppendOrg(ResolveQueries(queries, username), filters.Org))
 }
 
 // updatedDescQualifier orders search results by last update, newest first.

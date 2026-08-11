@@ -510,7 +510,7 @@ func TestEnsureSort_EmptyMap(t *testing.T) {
 func TestPRSearchEntries_AppliesFullPipeline(t *testing.T) {
 	got := PRSearchEntries(map[string]string{
 		"myTab": "is:pr is:open label:mine",
-	}, "octocat", "my-org")
+	}, "octocat", Filters{Org: "my-org"})
 
 	tests := []struct {
 		name string
@@ -551,7 +551,7 @@ func TestPRSearchEntries_AppliesFullPipeline(t *testing.T) {
 func TestPRSearchEntries_KeepsUserSort(t *testing.T) {
 	got := PRSearchEntries(map[string]string{
 		"waiting": "is:pr is:open sort:created-asc",
-	}, "octocat", "")
+	}, "octocat", Filters{})
 
 	want := "is:pr is:open sort:created-asc"
 	if got["waiting"] != want {
@@ -560,7 +560,7 @@ func TestPRSearchEntries_KeepsUserSort(t *testing.T) {
 }
 
 func TestIssueSearchEntries_AppliesFullPipeline(t *testing.T) {
-	got := IssueSearchEntries(nil, "octocat", "")
+	got := IssueSearchEntries(nil, "octocat", Filters{})
 
 	want := "is:issue is:open author:octocat sort:updated-desc"
 	if got["created"] != want {

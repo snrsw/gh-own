@@ -23,7 +23,7 @@ func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchR
 	return parsePRSearchResult(raw)
 }
 
-func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, org string) (*PRSearchResult, error) {
+func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, filters config.Filters) (*PRSearchResult, error) {
 	if username == "" {
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
@@ -32,7 +32,7 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, 
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
-	raw, err := Search(client, prSearchQuery, prTeamEntries(teams, org), parsePRSearchJSON)
+	raw, err := Search(client, prSearchQuery, prTeamEntries(teams, filters), parsePRSearchJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -44,16 +44,12 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, 
 // prefix so they route into the Participated bucket (see parsePRSearchResult).
 // These queries are not user-configurable, so they always take the sort
 // qualifier.
-func prTeamEntries(teams []string, org string) map[string]string {
+func prTeamEntries(teams []string, filters config.Filters) map[string]string {
 	entries := make(map[string]string, len(teams))
 	for i, team := range teams {
-		q := fmt.Sprintf("is:pr is:open team:%s", team)
-		if org != "" {
-			q += " org:" + org
-		}
-		entries[fmt.Sprintf("participatedTeam%d", i)] = q
+		entries[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:pr is:open team:%s", team)
 	}
-	return config.EnsureSort(entries)
+	return config.EnsureSort(config.AppendOrg(entries, filters.Org))
 }
 
 type PRSearchResult struct {
