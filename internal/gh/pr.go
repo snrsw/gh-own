@@ -32,6 +32,19 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, 
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
+	raw, err := Search(client, prSearchQuery, prTeamEntries(teams, org), parsePRSearchJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	return parsePRSearchResult(raw)
+}
+
+// prTeamEntries builds one query per team. The keys share the "participated"
+// prefix so they route into the Participated bucket (see parsePRSearchResult).
+// These queries are not user-configurable, so they always take the sort
+// qualifier.
+func prTeamEntries(teams []string, org string) map[string]string {
 	entries := make(map[string]string, len(teams))
 	for i, team := range teams {
 		q := fmt.Sprintf("is:pr is:open team:%s", team)
@@ -40,13 +53,7 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, 
 		}
 		entries[fmt.Sprintf("participatedTeam%d", i)] = q
 	}
-
-	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
-	if err != nil {
-		return nil, err
-	}
-
-	return parsePRSearchResult(raw)
+	return config.EnsureSort(entries)
 }
 
 type PRSearchResult struct {
@@ -131,7 +138,8 @@ func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, err
 	var drafts, needsAction, readyToMerge, waiting, participated []PRSearchNode
 	custom := make(map[string][]PRSearchNode)
 
-	for key, nodes := range parsed {
+	for _, key := range sortedKeys(parsed) {
+		nodes := parsed[key]
 		switch {
 		case strings.HasPrefix(key, "drafts"):
 			drafts = append(drafts, nodes...)

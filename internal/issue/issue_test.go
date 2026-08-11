@@ -1,10 +1,13 @@
 package issue
 
 import (
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/snrsw/gh-own/internal/gh"
+	"github.com/snrsw/gh-own/internal/ui"
 )
 
 func TestNewGroupedIssues_PropagatesCustom(t *testing.T) {
@@ -284,24 +287,139 @@ func TestIssueFromNode(t *testing.T) {
 	node.Author.Login = "testuser"
 	node.Repository.NameWithOwner = "owner/repo"
 
-	issue := fromGraphQL(node)
+	got := fromGraphQL(node)
 
-	if issue.Number != 42 {
-		t.Errorf("Number = %d, want 42", issue.Number)
+	if got.Number != 42 {
+		t.Errorf("Number = %d, want 42", got.Number)
 	}
-	if issue.Title != "Test Issue" {
-		t.Errorf("Title = %q, want %q", issue.Title, "Test Issue")
+	if got.Title != "Test Issue" {
+		t.Errorf("Title = %q, want %q", got.Title, "Test Issue")
 	}
-	if issue.HTMLURL != "https://github.com/owner/repo/issues/42" {
-		t.Errorf("HTMLURL = %q, want %q", issue.HTMLURL, "https://github.com/owner/repo/issues/42")
+	if got.HTMLURL != "https://github.com/owner/repo/issues/42" {
+		t.Errorf("HTMLURL = %q, want %q", got.HTMLURL, "https://github.com/owner/repo/issues/42")
 	}
-	if issue.State != "OPEN" {
-		t.Errorf("State = %q, want %q", issue.State, "OPEN")
+	if got.State != "OPEN" {
+		t.Errorf("State = %q, want %q", got.State, "OPEN")
 	}
-	if issue.User.Login != "testuser" {
-		t.Errorf("User.Login = %q, want %q", issue.User.Login, "testuser")
+	if got.User.Login != "testuser" {
+		t.Errorf("User.Login = %q, want %q", got.User.Login, "testuser")
 	}
-	if issue.RepositoryURL != "https://api.github.com/repos/owner/repo" {
-		t.Errorf("RepositoryURL = %q, want %q", issue.RepositoryURL, "https://api.github.com/repos/owner/repo")
+	if got.RepositoryURL != "https://api.github.com/repos/owner/repo" {
+		t.Errorf("RepositoryURL = %q, want %q", got.RepositoryURL, "https://api.github.com/repos/owner/repo")
+	}
+}
+
+func issueNumbers(items []issue) []int {
+	numbers := make([]int, len(items))
+	for i, is := range items {
+		numbers[i] = is.Number
+	}
+	return numbers
+}
+
+func TestNewGroupedIssues_SortsByUpdatedDesc(t *testing.T) {
+	ghResult := &gh.IssueSearchResult{
+		Created: []gh.IssueSearchNode{
+			{Number: 1, UpdatedAt: "2024-03-01T00:00:00Z"},
+			{Number: 2, UpdatedAt: "2024-03-20T00:00:00Z"},
+			{Number: 3, UpdatedAt: "2024-03-10T00:00:00Z"},
+		},
+	}
+
+	grouped := NewGroupedIssues(ghResult, "")
+
+	want := []int{2, 3, 1}
+	if got := issueNumbers(grouped.Created.Items); !slices.Equal(got, want) {
+		t.Errorf("Created.Items = %v, want %v", got, want)
+	}
+	if grouped.Created.TotalCount != 3 {
+		t.Errorf("Created.TotalCount = %d, want 3", grouped.Created.TotalCount)
+	}
+}
+
+func TestNewGroupedIssues_SortsCustomTabs(t *testing.T) {
+	ghResult := &gh.IssueSearchResult{
+		Custom: map[string][]gh.IssueSearchNode{
+			"myTab": {
+				{Number: 1, UpdatedAt: "2024-03-01T00:00:00Z"},
+				{Number: 2, UpdatedAt: "2024-03-20T00:00:00Z"},
+			},
+		},
+	}
+
+	grouped := NewGroupedIssues(ghResult, "")
+
+	want := []int{2, 1}
+	if got := issueNumbers(grouped.Custom["myTab"].Items); !slices.Equal(got, want) {
+		t.Errorf("Custom[\"myTab\"].Items = %v, want %v", got, want)
+	}
+}
+
+func TestNewGroupedIssues_SortsByDisplayedTime(t *testing.T) {
+	// Issue 1 has the newest updatedAt but the oldest activity time, and the
+	// activity time is what its description line shows.
+	ghResult := &gh.IssueSearchResult{
+		Created: []gh.IssueSearchNode{
+			{
+				Number:         1,
+				UpdatedAt:      "2024-03-20T00:00:00Z",
+				LatestActivity: gh.LatestActivity{Kind: "commented", Login: "alice", At: "2024-03-01T00:00:00Z"},
+			},
+			{Number: 2, UpdatedAt: "2024-03-10T00:00:00Z"},
+		},
+	}
+
+	grouped := NewGroupedIssues(ghResult, "")
+
+	want := []int{2, 1}
+	if got := issueNumbers(grouped.Created.Items); !slices.Equal(got, want) {
+		t.Errorf("Created.Items = %v, want %v", got, want)
+	}
+}
+
+func TestNewGroupedIssues_MissingTimestampSortsLast(t *testing.T) {
+	ghResult := &gh.IssueSearchResult{
+		Created: []gh.IssueSearchNode{
+			{Number: 1},
+			{Number: 2, UpdatedAt: "2024-03-01T00:00:00Z"},
+		},
+	}
+
+	grouped := NewGroupedIssues(ghResult, "")
+
+	want := []int{2, 1}
+	if got := issueNumbers(grouped.Created.Items); !slices.Equal(got, want) {
+		t.Errorf("Created.Items = %v, want %v", got, want)
+	}
+}
+
+func TestGroupedIssues_IssueItems_CarrySortAt(t *testing.T) {
+	// The sort timestamp has to survive the hop from the domain struct into the
+	// ui.Item; without it the list has nothing to reorder.
+	ghResult := &gh.IssueSearchResult{
+		Created: []gh.IssueSearchNode{
+			{Number: 1, UpdatedAt: "2024-03-01T00:00:00Z"},
+			{Number: 2, UpdatedAt: "2024-03-20T00:00:00Z"},
+		},
+	}
+	grouped := NewGroupedIssues(ghResult, "")
+
+	items := grouped.issueItems(grouped.Created)
+
+	want := []time.Time{
+		time.Date(2024, 3, 20, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC),
+	}
+	if len(items) != len(want) {
+		t.Fatalf("issueItems() returned %d items, want %d", len(items), len(want))
+	}
+	for i, item := range items {
+		it, ok := item.(ui.Item)
+		if !ok {
+			t.Fatalf("item %d is %T, want ui.Item", i, item)
+		}
+		if !it.SortAt().Equal(want[i]) {
+			t.Errorf("item %d SortAt() = %v, want %v", i, it.SortAt(), want[i])
+		}
 	}
 }

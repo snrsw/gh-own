@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"os/exec"
 	"runtime"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 
 type Item struct {
 	repoName, titleText, titleSuffix, description, url string
+	sortAt                                             time.Time
 }
 
 func NewItem(repoName, titleText, description, url string) Item {
@@ -34,6 +37,13 @@ func (i Item) WithSuffix(s string) Item {
 	return i
 }
 
+// WithSortAt returns a copy of the item carrying the timestamp the list is
+// ordered by, so the sort order can be flipped without refetching.
+func (i Item) WithSortAt(t time.Time) Item {
+	i.sortAt = t
+	return i
+}
+
 func (i Item) Title() string {
 	if i.repoName == "" {
 		return i.titleText
@@ -41,6 +51,10 @@ func (i Item) Title() string {
 	return i.repoName
 }
 func (i Item) Description() string { return i.description }
+
+// SortAt reports the timestamp the item is ordered by.
+func (i Item) SortAt() time.Time { return i.sortAt }
+
 func (i Item) FilterValue() string {
 	if i.repoName == "" {
 		return i.titleText
@@ -90,6 +104,9 @@ type Model struct {
 	err       error
 	fetchCmd  tea.Cmd
 	statusMsg string
+	// sortAsc flips the list order to oldest first. Tabs arrive newest first,
+	// so the zero value is the order they are built with.
+	sortAsc bool
 }
 
 // TabsMsg signals that data loading is complete and tabs are ready.
@@ -166,6 +183,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.width > 0 {
 			m = m.handleWindowSize(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+		}
+		// Freshly built tabs are newest first; re-apply the chosen order so a
+		// refresh does not silently discard it.
+		if m.sortAsc {
+			m.applySort()
 		}
 		return m, nil
 	case spinner.TickMsg:
@@ -292,8 +314,77 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 
 	case "r":
 		return m.handleRefresh()
+
+	case "s":
+		return m.handleToggleSort()
 	}
 	return m, nil, false
+}
+
+func (m Model) handleToggleSort() (Model, tea.Cmd, bool) {
+	if m.loading {
+		return m, nil, true
+	}
+	if m.tabs[m.activeTab].list.FilterState() == list.Filtering {
+		return m, nil, false
+	}
+
+	m.sortAsc = !m.sortAsc
+	m.applySort()
+
+	order := "newest first"
+	if m.sortAsc {
+		order = "oldest first"
+	}
+	m.statusMsg = "↕ Sorted by updated: " + order
+	clearCmd := tea.Tick(2*time.Second, func(time.Time) tea.Msg { return clearStatusMsg{} })
+	return m, clearCmd, true
+}
+
+// applySort reorders every tab, not just the active one, so switching tabs
+// never lands on a list ordered the other way.
+//
+// A tab that still holds a filter has it dropped and re-applied around the
+// swap. Handing new items to a filtered list makes bubbles re-run the filter
+// asynchronously, and that reply would be routed to whichever tab is active by
+// then — blanking the filtered tab, or showing it another tab's matches.
+// SetFilterText re-filters synchronously, so no reply is ever in flight.
+func (m *Model) applySort() {
+	for i := range m.tabs {
+		l := &m.tabs[i].list
+
+		filter := l.FilterValue()
+		l.ResetFilter()
+
+		// Sort a copy: the slice Items returns is the list's own, and a filter
+		// command from an earlier keystroke may still be reading it.
+		items := slices.Clone(l.Items())
+		sortItems(items, m.sortAsc)
+		l.SetItems(items) // unfiltered by now, so there is no command to run
+
+		if filter != "" {
+			l.SetFilterText(filter)
+		}
+		l.Select(0)
+	}
+}
+
+func sortItems(items []list.Item, asc bool) {
+	sort.SliceStable(items, func(i, j int) bool {
+		a, b := itemSortAt(items[i]), itemSortAt(items[j])
+		if asc {
+			return a.Before(b)
+		}
+		return a.After(b)
+	})
+}
+
+func itemSortAt(i list.Item) time.Time {
+	it, ok := i.(Item)
+	if !ok {
+		return time.Time{}
+	}
+	return it.SortAt()
 }
 
 func (m Model) handleRefresh() (Model, tea.Cmd, bool) {

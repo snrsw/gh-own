@@ -1,12 +1,15 @@
 package pr
 
 import (
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/snrsw/gh-own/internal/cistatus"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/reviewstatus"
+	"github.com/snrsw/gh-own/internal/ui"
 )
 
 func TestNewGroupedPullRequests_PropagatesCustom(t *testing.T) {
@@ -543,5 +546,126 @@ func TestFromGraphQLNodes(t *testing.T) {
 	}
 	if prs[1].CIStatus != cistatus.CIStatusFailure {
 		t.Errorf("prs[1].CIStatus = %v, want %v", prs[1].CIStatus, cistatus.CIStatusFailure)
+	}
+}
+
+func prNumbers(items []pullRequest) []int {
+	numbers := make([]int, len(items))
+	for i, p := range items {
+		numbers[i] = p.Number
+	}
+	return numbers
+}
+
+func TestNewGroupedPullRequests_SortsByUpdatedDesc(t *testing.T) {
+	ghResult := &gh.PRSearchResult{
+		Drafts: []gh.PRSearchNode{
+			{Number: 1, UpdatedAt: "2024-03-01T00:00:00Z"},
+			{Number: 2, UpdatedAt: "2024-03-20T00:00:00Z"},
+			{Number: 3, UpdatedAt: "2024-03-10T00:00:00Z"},
+		},
+	}
+
+	grouped := NewGroupedPullRequests(ghResult, "")
+
+	want := []int{2, 3, 1}
+	if got := prNumbers(grouped.Drafts.Items); !slices.Equal(got, want) {
+		t.Errorf("Drafts.Items = %v, want %v", got, want)
+	}
+	if grouped.Drafts.TotalCount != 3 {
+		t.Errorf("Drafts.TotalCount = %d, want 3", grouped.Drafts.TotalCount)
+	}
+}
+
+func TestNewGroupedPullRequests_SortsCustomTabs(t *testing.T) {
+	ghResult := &gh.PRSearchResult{
+		Custom: map[string][]gh.PRSearchNode{
+			"myTab": {
+				{Number: 1, UpdatedAt: "2024-03-01T00:00:00Z"},
+				{Number: 2, UpdatedAt: "2024-03-20T00:00:00Z"},
+			},
+		},
+	}
+
+	grouped := NewGroupedPullRequests(ghResult, "")
+
+	want := []int{2, 1}
+	if got := prNumbers(grouped.Custom["myTab"].Items); !slices.Equal(got, want) {
+		t.Errorf("Custom[\"myTab\"].Items = %v, want %v", got, want)
+	}
+}
+
+func TestNewGroupedPullRequests_SortsByDisplayedTime(t *testing.T) {
+	// The description line shows the latest activity time when there is one and
+	// updatedAt otherwise, so the order has to follow the same rule. PR 1 has
+	// the newest updatedAt but its activity is the oldest of the three.
+	ghResult := &gh.PRSearchResult{
+		Drafts: []gh.PRSearchNode{
+			{
+				Number:         1,
+				UpdatedAt:      "2024-03-20T00:00:00Z",
+				LatestActivity: gh.LatestActivity{Kind: "commented", Login: "alice", At: "2024-03-01T00:00:00Z"},
+			},
+			{
+				Number:         2,
+				UpdatedAt:      "2024-03-05T00:00:00Z",
+				LatestActivity: gh.LatestActivity{Kind: "pushed", Login: "bob", At: "2024-03-05T00:00:00Z"},
+			},
+			{Number: 3, UpdatedAt: "2024-03-10T00:00:00Z"},
+		},
+	}
+
+	grouped := NewGroupedPullRequests(ghResult, "")
+
+	want := []int{3, 2, 1}
+	if got := prNumbers(grouped.Drafts.Items); !slices.Equal(got, want) {
+		t.Errorf("Drafts.Items = %v, want %v", got, want)
+	}
+}
+
+func TestNewGroupedPullRequests_MissingTimestampSortsLast(t *testing.T) {
+	ghResult := &gh.PRSearchResult{
+		Drafts: []gh.PRSearchNode{
+			{Number: 1},
+			{Number: 2, UpdatedAt: "2024-03-01T00:00:00Z"},
+		},
+	}
+
+	grouped := NewGroupedPullRequests(ghResult, "")
+
+	want := []int{2, 1}
+	if got := prNumbers(grouped.Drafts.Items); !slices.Equal(got, want) {
+		t.Errorf("Drafts.Items = %v, want %v", got, want)
+	}
+}
+
+func TestGroupedPullRequests_PRItems_CarrySortAt(t *testing.T) {
+	// The sort timestamp has to survive the hop from the domain struct into the
+	// ui.Item; without it the list has nothing to reorder.
+	ghResult := &gh.PRSearchResult{
+		Drafts: []gh.PRSearchNode{
+			{Number: 1, UpdatedAt: "2024-03-01T00:00:00Z"},
+			{Number: 2, UpdatedAt: "2024-03-20T00:00:00Z"},
+		},
+	}
+	grouped := NewGroupedPullRequests(ghResult, "")
+
+	items := grouped.prItems(grouped.Drafts)
+
+	want := []time.Time{
+		time.Date(2024, 3, 20, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC),
+	}
+	if len(items) != len(want) {
+		t.Fatalf("prItems() returned %d items, want %d", len(items), len(want))
+	}
+	for i, item := range items {
+		it, ok := item.(ui.Item)
+		if !ok {
+			t.Fatalf("item %d is %T, want ui.Item", i, item)
+		}
+		if !it.SortAt().Equal(want[i]) {
+			t.Errorf("item %d SortAt() = %v, want %v", i, it.SortAt(), want[i])
+		}
 	}
 }

@@ -3,6 +3,7 @@ package issue
 
 import (
 	"strings"
+	"time"
 
 	"github.com/snrsw/gh-own/internal/gh"
 )
@@ -40,6 +41,9 @@ type issue struct {
 	UpdatedAt      string            `json:"updated_at"`
 	CreatedAt      string            `json:"created_at"`
 	LatestActivity gh.LatestActivity `json:"-"`
+	// SortAt is the timestamp the list is ordered by. It matches the time shown
+	// on the description line (see toItem).
+	SortAt time.Time `json:"-"`
 }
 
 func (i *issue) repositoryFullName() string {
@@ -53,6 +57,7 @@ func (i *issue) repositoryFullName() string {
 
 func toSearchResult(nodes []gh.IssueSearchNode) gh.SearchResult[issue] {
 	issues := fromGraphQLNodes(nodes)
+	gh.SortByUpdatedDesc(issues, func(i issue) time.Time { return i.SortAt })
 	return gh.SearchResult[issue]{
 		TotalCount: len(issues),
 		Items:      issues,
@@ -78,5 +83,6 @@ func fromGraphQL(node gh.IssueSearchNode) issue {
 		UpdatedAt:      node.UpdatedAt,
 		CreatedAt:      node.CreatedAt,
 		LatestActivity: node.LatestActivity,
+		SortAt:         gh.SortAt(node.LatestActivity, node.UpdatedAt),
 	}
 }

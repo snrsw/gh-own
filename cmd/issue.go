@@ -43,7 +43,7 @@ var issueCmd = &cobra.Command{
 				return nil, err
 			}
 
-			entries := config.AppendOrg(config.ResolveQueries(config.MergeIssueQueries(cfg.Issue.Queries), username), org)
+			entries := config.IssueSearchEntries(cfg.Issue.Queries, username, org)
 
 			done = timing.Track("issue:rest-client")
 			restClient, err := api.DefaultRESTClient()

@@ -87,8 +87,23 @@ gh own --debug
 | `tab` / `shift+tab` | Switch between tabs |
 | `enter` | Open selected item in browser |
 | `r` | Refresh data |
+| `s` | Toggle sort order (newest / oldest first) |
 | `/` | Filter items in current tab |
 | `ctrl+c` | Quit |
+
+### Sort order
+
+Every tab lists items newest first, using the same timestamp shown on each item's
+description line — the latest activity (comment, review, or push) when there is
+one, and the item's last-updated time otherwise. Press `s` to flip to oldest
+first; the choice applies to all tabs, keeps any filter you have applied, and
+survives a refresh.
+
+Searches are also issued with `sort:updated-desc` so that the page GitHub returns
+is the most recently updated items rather than the most relevant ones. If one of
+your [configured queries](#configuration) already specifies its own `sort:`
+qualifier, that one is used instead. The team searches behind the Participated
+tab are not configurable and always use `sort:updated-desc`.
 
 ## Symbol legend
 

@@ -441,3 +441,59 @@ func TestParsePRSearchNodes_ReviewDecision(t *testing.T) {
 		})
 	}
 }
+
+func TestParsePRSearchResult_DeterministicBucketOrder(t *testing.T) {
+	// Buckets fed by several queries are assembled from a map filled by
+	// parallel searches, so the concatenation order must not depend on map
+	// iteration order. A single run would pass by chance; loop to be sure.
+	parsed := map[string][]PRSearchNode{
+		"drafts":         {{Number: 1, URL: "https://github.com/org/repo/pull/1"}},
+		"draftsAssigned": {{Number: 2, URL: "https://github.com/org/repo/pull/2"}},
+	}
+
+	want := []int{1, 2}
+	for i := 0; i < 20; i++ {
+		result, err := parsePRSearchResult(parsed)
+		if err != nil {
+			t.Fatalf("parsePRSearchResult returned error: %v", err)
+		}
+		got := make([]int, 0, len(result.Drafts))
+		for _, node := range result.Drafts {
+			got = append(got, node.Number)
+		}
+		if len(got) != len(want) {
+			t.Fatalf("Drafts = %v, want %v", got, want)
+		}
+		for j := range want {
+			if got[j] != want[j] {
+				t.Fatalf("Drafts = %v, want %v (iteration %d)", got, want, i)
+			}
+		}
+	}
+}
+
+func TestPRTeamEntries(t *testing.T) {
+	got := prTeamEntries([]string{"my-org/team-a", "my-org/team-b"}, "my-org")
+
+	want := map[string]string{
+		"participatedTeam0": "is:pr is:open team:my-org/team-a org:my-org sort:updated-desc",
+		"participatedTeam1": "is:pr is:open team:my-org/team-b org:my-org sort:updated-desc",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("prTeamEntries() has %d entries, want %d", len(got), len(want))
+	}
+	for key, wantQuery := range want {
+		if got[key] != wantQuery {
+			t.Errorf("prTeamEntries()[%q] = %q, want %q", key, got[key], wantQuery)
+		}
+	}
+}
+
+func TestPRTeamEntries_WithoutOrg(t *testing.T) {
+	got := prTeamEntries([]string{"my-org/team-a"}, "")
+
+	want := "is:pr is:open team:my-org/team-a sort:updated-desc"
+	if got["participatedTeam0"] != want {
+		t.Errorf("prTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
+	}
+}

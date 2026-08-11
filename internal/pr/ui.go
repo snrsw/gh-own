@@ -69,7 +69,7 @@ func (p pullRequest) toItem(currentLogin string) ui.Item {
 		titleText,
 		desc,
 		p.HTMLURL,
-	).WithSuffix(suffix)
+	).WithSuffix(suffix).WithSortAt(p.SortAt)
 }
 
 func (o *GroupedPullRequests) prItems(prs gh.SearchResult[pullRequest]) []list.Item {
