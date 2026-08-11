@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -510,7 +511,7 @@ func TestEnsureSort_EmptyMap(t *testing.T) {
 func TestPRSearchEntries_AppliesFullPipeline(t *testing.T) {
 	got := PRSearchEntries(map[string]string{
 		"myTab": "is:pr is:open label:mine",
-	}, "octocat", "my-org")
+	}, "octocat", Filters{Org: "my-org"})
 
 	tests := []struct {
 		name string
@@ -551,7 +552,7 @@ func TestPRSearchEntries_AppliesFullPipeline(t *testing.T) {
 func TestPRSearchEntries_KeepsUserSort(t *testing.T) {
 	got := PRSearchEntries(map[string]string{
 		"waiting": "is:pr is:open sort:created-asc",
-	}, "octocat", "")
+	}, "octocat", Filters{})
 
 	want := "is:pr is:open sort:created-asc"
 	if got["waiting"] != want {
@@ -560,10 +561,202 @@ func TestPRSearchEntries_KeepsUserSort(t *testing.T) {
 }
 
 func TestIssueSearchEntries_AppliesFullPipeline(t *testing.T) {
-	got := IssueSearchEntries(nil, "octocat", "")
+	got := IssueSearchEntries(nil, "octocat", Filters{})
 
 	want := "is:issue is:open author:octocat sort:updated-desc"
 	if got["created"] != want {
 		t.Errorf("IssueSearchEntries()[%q] = %q, want %q", "created", got["created"], want)
+	}
+}
+
+func TestExcludeAuthors_EmptyList_ReturnsOriginal(t *testing.T) {
+	queries := map[string]string{
+		"created": "is:pr is:open author:octocat",
+	}
+
+	got := ExcludeAuthors(queries, nil)
+
+	if got["created"] != queries["created"] {
+		t.Errorf("ExcludeAuthors with no authors = %q, want %q", got["created"], queries["created"])
+	}
+}
+
+func TestExcludeAuthors_AppendsNegatedQualifier(t *testing.T) {
+	queries := map[string]string{
+		"participated": "is:pr is:open involves:octocat",
+		"myTab":        "is:pr is:open label:bug",
+	}
+
+	got := ExcludeAuthors(queries, []string{"renovate[bot]", "app/dependabot"})
+
+	wantParticipated := "is:pr is:open involves:octocat -author:renovate[bot] -author:app/dependabot"
+	if got["participated"] != wantParticipated {
+		t.Errorf("ExcludeAuthors[participated] = %q, want %q", got["participated"], wantParticipated)
+	}
+
+	wantMyTab := "is:pr is:open label:bug -author:renovate[bot] -author:app/dependabot"
+	if got["myTab"] != wantMyTab {
+		t.Errorf("ExcludeAuthors[myTab] = %q, want %q", got["myTab"], wantMyTab)
+	}
+}
+
+func TestExcludeAuthors_SkipsQueryThatAlreadyNamesAuthor(t *testing.T) {
+	tests := []struct {
+		name  string
+		query string
+	}{
+		{"positive qualifier", "is:pr is:open author:renovate[bot]"},
+		{"already negated", "is:pr is:open -author:renovate[bot]"},
+		{"app spelling", "is:pr is:open author:app/renovate"},
+		{"different case", "is:pr is:open author:Renovate[bot]"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExcludeAuthors(map[string]string{"k": tt.query}, []string{"renovate[bot]"})
+
+			if got["k"] != tt.query {
+				t.Errorf("ExcludeAuthors[k] = %q, want it left alone as %q", got["k"], tt.query)
+			}
+		})
+	}
+}
+
+func TestExcludeAuthors_IgnoresEmptyAuthor(t *testing.T) {
+	queries := map[string]string{"k": "is:pr is:open"}
+
+	got := ExcludeAuthors(queries, []string{"", "  ", "renovate[bot]"})
+
+	want := "is:pr is:open -author:renovate[bot]"
+	if got["k"] != want {
+		t.Errorf("ExcludeAuthors[k] = %q, want %q", got["k"], want)
+	}
+}
+
+func TestExcludeAuthors_DoesNotMatchSubstringOfOtherQualifier(t *testing.T) {
+	queries := map[string]string{"k": "is:pr is:open review-requested:renovate[bot]"}
+
+	got := ExcludeAuthors(queries, []string{"renovate[bot]"})
+
+	want := "is:pr is:open review-requested:renovate[bot] -author:renovate[bot]"
+	if got["k"] != want {
+		t.Errorf("ExcludeAuthors[k] = %q, want %q", got["k"], want)
+	}
+}
+
+func TestPRSearchEntries_AppliesExcludeAuthors(t *testing.T) {
+	got := PRSearchEntries(nil, "octocat", Filters{
+		Org:            "my-org",
+		ExcludeAuthors: []string{"renovate[bot]"},
+	})
+
+	want := "is:pr is:open review-requested:octocat -author:renovate[bot] org:my-org sort:updated-desc"
+	if got["reviewRequested"] != want {
+		t.Errorf("PRSearchEntries()[reviewRequested] = %q, want %q", got["reviewRequested"], want)
+	}
+}
+
+func TestIssueSearchEntries_AppliesExcludeAuthors(t *testing.T) {
+	got := IssueSearchEntries(nil, "octocat", Filters{ExcludeAuthors: []string{"app/dependabot"}})
+
+	want := "is:issue is:open author:octocat -author:app/dependabot sort:updated-desc"
+	if got["created"] != want {
+		t.Errorf("IssueSearchEntries()[created] = %q, want %q", got["created"], want)
+	}
+}
+
+func TestLoadFromPath_ReadsExcludeSection(t *testing.T) {
+	path := writeTempYAML(t, `
+exclude:
+  bots: true
+  authors:
+    - "renovate[bot]"
+    - "my-release-bot"
+`)
+
+	cfg, err := LoadFromPath(path)
+	if err != nil {
+		t.Fatalf("LoadFromPath() error = %v", err)
+	}
+
+	if !cfg.Exclude.Bots {
+		t.Error("cfg.Exclude.Bots = false, want true")
+	}
+	want := []string{"renovate[bot]", "my-release-bot"}
+	if !slices.Equal(cfg.Exclude.Authors, want) {
+		t.Errorf("cfg.Exclude.Authors = %v, want %v", cfg.Exclude.Authors, want)
+	}
+}
+
+func TestLoadFromPath_MissingExcludeSectionIsEmpty(t *testing.T) {
+	path := writeTempYAML(t, "pr:\n  queries:\n    drafts: \"is:pr is:open\"\n")
+
+	cfg, err := LoadFromPath(path)
+	if err != nil {
+		t.Fatalf("LoadFromPath() error = %v", err)
+	}
+
+	if cfg.Exclude.Bots {
+		t.Error("cfg.Exclude.Bots = true, want false")
+	}
+	if len(cfg.Exclude.Authors) != 0 {
+		t.Errorf("cfg.Exclude.Authors = %v, want empty", cfg.Exclude.Authors)
+	}
+}
+
+func TestResolveExcludeAuthors(t *testing.T) {
+	tests := []struct {
+		name        string
+		cfg         ExcludeConfig
+		flagAuthors []string
+		noBots      bool
+		want        []string
+	}{
+		{
+			name: "nothing configured",
+			want: nil,
+		},
+		{
+			name: "config authors only",
+			cfg:  ExcludeConfig{Authors: []string{"renovate[bot]"}},
+			want: []string{"renovate[bot]"},
+		},
+		{
+			name:   "bot preset via flag",
+			noBots: true,
+			want:   DefaultBotAuthors(),
+		},
+		{
+			name: "bot preset via config",
+			cfg:  ExcludeConfig{Bots: true},
+			want: DefaultBotAuthors(),
+		},
+		{
+			name:        "flag and config union, preset first",
+			cfg:         ExcludeConfig{Bots: true, Authors: []string{"my-release-bot"}},
+			flagAuthors: []string{"noisy-bot"},
+			want:        append(DefaultBotAuthors(), "my-release-bot", "noisy-bot"),
+		},
+		{
+			name:        "duplicate spellings collapse to the first seen",
+			cfg:         ExcludeConfig{Authors: []string{"renovate[bot]"}},
+			flagAuthors: []string{"app/renovate", "RENOVATE[BOT]", "other-bot"},
+			want:        []string{"renovate[bot]", "other-bot"},
+		},
+		{
+			name:        "blank entries dropped",
+			flagAuthors: []string{"", "  ", "noisy-bot"},
+			want:        []string{"noisy-bot"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ResolveExcludeAuthors(tt.cfg, tt.flagAuthors, tt.noBots)
+
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("ResolveExcludeAuthors() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

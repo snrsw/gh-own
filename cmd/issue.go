@@ -43,7 +43,8 @@ var issueCmd = &cobra.Command{
 				return nil, err
 			}
 
-			entries := config.IssueSearchEntries(cfg.Issue.Queries, username, org)
+			filters := searchFilters(cfg)
+			entries := config.IssueSearchEntries(cfg.Issue.Queries, username, filters)
 
 			done = timing.Track("issue:rest-client")
 			restClient, err := api.DefaultRESTClient()
@@ -86,7 +87,7 @@ var issueCmd = &cobra.Command{
 				}
 
 				teamDone = timing.Track("issue:search-teams")
-				issues, err := gh.SearchIssuesTeams(client, username, teams, org)
+				issues, err := gh.SearchIssuesTeams(client, username, teams, filters)
 				teamDone()
 				if err != nil {
 					teamCh <- result[*gh.IssueSearchResult]{v: nil, err: err}

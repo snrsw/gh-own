@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/snrsw/gh-own/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -41,10 +42,23 @@ func Execute() {
 var debug bool
 var demo bool
 var org string
+var excludeAuthors []string
+var noBots bool
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug logging")
 	rootCmd.PersistentFlags().BoolVar(&demo, "demo", false, "use demo data (no GitHub API calls)")
 	rootCmd.PersistentFlags().StringVar(&org, "org", "", "filter by organization")
+	rootCmd.PersistentFlags().StringSliceVar(&excludeAuthors, "exclude-author", nil, "hide items written by this author (repeatable)")
+	rootCmd.PersistentFlags().BoolVar(&noBots, "no-bots", false, "hide items written by common bots (dependabot, renovate, github-actions)")
 	rootCmd.AddCommand(prCmd, issueCmd)
+}
+
+// searchFilters folds the exclusion sources into the filters every search
+// query is narrowed by.
+func searchFilters(cfg config.Config) config.Filters {
+	return config.Filters{
+		Org:            org,
+		ExcludeAuthors: config.ResolveExcludeAuthors(cfg.Exclude, excludeAuthors, noBots),
+	}
 }

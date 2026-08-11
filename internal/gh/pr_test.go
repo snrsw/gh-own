@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/snrsw/gh-own/internal/cistatus"
+	"github.com/snrsw/gh-own/internal/config"
 )
 
 func TestParsePRSearchResult_CustomKeyPreserved(t *testing.T) {
@@ -202,7 +203,7 @@ func TestSearchPRs_EmptyEntries_HasEmptyCustom(t *testing.T) {
 }
 
 func TestSearchPRs_EmptyUsernameWithTeams(t *testing.T) {
-	results, err := SearchPRsTeams(nil, "", []string{"my-org/team-a"}, "")
+	results, err := SearchPRsTeams(nil, "", []string{"my-org/team-a"}, config.Filters{})
 
 	if err != nil {
 		t.Errorf("SearchPRs with empty username returned error: %v", err)
@@ -473,7 +474,7 @@ func TestParsePRSearchResult_DeterministicBucketOrder(t *testing.T) {
 }
 
 func TestPRTeamEntries(t *testing.T) {
-	got := prTeamEntries([]string{"my-org/team-a", "my-org/team-b"}, "my-org")
+	got := prTeamEntries([]string{"my-org/team-a", "my-org/team-b"}, config.Filters{Org: "my-org"})
 
 	want := map[string]string{
 		"participatedTeam0": "is:pr is:open team:my-org/team-a org:my-org sort:updated-desc",
@@ -490,9 +491,20 @@ func TestPRTeamEntries(t *testing.T) {
 }
 
 func TestPRTeamEntries_WithoutOrg(t *testing.T) {
-	got := prTeamEntries([]string{"my-org/team-a"}, "")
+	got := prTeamEntries([]string{"my-org/team-a"}, config.Filters{})
 
 	want := "is:pr is:open team:my-org/team-a sort:updated-desc"
+	if got["participatedTeam0"] != want {
+		t.Errorf("prTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
+	}
+}
+
+func TestPRTeamEntries_AppliesExcludeAuthors(t *testing.T) {
+	got := prTeamEntries([]string{"my-org/team-a"}, config.Filters{
+		ExcludeAuthors: []string{"renovate[bot]"},
+	})
+
+	want := "is:pr is:open team:my-org/team-a -author:renovate[bot] sort:updated-desc"
 	if got["participatedTeam0"] != want {
 		t.Errorf("prTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
 	}

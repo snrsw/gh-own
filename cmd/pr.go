@@ -43,7 +43,8 @@ var prCmd = &cobra.Command{
 				return nil, err
 			}
 
-			entries := config.PRSearchEntries(cfg.PR.Queries, username, org)
+			filters := searchFilters(cfg)
+			entries := config.PRSearchEntries(cfg.PR.Queries, username, filters)
 
 			done = timing.Track("pr:rest-client")
 			restClient, err := api.DefaultRESTClient()
@@ -86,7 +87,7 @@ var prCmd = &cobra.Command{
 				}
 
 				teamDone = timing.Track("pr:search-teams")
-				prs, err := gh.SearchPRsTeams(client, username, teams, org)
+				prs, err := gh.SearchPRsTeams(client, username, teams, filters)
 				teamDone()
 				if err != nil {
 					teamCh <- result[*gh.PRSearchResult]{v: nil, err: err}

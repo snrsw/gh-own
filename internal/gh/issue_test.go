@@ -3,6 +3,8 @@ package gh
 import (
 	"slices"
 	"testing"
+
+	"github.com/snrsw/gh-own/internal/config"
 )
 
 func TestParseIssueSearchResult_CustomKeyPreserved(t *testing.T) {
@@ -148,7 +150,7 @@ func TestIssueSearchNode_Fields(t *testing.T) {
 }
 
 func TestSearchIssues_EmptyUsernameWithTeams(t *testing.T) {
-	results, err := SearchIssuesTeams(nil, "", []string{"my-org/team-a"}, "")
+	results, err := SearchIssuesTeams(nil, "", []string{"my-org/team-a"}, config.Filters{})
 
 	if err != nil {
 		t.Errorf("SearchIssues with empty username returned error: %v", err)
@@ -270,7 +272,7 @@ func TestParseIssueSearchNodes(t *testing.T) {
 }
 
 func TestIssueTeamEntries(t *testing.T) {
-	got := issueTeamEntries([]string{"my-org/team-a"}, "my-org")
+	got := issueTeamEntries([]string{"my-org/team-a"}, config.Filters{Org: "my-org"})
 
 	want := "is:issue is:open team:my-org/team-a org:my-org sort:updated-desc"
 	if got["participatedTeam0"] != want {
@@ -301,5 +303,16 @@ func TestParseIssueSearchResult_DeterministicBucketOrder(t *testing.T) {
 		if !slices.Equal(got, want) {
 			t.Fatalf("Participated = %v, want %v (iteration %d)", got, want, i)
 		}
+	}
+}
+
+func TestIssueTeamEntries_AppliesExcludeAuthors(t *testing.T) {
+	got := issueTeamEntries([]string{"my-org/team-a"}, config.Filters{
+		ExcludeAuthors: []string{"app/dependabot"},
+	})
+
+	want := "is:issue is:open team:my-org/team-a -author:app/dependabot sort:updated-desc"
+	if got["participatedTeam0"] != want {
+		t.Errorf("issueTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
 	}
 }
