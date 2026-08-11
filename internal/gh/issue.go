@@ -45,7 +45,7 @@ func issueTeamEntries(teams []string, filters config.Filters) map[string]string 
 	for i, team := range teams {
 		entries[fmt.Sprintf("participatedTeam%d", i)] = fmt.Sprintf("is:issue is:open team:%s", team)
 	}
-	return config.EnsureSort(config.AppendOrg(entries, filters.Org))
+	return config.ApplyFilters(entries, filters)
 }
 
 type IssueSearchResult struct {

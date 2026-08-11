@@ -31,6 +31,7 @@ Key features:
 - Fetches results for all teams you belong to, merged and deduplicated with your personal results
 - Team slugs are cached for 6 hours to avoid repeated API calls
 - Filter results to a single GitHub organization with `--org`
+- Hide bot-authored pull requests and issues with `--no-bots` or `--exclude-author`
 
 ## Installation
 
@@ -57,6 +58,8 @@ gh own [command] [flags]
 | Flag | Description |
 |------|-------------|
 | `--org <name>` | Filter results to a single GitHub organization |
+| `--exclude-author <login>` | Hide items written by this author; repeatable, or comma-separated |
+| `--no-bots` | Hide items written by Dependabot, Renovate, and GitHub Actions |
 | `--demo` | Use built-in demo data without calling the GitHub API (useful for screenshots and recordings) |
 | `--debug` | Enable debug logging to stderr (includes timing instrumentation) |
 
@@ -74,6 +77,12 @@ gh own issue
 
 # Filter to a specific organization
 gh own --org my-org
+
+# Hide the usual bots
+gh own --no-bots
+
+# Hide a specific author
+gh own --exclude-author 'my-release-bot'
 
 # Enable debug logging
 gh own --debug
@@ -161,6 +170,46 @@ issue:
 ```
 
 This adds tabs named "Needs Triage", "Team Review", and "Bugs" respectively.
+
+### Excluding authors
+
+Bots such as Renovate and Dependabot can bury the pull requests you actually
+need to look at. The `exclude` section drops their items from every tab of both
+commands:
+
+```yaml
+exclude:
+  bots: true
+  authors:
+    - "renovate[bot]"
+    - "my-release-bot"
+```
+
+| Key | Meaning |
+|-----|---------|
+| `bots` | Turn on the built-in preset: `app/dependabot`, `app/renovate`, `app/github-actions` |
+| `authors` | Additional logins to hide |
+
+The `--no-bots` and `--exclude-author` flags do the same thing for a single run.
+The config file, the flags, and the preset combine — they do not override each
+other — so `exclude.bots: true` in your config plus `--exclude-author noisy-bot`
+on the command line hides all four accounts.
+
+Both spellings GitHub accepts work: the API login `renovate[bot]` and the search
+qualifier `app/renovate` refer to the same account, and listing it twice in
+different spellings is harmless.
+
+Exclusion happens inside the search query, not after the results come back. This
+matters because each query returns a fixed-size page: without exclusion, fifty
+Renovate pull requests can fill that page and push the ones you care about out
+of view entirely.
+
+A query of your own that already names an excluded author keeps its own meaning,
+the same way a query with its own `sort:` keeps that sort. So a custom tab built
+around `author:app/renovate` still works while `exclude.bots` is on.
+
+> If you list an author that does not exist, GitHub rejects the whole search with
+> a "Validation Failed" error naming the problem. Check the spelling of the login.
 
 ### Default queries
 

@@ -498,3 +498,14 @@ func TestPRTeamEntries_WithoutOrg(t *testing.T) {
 		t.Errorf("prTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
 	}
 }
+
+func TestPRTeamEntries_AppliesExcludeAuthors(t *testing.T) {
+	got := prTeamEntries([]string{"my-org/team-a"}, config.Filters{
+		ExcludeAuthors: []string{"renovate[bot]"},
+	})
+
+	want := "is:pr is:open team:my-org/team-a -author:renovate[bot] sort:updated-desc"
+	if got["participatedTeam0"] != want {
+		t.Errorf("prTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
+	}
+}

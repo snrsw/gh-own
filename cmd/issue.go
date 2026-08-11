@@ -43,7 +43,7 @@ var issueCmd = &cobra.Command{
 				return nil, err
 			}
 
-			filters := config.Filters{Org: org}
+			filters := searchFilters(cfg)
 			entries := config.IssueSearchEntries(cfg.Issue.Queries, username, filters)
 
 			done = timing.Track("issue:rest-client")

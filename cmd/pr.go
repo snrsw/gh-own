@@ -43,7 +43,7 @@ var prCmd = &cobra.Command{
 				return nil, err
 			}
 
-			filters := config.Filters{Org: org}
+			filters := searchFilters(cfg)
 			entries := config.PRSearchEntries(cfg.PR.Queries, username, filters)
 
 			done = timing.Track("pr:rest-client")

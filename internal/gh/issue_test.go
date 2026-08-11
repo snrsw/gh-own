@@ -305,3 +305,14 @@ func TestParseIssueSearchResult_DeterministicBucketOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestIssueTeamEntries_AppliesExcludeAuthors(t *testing.T) {
+	got := issueTeamEntries([]string{"my-org/team-a"}, config.Filters{
+		ExcludeAuthors: []string{"app/dependabot"},
+	})
+
+	want := "is:issue is:open team:my-org/team-a -author:app/dependabot sort:updated-desc"
+	if got["participatedTeam0"] != want {
+		t.Errorf("issueTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
+	}
+}
