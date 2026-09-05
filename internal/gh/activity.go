@@ -41,6 +41,8 @@ func reviewKind(state string) string {
 		return "approved"
 	case "CHANGES_REQUESTED":
 		return "changes requested"
+	case "COMMENTED":
+		return "commented"
 	default:
 		return "dismissed"
 	}

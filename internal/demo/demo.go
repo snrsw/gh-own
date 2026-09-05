@@ -21,6 +21,11 @@ func PRSearchResult() *gh.PRSearchResult {
 				"acme-corp/backend", false, "SUCCESS", "CHANGES_REQUESTED",
 				gh.LatestActivity{Kind: "changes requested", Login: "dave", At: "2026-03-06T09:00:00Z"},
 				"alice", "2026-02-28T10:00:00Z"),
+			withAttention(prNode(93, "fix: retry failed webhook deliveries",
+				"acme-corp/backend", false, "SUCCESS", "REVIEW_REQUIRED",
+				gh.LatestActivity{Kind: "commented", Login: "carol", At: "2026-03-06T11:00:00Z"},
+				"bob", "2026-03-02T15:00:00Z"),
+				gh.Attention{Reason: gh.AttentionMentioned, Login: "carol", At: "2026-03-06T11:00:00Z"}),
 		},
 		ReadyToMerge: []gh.PRSearchNode{
 			prNode(101, "feat: add dark mode to dashboard",
@@ -98,6 +103,14 @@ func prNode(num int, title, repo string, draft bool, ci, review string,
 	}
 	n.Author.Login = author
 	n.Repository.NameWithOwner = repo
+	return n
+}
+
+// withAttention marks a demo pull request as waiting on the user. Real data
+// gets this from the conversation (see gh.Conversation.Attention), which the
+// demo does not carry.
+func withAttention(n gh.PRSearchNode, att gh.Attention) gh.PRSearchNode {
+	n.Attention = att
 	return n
 }
 

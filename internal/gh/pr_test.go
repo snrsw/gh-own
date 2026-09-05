@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/snrsw/gh-own/internal/cistatus"
@@ -278,21 +279,11 @@ func TestParsePRSearchNodes(t *testing.T) {
 
 func TestParsePRSearchNodes_WithPush(t *testing.T) {
 	node := prSearchRawNode{Number: 1, Title: "Test"}
-	node.Commits.Nodes = []struct {
-		Commit struct {
-			StatusCheckRollup *struct {
-				State string `json:"state"`
-			} `json:"statusCheckRollup"`
-			CommittedDate string `json:"committedDate"`
-			Author        struct {
-				User *struct {
-					Login string `json:"login"`
-				} `json:"user"`
-			} `json:"author"`
-		} `json:"commit"`
-	}{{}}
+	node.Commits.Nodes = []rawCommitNode{{}}
 	node.Commits.Nodes[0].Commit.CommittedDate = "2024-03-10T12:00:00Z"
-	commitUser := struct{ Login string `json:"login"` }{Login: "charlie"}
+	commitUser := struct {
+		Login string `json:"login"`
+	}{Login: "charlie"}
 	node.Commits.Nodes[0].Commit.Author.User = &commitUser
 
 	nodes := parsePRSearchNodes([]prSearchRawNode{node})
@@ -326,11 +317,7 @@ func TestParsePRSearchNodes_NoActivity(t *testing.T) {
 
 func TestParsePRSearchNodes_WithApprovedReview(t *testing.T) {
 	node := prSearchRawNode{Number: 1, Title: "Test"}
-	node.Reviews.Nodes = []struct {
-		Author      struct{ Login string `json:"login"` } `json:"author"`
-		SubmittedAt string                                `json:"submittedAt"`
-		State       string                                `json:"state"`
-	}{{SubmittedAt: "2024-03-10T12:00:00Z", State: "APPROVED"}}
+	node.Reviews.Nodes = []rawReview{{SubmittedAt: "2024-03-10T12:00:00Z", State: "APPROVED"}}
 	node.Reviews.Nodes[0].Author.Login = "bob"
 
 	nodes := parsePRSearchNodes([]prSearchRawNode{node})
@@ -348,10 +335,7 @@ func TestParsePRSearchNodes_WithApprovedReview(t *testing.T) {
 
 func TestParsePRSearchNodes_WithComment(t *testing.T) {
 	node := prSearchRawNode{Number: 1, Title: "Test"}
-	node.Comments.Nodes = []struct {
-		Author    struct{ Login string `json:"login"` } `json:"author"`
-		CreatedAt string                                `json:"createdAt"`
-	}{{CreatedAt: "2024-03-10T12:00:00Z"}}
+	node.Comments.Nodes = []rawComment{{CreatedAt: "2024-03-10T12:00:00Z"}}
 	node.Comments.Nodes[0].Author.Login = "alice"
 
 	nodes := parsePRSearchNodes([]prSearchRawNode{node})
@@ -373,20 +357,10 @@ func TestParsePRSearchNodes_CIStatus(t *testing.T) {
 		Number: 1,
 		Title:  "With CI",
 	}
-	nodeWithCI.Commits.Nodes = []struct {
-		Commit struct {
-			StatusCheckRollup *struct {
-				State string `json:"state"`
-			} `json:"statusCheckRollup"`
-			CommittedDate string `json:"committedDate"`
-			Author        struct {
-				User *struct {
-					Login string `json:"login"`
-				} `json:"user"`
-			} `json:"author"`
-		} `json:"commit"`
-	}{{}}
-	nodeWithCI.Commits.Nodes[0].Commit.StatusCheckRollup = &struct{ State string `json:"state"` }{State: successState}
+	nodeWithCI.Commits.Nodes = []rawCommitNode{{}}
+	nodeWithCI.Commits.Nodes[0].Commit.StatusCheckRollup = &struct {
+		State string `json:"state"`
+	}{State: successState}
 
 	nodeWithoutCI := prSearchRawNode{
 		Number: 2,
@@ -507,5 +481,116 @@ func TestPRTeamEntries_AppliesExcludeAuthors(t *testing.T) {
 	want := "is:pr is:open team:my-org/team-a -author:renovate[bot] sort:updated-desc"
 	if got["participatedTeam0"] != want {
 		t.Errorf("prTeamEntries()[%q] = %q, want %q", "participatedTeam0", got["participatedTeam0"], want)
+	}
+}
+
+const conversationJSON = `{"nodes": [{
+	"number": 7,
+	"title": "Add thing",
+	"url": "https://github.com/owner/repo/pull/7",
+	"body": "cc @me",
+	"createdAt": "2024-03-10T08:00:00Z",
+	"author": {"login": "alice"},
+	"repository": {"nameWithOwner": "owner/repo"},
+	"commits": {"nodes": [
+		{"commit": {"statusCheckRollup": {"state": "FAILURE"}, "committedDate": "2024-03-10T09:00:00Z", "author": {"user": {"login": "alice"}}}},
+		{"commit": {"statusCheckRollup": {"state": "SUCCESS"}, "committedDate": "2024-03-10T10:00:00Z", "author": {"user": null}}}
+	]},
+	"comments": {"nodes": [
+		{"author": {"__typename": "Bot", "login": "codecov"}, "body": "90%", "createdAt": "2024-03-10T11:00:00Z"},
+		{"author": {"__typename": "User", "login": "bob"}, "body": "nice", "createdAt": "2024-03-10T12:00:00Z"}
+	]},
+	"reviews": {"nodes": [
+		{"author": {"__typename": "User", "login": "me"}, "body": "", "submittedAt": null, "state": "PENDING"},
+		{"author": {"__typename": "User", "login": "carol"}, "body": "hm", "submittedAt": "2024-03-10T13:00:00Z", "state": "COMMENTED"}
+	]},
+	"reviewThreads": {"nodes": [
+		{"isResolved": true, "comments": {"nodes": [
+			{"author": {"__typename": "User", "login": "me"}, "body": "typo", "createdAt": "2024-03-10T09:30:00Z"},
+			{"author": null, "body": "fixed", "createdAt": "2024-03-10T09:45:00Z"}
+		]}}
+	]}
+}]}`
+
+func parseConversationJSON(t *testing.T) PRSearchNode {
+	t.Helper()
+	nodes, err := parsePRSearchJSON([]byte(conversationJSON))
+	if err != nil {
+		t.Fatalf("parsePRSearchJSON returned error: %v", err)
+	}
+	if len(nodes) != 1 {
+		t.Fatalf("expected 1 node, got %d", len(nodes))
+	}
+	return nodes[0]
+}
+
+func TestParsePRSearchJSON_Conversation(t *testing.T) {
+	n := parseConversationJSON(t)
+
+	want := Conversation{
+		Author:    "alice",
+		CreatedAt: "2024-03-10T08:00:00Z",
+		Body:      "cc @me",
+		Comments: []Comment{
+			{Login: "codecov", IsBot: true, Body: "90%", At: "2024-03-10T11:00:00Z"},
+			{Login: "bob", Body: "nice", At: "2024-03-10T12:00:00Z"},
+		},
+		// The PENDING review is dropped: it is not submitted yet.
+		Reviews: []Review{
+			{Comment: Comment{Login: "carol", Body: "hm", At: "2024-03-10T13:00:00Z"}, State: "COMMENTED"},
+		},
+		Threads: []ReviewThread{
+			{IsResolved: true, Comments: []Comment{
+				{Login: "me", Body: "typo", At: "2024-03-10T09:30:00Z"},
+				{Body: "fixed", At: "2024-03-10T09:45:00Z"}, // deleted account: null author
+			}},
+		},
+		Commits: []Commit{
+			{Login: "alice", At: "2024-03-10T09:00:00Z"},
+			{At: "2024-03-10T10:00:00Z"},
+		},
+	}
+	if !reflect.DeepEqual(n.Conversation, want) {
+		t.Errorf("Conversation = %+v\nwant %+v", n.Conversation, want)
+	}
+}
+
+func TestParsePRSearchJSON_ListFieldsComeFromTheLatestEntries(t *testing.T) {
+	n := parseConversationJSON(t)
+
+	if n.StatusState != "SUCCESS" {
+		t.Errorf("StatusState = %q, want SUCCESS (from the latest commit)", n.StatusState)
+	}
+	want := LatestActivity{Kind: "commented", Login: "carol", At: "2024-03-10T13:00:00Z"}
+	if n.LatestActivity != want {
+		t.Errorf("LatestActivity = %+v, want %+v", n.LatestActivity, want)
+	}
+}
+
+func TestParsePRSearchJSON_ConversationAttention(t *testing.T) {
+	c := parseConversationJSON(t).Conversation
+
+	// The description mentions "me", but the thread reply at 09:30 answered it.
+	if att, ok := c.Attention("me", false); ok {
+		t.Errorf("Attention(not owned) = %+v, want none: the mention was answered", att)
+	}
+	// Owned, carol's COMMENTED review is the newest thing since that reply; the
+	// bot comment in between does not count.
+	att, ok := c.Attention("me", true)
+	want := Attention{Reason: AttentionCommented, Login: "carol", At: "2024-03-10T13:00:00Z"}
+	if !ok || att != want {
+		t.Errorf("Attention(owned) = %+v, ok = %v; want %+v", att, ok, want)
+	}
+}
+
+func TestParsePRSearchNodes_LatestActivitySkipsPushWithoutUser(t *testing.T) {
+	node := prSearchRawNode{Number: 1, Title: "Test"}
+	node.Commits.Nodes = []rawCommitNode{{}}
+	node.Commits.Nodes[0].Commit.CommittedDate = "2024-03-10T12:00:00Z"
+
+	nodes := parsePRSearchNodes([]prSearchRawNode{node})
+
+	if nodes[0].LatestActivity.Login != "" {
+		t.Errorf("LatestActivity = %+v, want none for a commit with no GitHub user", nodes[0].LatestActivity)
 	}
 }

@@ -96,6 +96,11 @@ func parsePRSearchJSON(data json.RawMessage) ([]PRSearchNode, error) {
 	return parsePRSearchNodes(sr.Nodes), nil
 }
 
+// prSearchQuery fetches, besides the fields shown in the list, the tail of each
+// pull request's conversation so that Conversation.Attention can tell whether
+// it is waiting on the user. The page sizes are a trade-off: enough history to
+// find the user's last activity and what followed it, small enough to keep the
+// response and the rate-limit cost of a search with fifty results reasonable.
 const prSearchQuery = `query($q: String!) {
 	result: search(query: $q, type: ISSUE, first: 50) {
 		nodes {
@@ -103,13 +108,14 @@ const prSearchQuery = `query($q: String!) {
 				number
 				title
 				url
+				body
 				isDraft
 				updatedAt
 				createdAt
 				reviewDecision
 				author { login }
 				repository { nameWithOwner }
-				commits(last: 1) {
+				commits(last: 5) {
 					nodes {
 						commit {
 							statusCheckRollup { state }
@@ -118,11 +124,19 @@ const prSearchQuery = `query($q: String!) {
 						}
 					}
 				}
-				comments(last: 1) {
-					nodes { author { login } createdAt }
+				comments(last: 10) {
+					nodes { author { __typename login } body createdAt }
 				}
-				reviews(last: 1) {
-					nodes { author { login } submittedAt state }
+				reviews(last: 10) {
+					nodes { author { __typename login } body submittedAt state }
+				}
+				reviewThreads(last: 10) {
+					nodes {
+						isResolved
+						comments(last: 10) {
+							nodes { author { __typename login } body createdAt }
+						}
+					}
 				}
 			}
 		}
@@ -173,7 +187,12 @@ type PRSearchNode struct {
 	StatusState    string
 	ReviewDecision string
 	LatestActivity LatestActivity
-	Author         struct {
+	// Conversation is the recent discussion, see Conversation.Attention.
+	Conversation Conversation
+	// Attention is set once the pull request is found to be waiting on the
+	// user; its zero value means it is not.
+	Attention Attention
+	Author    struct {
 		Login string
 	}
 	Repository struct {
@@ -193,6 +212,7 @@ type prSearchRawNode struct {
 	Number         int    `json:"number"`
 	Title          string `json:"title"`
 	URL            string `json:"url"`
+	Body           string `json:"body"`
 	IsDraft        bool   `json:"isDraft"`
 	UpdatedAt      string `json:"updatedAt"`
 	CreatedAt      string `json:"createdAt"`
@@ -204,33 +224,70 @@ type prSearchRawNode struct {
 		NameWithOwner string `json:"nameWithOwner"`
 	} `json:"repository"`
 	Commits struct {
-		Nodes []struct {
-			Commit struct {
-				StatusCheckRollup *struct {
-					State string `json:"state"`
-				} `json:"statusCheckRollup"`
-				CommittedDate string `json:"committedDate"`
-				Author        struct {
-					User *struct {
-						Login string `json:"login"`
-					} `json:"user"`
-				} `json:"author"`
-			} `json:"commit"`
-		} `json:"nodes"`
+		Nodes []rawCommitNode `json:"nodes"`
 	} `json:"commits"`
 	Comments struct {
-		Nodes []struct {
-			Author    struct{ Login string `json:"login"` } `json:"author"`
-			CreatedAt string                                `json:"createdAt"`
-		} `json:"nodes"`
+		Nodes []rawComment `json:"nodes"`
 	} `json:"comments"`
 	Reviews struct {
-		Nodes []struct {
-			Author      struct{ Login string `json:"login"` } `json:"author"`
-			SubmittedAt string                                `json:"submittedAt"`
-			State       string                                `json:"state"`
-		} `json:"nodes"`
+		Nodes []rawReview `json:"nodes"`
 	} `json:"reviews"`
+	ReviewThreads struct {
+		Nodes []rawReviewThread `json:"nodes"`
+	} `json:"reviewThreads"`
+}
+
+// rawActor is a GraphQL Actor. The typename tells a GitHub App ("Bot") from a
+// person ("User"); the login of an App carries no "[bot]" suffix in GraphQL.
+type rawActor struct {
+	TypeName string `json:"__typename"`
+	Login    string `json:"login"`
+}
+
+func (a rawActor) comment(body, at string) Comment {
+	return Comment{Login: a.Login, IsBot: a.TypeName == "Bot", Body: body, At: at}
+}
+
+type rawComment struct {
+	Author    rawActor `json:"author"`
+	Body      string   `json:"body"`
+	CreatedAt string   `json:"createdAt"`
+}
+
+type rawReview struct {
+	Author      rawActor `json:"author"`
+	Body        string   `json:"body"`
+	SubmittedAt string   `json:"submittedAt"`
+	State       string   `json:"state"`
+}
+
+type rawReviewThread struct {
+	IsResolved bool `json:"isResolved"`
+	Comments   struct {
+		Nodes []rawComment `json:"nodes"`
+	} `json:"comments"`
+}
+
+type rawCommitNode struct {
+	Commit struct {
+		StatusCheckRollup *struct {
+			State string `json:"state"`
+		} `json:"statusCheckRollup"`
+		CommittedDate string `json:"committedDate"`
+		Author        struct {
+			User *struct {
+				Login string `json:"login"`
+			} `json:"user"`
+		} `json:"author"`
+	} `json:"commit"`
+}
+
+func (c rawCommitNode) commit() Commit {
+	cm := Commit{At: c.Commit.CommittedDate}
+	if c.Commit.Author.User != nil {
+		cm.Login = c.Commit.Author.User.Login
+	}
+	return cm
 }
 
 func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
@@ -247,35 +304,66 @@ func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
 			UpdatedAt:      n.UpdatedAt,
 			CreatedAt:      n.CreatedAt,
 			ReviewDecision: n.ReviewDecision,
+			Conversation:   n.conversation(),
 		}
 		node.Author.Login = n.Author.Login
 		node.Repository.NameWithOwner = n.Repository.NameWithOwner
 
-		if len(n.Commits.Nodes) > 0 && n.Commits.Nodes[0].Commit.StatusCheckRollup != nil {
-			node.StatusState = n.Commits.Nodes[0].Commit.StatusCheckRollup.State
+		// The lists are chronological, so the latest entry is the last one.
+		if last := len(n.Commits.Nodes) - 1; last >= 0 && n.Commits.Nodes[last].Commit.StatusCheckRollup != nil {
+			node.StatusState = n.Commits.Nodes[last].Commit.StatusCheckRollup.State
 		}
-
-		var commentLogin, commentAt string
-		if len(n.Comments.Nodes) > 0 {
-			commentLogin = n.Comments.Nodes[0].Author.Login
-			commentAt = n.Comments.Nodes[0].CreatedAt
-		}
-		var reviewLogin, reviewAt, reviewState string
-		if len(n.Reviews.Nodes) > 0 {
-			reviewLogin = n.Reviews.Nodes[0].Author.Login
-			reviewAt = n.Reviews.Nodes[0].SubmittedAt
-			reviewState = n.Reviews.Nodes[0].State
-		}
-		var pushLogin, pushAt string
-		if len(n.Commits.Nodes) > 0 && n.Commits.Nodes[0].Commit.Author.User != nil {
-			pushLogin = n.Commits.Nodes[0].Commit.Author.User.Login
-			pushAt = n.Commits.Nodes[0].Commit.CommittedDate
-		}
-		node.LatestActivity = NewLatestActivity(commentLogin, commentAt, reviewLogin, reviewAt, reviewState, pushLogin, pushAt)
+		node.LatestActivity = n.latestActivity(node.Conversation)
 
 		nodes = append(nodes, node)
 	}
 	return nodes
+}
+
+func (n prSearchRawNode) conversation() Conversation {
+	c := Conversation{
+		Author:    n.Author.Login,
+		CreatedAt: n.CreatedAt,
+		Body:      n.Body,
+	}
+	for _, cm := range n.Comments.Nodes {
+		c.Comments = append(c.Comments, cm.Author.comment(cm.Body, cm.CreatedAt))
+	}
+	for _, r := range n.Reviews.Nodes {
+		if r.State == "PENDING" {
+			continue // Not submitted yet: only its author can see it.
+		}
+		c.Reviews = append(c.Reviews, Review{Comment: r.Author.comment(r.Body, r.SubmittedAt), State: r.State})
+	}
+	for _, th := range n.ReviewThreads.Nodes {
+		thread := ReviewThread{IsResolved: th.IsResolved}
+		for _, cm := range th.Comments.Nodes {
+			thread.Comments = append(thread.Comments, cm.Author.comment(cm.Body, cm.CreatedAt))
+		}
+		c.Threads = append(c.Threads, thread)
+	}
+	for _, cm := range n.Commits.Nodes {
+		c.Commits = append(c.Commits, cm.commit())
+	}
+	return c
+}
+
+// latestActivity picks the most recent comment, review, and push out of the
+// conversation and lets NewLatestActivity choose between them.
+func (prSearchRawNode) latestActivity(c Conversation) LatestActivity {
+	var commentLogin, commentAt string
+	if n := len(c.Comments); n > 0 {
+		commentLogin, commentAt = c.Comments[n-1].Login, c.Comments[n-1].At
+	}
+	var reviewLogin, reviewAt, reviewState string
+	if n := len(c.Reviews); n > 0 {
+		reviewLogin, reviewAt, reviewState = c.Reviews[n-1].Login, c.Reviews[n-1].At, c.Reviews[n-1].State
+	}
+	var pushLogin, pushAt string
+	if n := len(c.Commits); n > 0 && c.Commits[n-1].Login != "" {
+		pushLogin, pushAt = c.Commits[n-1].Login, c.Commits[n-1].At
+	}
+	return NewLatestActivity(commentLogin, commentAt, reviewLogin, reviewAt, reviewState, pushLogin, pushAt)
 }
 
 func deduplicatePRNodes(nodes []PRSearchNode) []PRSearchNode {
