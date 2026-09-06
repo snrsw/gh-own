@@ -271,6 +271,20 @@ comments, reviews, and review threads, the last ten comments of each thread,
 and the last five commits), so on a very long PR an older exchange can be
 missed.
 
+This is the one place where a tab holds more than its query matches. To turn
+it off — because you want every tab to be exactly its query, or because the
+extra data makes the search too slow for you — set:
+
+```yaml
+pr:
+  needsAction:
+    conversation: false
+```
+
+With it off, gh-own fetches only the latest comment, review, and commit of
+each PR, Needs action is exactly the `needsAction` query, and no PR is moved
+between tabs.
+
 ## Requirements
 
 - [GitHub CLI](https://cli.github.com/) installed and authenticated

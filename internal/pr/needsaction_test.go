@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/snrsw/gh-own/internal/config"
 	"github.com/snrsw/gh-own/internal/gh"
 )
 
@@ -137,7 +138,7 @@ func TestNewGroupedPullRequests_PromotesAndDescribes(t *testing.T) {
 		Custom:  map[string][]gh.PRSearchNode{},
 	}
 
-	grouped := NewGroupedPullRequests(r, "me")
+	grouped := NewGroupedPullRequests(r, "me", config.NeedsActionConfig{})
 
 	if grouped.NeedsAction.TotalCount != 1 || grouped.Waiting.TotalCount != 1 {
 		t.Fatalf("NeedsAction = %d, Waiting = %d, want 1 and 1", grouped.NeedsAction.TotalCount, grouped.Waiting.TotalCount)
@@ -152,5 +153,20 @@ func TestNewGroupedPullRequests_PromotesAndDescribes(t *testing.T) {
 	desc := item.toItem("me").Description()
 	if !strings.Contains(desc, "mentioned you by @bob") {
 		t.Errorf("Description() = %q, should contain %q", desc, "mentioned you by @bob")
+	}
+}
+
+func TestNewGroupedPullRequests_ConversationOff(t *testing.T) {
+	newComment := gh.Comment{Login: "bob", Body: "@me look", At: "2024-03-10T09:00:00Z"}
+	r := &gh.PRSearchResult{
+		Waiting: []gh.PRSearchNode{ownedNode(1, newComment)},
+		Custom:  map[string][]gh.PRSearchNode{},
+	}
+	off := false
+
+	grouped := NewGroupedPullRequests(r, "me", config.NeedsActionConfig{Conversation: &off})
+
+	if grouped.NeedsAction.TotalCount != 0 || grouped.Waiting.TotalCount != 1 {
+		t.Errorf("NeedsAction = %d, Waiting = %d; want 0 and 1 with the conversation off", grouped.NeedsAction.TotalCount, grouped.Waiting.TotalCount)
 	}
 }

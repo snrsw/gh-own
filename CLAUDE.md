@@ -30,6 +30,7 @@ gh-own is a GitHub CLI extension that displays the user's owned PRs and issues i
 - **internal/pr/** - PR data types and search logic (groups by: needs action, ready to merge, review-requested, waiting, drafts, participated); `needsaction.go` promotes PRs whose `Conversation.Attention` fires into Needs action and drops them from the other default tabs (Review Requested keeps them); `BuildTabs()` produces `[]ui.Tab`
 - **internal/issue/** - Issue data types and search logic (groups by: created, assigned, participated); `BuildTabs()` produces `[]ui.Tab`
 - **internal/ui/** - Bubbletea TUI with tabbed interface; `Model` manages tabs, `Item` represents list entries, `NewLoadingModel` shows a spinner while data is fetched
+- **internal/config/** - YAML config at `~/.config/gh-own/config.yaml`: per-tab queries, `exclude`, and `pr.needsAction.conversation` (default true; false skips both the conversation fields in the PR search query and `promoteNeedsAction`, so every tab is exactly its query)
 - **internal/cache/** - Team slug cache stored at `~/.cache/gh/gh-own/teams.json`; written atomically; TTL-based expiry (default 6 h)
 - **internal/cistatus/** - `CIStatus` enum (None/Success/Failure/Pending) parsed from GitHub's `statusCheckRollup`; `RenderCIStatus` returns coloured symbol
 - **internal/reviewstatus/** - `ReviewStatus` enum (None/Approved/ChangesRequested/ReviewRequired) parsed from GitHub's `reviewDecision`; `RenderReviewStatus` returns coloured symbol
@@ -42,7 +43,7 @@ gh-own is a GitHub CLI extension that displays the user's owned PRs and issues i
    - **User search** — `gh.SearchPRs` / `gh.SearchIssues` via GraphQL
    - **Team search** — `gh.GetTeamSlugsWithCache` (REST, cached 6 h) → `gh.SearchPRsTeams` / `gh.SearchIssuesTeams`
 3. Results are merged with `gh.MergeSearch*Results` (deduplicates by URL)
-4. Domain packages (`pr`, `issue`) group results, order every bucket newest first by `gh.SortAt`, and call `BuildTabs()` to produce `[]ui.Tab`; `pr.NewGroupedPullRequests` first runs `promoteNeedsAction`, so Needs action = changes requested ∪ PRs waiting on the user (see `gh.Conversation.Attention`); the description line and sort time of such a PR come from `PRSearchNode.Attention` instead of `LatestActivity`
+4. Domain packages (`pr`, `issue`) group results, order every bucket newest first by `gh.SortAt`, and call `BuildTabs()` to produce `[]ui.Tab`; `pr.NewGroupedPullRequests` first runs `promoteNeedsAction` (unless `pr.needsAction.conversation` is false), so Needs action = changes requested ∪ PRs waiting on the user (see `gh.Conversation.Attention`); the description line and sort time of such a PR come from `PRSearchNode.Attention` instead of `LatestActivity`
 5. `ui.NewLoadingModel` starts Bubbletea with a spinner; `ui.FetchCmd` wraps the fetch function and delivers `TabsMsg` (success) or `ErrMsg` (failure)
 6. Keyboard: `enter` opens the selected item URL in the system browser; `r` refreshes; `s` toggles newest/oldest first (`Model.applySort` re-sorts every tab and is re-applied on `TabsMsg`); `tab`/`shift+tab` switch tabs; `/` filters
 

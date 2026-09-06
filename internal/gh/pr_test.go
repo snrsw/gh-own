@@ -2,6 +2,7 @@ package gh
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/snrsw/gh-own/internal/cistatus"
@@ -168,7 +169,7 @@ func TestPRSearchNode_RepositoryURL(t *testing.T) {
 }
 
 func TestSearchPRs_EmptyEntries(t *testing.T) {
-	results, err := SearchPRs(nil, nil)
+	results, err := SearchPRs(nil, nil, true)
 
 	if err != nil {
 		t.Errorf("SearchPRs with empty username returned error: %v", err)
@@ -189,7 +190,7 @@ func TestSearchPRs_EmptyEntries(t *testing.T) {
 }
 
 func TestSearchPRs_EmptyEntries_HasEmptyCustom(t *testing.T) {
-	results, err := SearchPRs(nil, nil)
+	results, err := SearchPRs(nil, nil, true)
 
 	if err != nil {
 		t.Fatalf("SearchPRs returned error: %v", err)
@@ -204,7 +205,7 @@ func TestSearchPRs_EmptyEntries_HasEmptyCustom(t *testing.T) {
 }
 
 func TestSearchPRs_EmptyUsernameWithTeams(t *testing.T) {
-	results, err := SearchPRsTeams(nil, "", []string{"my-org/team-a"}, config.Filters{})
+	results, err := SearchPRsTeams(nil, "", []string{"my-org/team-a"}, config.Filters{}, true)
 
 	if err != nil {
 		t.Errorf("SearchPRs with empty username returned error: %v", err)
@@ -592,5 +593,26 @@ func TestParsePRSearchNodes_LatestActivitySkipsPushWithoutUser(t *testing.T) {
 
 	if nodes[0].LatestActivity.Login != "" {
 		t.Errorf("LatestActivity = %+v, want none for a commit with no GitHub user", nodes[0].LatestActivity)
+	}
+}
+
+func TestPRSearchQuery_ConversationFields(t *testing.T) {
+	with := prSearchQuery(true)
+	without := prSearchQuery(false)
+
+	for _, field := range []string{"reviewThreads", "body", "__typename", "comments(last: 10)"} {
+		if !strings.Contains(with, field) {
+			t.Errorf("prSearchQuery(true) lacks %q", field)
+		}
+		if strings.Contains(without, field) {
+			t.Errorf("prSearchQuery(false) should not fetch %q", field)
+		}
+	}
+	for _, q := range []string{with, without} {
+		for _, field := range []string{"statusCheckRollup", "comments(last:", "reviews(last:", "reviewDecision"} {
+			if !strings.Contains(q, field) {
+				t.Errorf("query lacks %q:\n%s", field, q)
+			}
+		}
 	}
 }

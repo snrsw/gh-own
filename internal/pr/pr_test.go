@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/snrsw/gh-own/internal/cistatus"
+	"github.com/snrsw/gh-own/internal/config"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/reviewstatus"
 	"github.com/snrsw/gh-own/internal/ui"
@@ -20,7 +21,7 @@ func TestNewGroupedPullRequests_PropagatesCustom(t *testing.T) {
 		},
 	}
 
-	grouped := NewGroupedPullRequests(ghResult, "")
+	grouped := NewGroupedPullRequests(ghResult, "", config.NeedsActionConfig{})
 
 	if len(grouped.Custom) != 1 {
 		t.Fatalf("Custom has %d keys, want 1", len(grouped.Custom))
@@ -569,7 +570,7 @@ func TestNewGroupedPullRequests_SortsByUpdatedDesc(t *testing.T) {
 		},
 	}
 
-	grouped := NewGroupedPullRequests(ghResult, "")
+	grouped := NewGroupedPullRequests(ghResult, "", config.NeedsActionConfig{})
 
 	want := []int{2, 3, 1}
 	if got := prNumbers(grouped.Drafts.Items); !slices.Equal(got, want) {
@@ -590,7 +591,7 @@ func TestNewGroupedPullRequests_SortsCustomTabs(t *testing.T) {
 		},
 	}
 
-	grouped := NewGroupedPullRequests(ghResult, "")
+	grouped := NewGroupedPullRequests(ghResult, "", config.NeedsActionConfig{})
 
 	want := []int{2, 1}
 	if got := prNumbers(grouped.Custom["myTab"].Items); !slices.Equal(got, want) {
@@ -618,7 +619,7 @@ func TestNewGroupedPullRequests_SortsByDisplayedTime(t *testing.T) {
 		},
 	}
 
-	grouped := NewGroupedPullRequests(ghResult, "")
+	grouped := NewGroupedPullRequests(ghResult, "", config.NeedsActionConfig{})
 
 	want := []int{3, 2, 1}
 	if got := prNumbers(grouped.Drafts.Items); !slices.Equal(got, want) {
@@ -634,7 +635,7 @@ func TestNewGroupedPullRequests_MissingTimestampSortsLast(t *testing.T) {
 		},
 	}
 
-	grouped := NewGroupedPullRequests(ghResult, "")
+	grouped := NewGroupedPullRequests(ghResult, "", config.NeedsActionConfig{})
 
 	want := []int{2, 1}
 	if got := prNumbers(grouped.Drafts.Items); !slices.Equal(got, want) {
@@ -651,7 +652,7 @@ func TestGroupedPullRequests_PRItems_CarrySortAt(t *testing.T) {
 			{Number: 2, UpdatedAt: "2024-03-20T00:00:00Z"},
 		},
 	}
-	grouped := NewGroupedPullRequests(ghResult, "")
+	grouped := NewGroupedPullRequests(ghResult, "", config.NeedsActionConfig{})
 
 	items := grouped.prItems(grouped.Drafts)
 

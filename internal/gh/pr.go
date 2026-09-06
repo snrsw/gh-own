@@ -10,12 +10,15 @@ import (
 	"github.com/snrsw/gh-own/internal/config"
 )
 
-func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchResult, error) {
+// SearchPRs runs every entry as a search. With conversation, each result also
+// carries the tail of its discussion (see PRSearchNode.Conversation), at the
+// cost of a larger response.
+func SearchPRs(client *api.GraphQLClient, entries map[string]string, conversation bool) (*PRSearchResult, error) {
 	if len(entries) == 0 {
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
-	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
+	raw, err := Search(client, prSearchQuery(conversation), entries, parsePRSearchJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +26,9 @@ func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchR
 	return parsePRSearchResult(raw)
 }
 
-func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, filters config.Filters) (*PRSearchResult, error) {
+// SearchPRsTeams searches the pull requests of every team; see SearchPRs for
+// conversation.
+func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, filters config.Filters, conversation bool) (*PRSearchResult, error) {
 	if username == "" {
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
@@ -32,7 +37,7 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, 
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
-	raw, err := Search(client, prSearchQuery, prTeamEntries(teams, filters), parsePRSearchJSON)
+	raw, err := Search(client, prSearchQuery(conversation), prTeamEntries(teams, filters), parsePRSearchJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -96,25 +101,57 @@ func parsePRSearchJSON(data json.RawMessage) ([]PRSearchNode, error) {
 	return parsePRSearchNodes(sr.Nodes), nil
 }
 
-// prSearchQuery fetches, besides the fields shown in the list, the tail of each
-// pull request's conversation so that Conversation.Attention can tell whether
-// it is waiting on the user. The page sizes are a trade-off: enough history to
-// find the user's last activity and what followed it, small enough to keep the
-// response and the rate-limit cost of a search with fifty results reasonable.
-const prSearchQuery = `query($q: String!) {
+// prSearchQuery builds the search query. Besides the fields shown in the list
+// it fetches, with conversation, the tail of each pull request's discussion so
+// that Conversation.Attention can tell whether it is waiting on the user, and
+// without it only the single latest comment, review and commit that the
+// activity line needs. The conversation page sizes are a trade-off: enough
+// history to find the user's last activity and what followed it, small enough
+// to keep the response of a search with fifty results reasonable.
+func prSearchQuery(conversation bool) string {
+	fields := prActivityFields
+	if conversation {
+		fields = prConversationFields
+	}
+	return `query($q: String!) {
 	result: search(query: $q, type: ISSUE, first: 50) {
 		nodes {
 			... on PullRequest {
 				number
 				title
 				url
-				body
 				isDraft
 				updatedAt
 				createdAt
 				reviewDecision
 				author { login }
 				repository { nameWithOwner }
+` + fields + `
+			}
+		}
+	}
+}`
+}
+
+const prActivityFields = `
+				commits(last: 1) {
+					nodes {
+						commit {
+							statusCheckRollup { state }
+							committedDate
+							author { user { login } }
+						}
+					}
+				}
+				comments(last: 1) {
+					nodes { author { login } createdAt }
+				}
+				reviews(last: 1) {
+					nodes { author { login } submittedAt state }
+				}`
+
+const prConversationFields = `
+				body
 				commits(last: 5) {
 					nodes {
 						commit {
@@ -137,11 +174,7 @@ const prSearchQuery = `query($q: String!) {
 							nodes { author { __typename login } body createdAt }
 						}
 					}
-				}
-			}
-		}
-	}
-}`
+				}`
 
 func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, error) {
 	defaultKeys := config.DefaultPRKeys()

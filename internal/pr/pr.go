@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/snrsw/gh-own/internal/cistatus"
+	"github.com/snrsw/gh-own/internal/config"
 	"github.com/snrsw/gh-own/internal/gh"
 	"github.com/snrsw/gh-own/internal/reviewstatus"
 )
@@ -21,8 +22,13 @@ type GroupedPullRequests struct {
 	currentLogin    string
 }
 
-func NewGroupedPullRequests(ghResult *gh.PRSearchResult, currentLogin string) *GroupedPullRequests {
-	ghResult = promoteNeedsAction(ghResult, currentLogin)
+// NewGroupedPullRequests groups the search results into tabs. With opts turning
+// the conversation on, pull requests waiting on the user move into Needs action
+// first (see promoteNeedsAction).
+func NewGroupedPullRequests(ghResult *gh.PRSearchResult, currentLogin string, opts config.NeedsActionConfig) *GroupedPullRequests {
+	if opts.ConversationEnabled() {
+		ghResult = promoteNeedsAction(ghResult, currentLogin)
+	}
 	custom := make(map[string]gh.SearchResult[pullRequest], len(ghResult.Custom))
 	for k, nodes := range ghResult.Custom {
 		custom[k] = toSearchResult(nodes)
