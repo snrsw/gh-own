@@ -1,6 +1,8 @@
 package pr
 
 import (
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -8,14 +10,14 @@ import (
 )
 
 func ownedNode(num int, comments ...gh.Comment) gh.PRSearchNode {
-	n := gh.PRSearchNode{Number: num, URL: "https://github.com/o/r/pull/" + string(rune('0'+num))}
+	n := gh.PRSearchNode{Number: num, URL: "https://github.com/o/r/pull/" + strconv.Itoa(num)}
 	n.Author.Login = "me"
 	n.Conversation = gh.Conversation{Author: "me", CreatedAt: "2024-03-10T08:00:00Z", Comments: comments}
 	return n
 }
 
 func otherNode(num int, threads ...gh.ReviewThread) gh.PRSearchNode {
-	n := gh.PRSearchNode{Number: num, URL: "https://github.com/o/r/pull/" + string(rune('0'+num))}
+	n := gh.PRSearchNode{Number: num, URL: "https://github.com/o/r/pull/" + strconv.Itoa(num)}
 	n.Author.Login = "alice"
 	n.Conversation = gh.Conversation{Author: "alice", CreatedAt: "2024-03-10T08:00:00Z", Threads: threads}
 	return n
@@ -30,15 +32,7 @@ func numbers(nodes []gh.PRSearchNode) []int {
 }
 
 func equalNumbers(a []int, b ...int) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(a, b)
 }
 
 func TestPromoteNeedsAction_MovesOwnedPRsWithNewComments(t *testing.T) {
