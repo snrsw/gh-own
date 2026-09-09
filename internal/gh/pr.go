@@ -150,9 +150,15 @@ const prActivityFields = `
 					nodes { author { login } submittedAt state }
 				}`
 
-const prConversationFields = `
+// prConversationFields is built from the page sizes in conversation.go so that
+// the query and Conversation.horizon agree on how much of each list is fetched.
+// publishedAt is fetched for review-thread comments only: a comment drafted as
+// part of a review is created when typed but published when the review is
+// submitted, and only the latter is when others could read it. Issue comments
+// are published as they are created, so createdAt is enough there.
+var prConversationFields = fmt.Sprintf(`
 				body
-				commits(last: 5) {
+				commits(last: %[2]d) {
 					nodes {
 						commit {
 							statusCheckRollup { state }
@@ -161,20 +167,20 @@ const prConversationFields = `
 						}
 					}
 				}
-				comments(last: 10) {
+				comments(last: %[1]d) {
 					nodes { author { __typename login } body createdAt }
 				}
-				reviews(last: 10) {
+				reviews(last: %[1]d) {
 					nodes { author { __typename login } body submittedAt state }
 				}
-				reviewThreads(last: 10) {
+				reviewThreads(last: %[1]d) {
 					nodes {
 						isResolved
-						comments(last: 10) {
-							nodes { author { __typename login } body createdAt }
+						comments(last: %[1]d) {
+							nodes { author { __typename login } body createdAt publishedAt }
 						}
 					}
-				}`
+				}`, conversationPageSize, commitsPageSize)
 
 func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, error) {
 	defaultKeys := config.DefaultPRKeys()
@@ -294,10 +300,26 @@ type rawReview struct {
 	State       string   `json:"state"`
 }
 
+// rawThreadComment is a review-thread comment. PublishedAt is null while the
+// review it belongs to is still pending.
+type rawThreadComment struct {
+	rawComment
+	PublishedAt string `json:"publishedAt"`
+}
+
+// at returns when the comment became visible to others: its publication, or
+// its creation when GitHub reports no publication time.
+func (c rawThreadComment) at() string {
+	if c.PublishedAt != "" {
+		return c.PublishedAt
+	}
+	return c.CreatedAt
+}
+
 type rawReviewThread struct {
 	IsResolved bool `json:"isResolved"`
 	Comments   struct {
-		Nodes []rawComment `json:"nodes"`
+		Nodes []rawThreadComment `json:"nodes"`
 	} `json:"comments"`
 }
 
@@ -346,7 +368,7 @@ func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
 		if last := len(n.Commits.Nodes) - 1; last >= 0 && n.Commits.Nodes[last].Commit.StatusCheckRollup != nil {
 			node.StatusState = n.Commits.Nodes[last].Commit.StatusCheckRollup.State
 		}
-		node.LatestActivity = n.latestActivity(node.Conversation)
+		node.LatestActivity = node.Conversation.latestActivity()
 
 		nodes = append(nodes, node)
 	}
@@ -371,7 +393,7 @@ func (n prSearchRawNode) conversation() Conversation {
 	for _, th := range n.ReviewThreads.Nodes {
 		thread := ReviewThread{IsResolved: th.IsResolved}
 		for _, cm := range th.Comments.Nodes {
-			thread.Comments = append(thread.Comments, cm.Author.comment(cm.Body, cm.CreatedAt))
+			thread.Comments = append(thread.Comments, cm.Author.comment(cm.Body, cm.at()))
 		}
 		c.Threads = append(c.Threads, thread)
 	}
@@ -379,24 +401,6 @@ func (n prSearchRawNode) conversation() Conversation {
 		c.Commits = append(c.Commits, cm.commit())
 	}
 	return c
-}
-
-// latestActivity picks the most recent comment, review, and push out of the
-// conversation and lets NewLatestActivity choose between them.
-func (prSearchRawNode) latestActivity(c Conversation) LatestActivity {
-	var commentLogin, commentAt string
-	if n := len(c.Comments); n > 0 {
-		commentLogin, commentAt = c.Comments[n-1].Login, c.Comments[n-1].At
-	}
-	var reviewLogin, reviewAt, reviewState string
-	if n := len(c.Reviews); n > 0 {
-		reviewLogin, reviewAt, reviewState = c.Reviews[n-1].Login, c.Reviews[n-1].At, c.Reviews[n-1].State
-	}
-	var pushLogin, pushAt string
-	if n := len(c.Commits); n > 0 && c.Commits[n-1].Login != "" {
-		pushLogin, pushAt = c.Commits[n-1].Login, c.Commits[n-1].At
-	}
-	return NewLatestActivity(commentLogin, commentAt, reviewLogin, reviewAt, reviewState, pushLogin, pushAt)
 }
 
 func deduplicatePRNodes(nodes []PRSearchNode) []PRSearchNode {

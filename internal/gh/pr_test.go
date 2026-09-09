@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -507,8 +508,8 @@ const conversationJSON = `{"nodes": [{
 	]},
 	"reviewThreads": {"nodes": [
 		{"isResolved": true, "comments": {"nodes": [
-			{"author": {"__typename": "User", "login": "me"}, "body": "typo", "createdAt": "2024-03-10T09:30:00Z"},
-			{"author": null, "body": "fixed", "createdAt": "2024-03-10T09:45:00Z"}
+			{"author": {"__typename": "User", "login": "me"}, "body": "typo", "createdAt": "2024-03-10T09:20:00Z", "publishedAt": "2024-03-10T09:30:00Z"},
+			{"author": null, "body": "fixed", "createdAt": "2024-03-10T09:45:00Z", "publishedAt": null}
 		]}}
 	]}
 }]}`
@@ -540,6 +541,9 @@ func TestParsePRSearchJSON_Conversation(t *testing.T) {
 		Reviews: []Review{
 			{Comment: Comment{Login: "carol", Body: "hm", At: "2024-03-10T13:00:00Z"}, State: "COMMENTED"},
 		},
+		// Thread comments are dated by publishedAt, a comment drafted in a
+		// review is created before the review is submitted; createdAt is the
+		// fallback when publishedAt is null.
 		Threads: []ReviewThread{
 			{IsResolved: true, Comments: []Comment{
 				{Login: "me", Body: "typo", At: "2024-03-10T09:30:00Z"},
@@ -572,15 +576,15 @@ func TestParsePRSearchJSON_ConversationAttention(t *testing.T) {
 	c := parseConversationJSON(t).Conversation
 
 	// The description mentions "me", but the thread reply at 09:30 answered it.
-	if att, ok := c.Attention("me", false); ok {
+	if att := c.Attention("me", false); att.Reason != "" {
 		t.Errorf("Attention(not owned) = %+v, want none: the mention was answered", att)
 	}
 	// Owned, carol's COMMENTED review is the newest thing since that reply; the
 	// bot comment in between does not count.
-	att, ok := c.Attention("me", true)
+	att := c.Attention("me", true)
 	want := Attention{Reason: AttentionCommented, Login: "carol", At: "2024-03-10T13:00:00Z"}
-	if !ok || att != want {
-		t.Errorf("Attention(owned) = %+v, ok = %v; want %+v", att, ok, want)
+	if att != want {
+		t.Errorf("Attention(owned) = %+v, want %+v", att, want)
 	}
 }
 
@@ -600,13 +604,21 @@ func TestPRSearchQuery_ConversationFields(t *testing.T) {
 	with := prSearchQuery(true)
 	without := prSearchQuery(false)
 
-	for _, field := range []string{"reviewThreads", "body", "__typename", "comments(last: 10)"} {
+	for _, field := range []string{"reviewThreads", "body", "__typename", "publishedAt",
+		fmt.Sprintf("comments(last: %d)", conversationPageSize),
+		fmt.Sprintf("reviews(last: %d)", conversationPageSize),
+		fmt.Sprintf("commits(last: %d)", commitsPageSize),
+	} {
 		if !strings.Contains(with, field) {
 			t.Errorf("prSearchQuery(true) lacks %q", field)
 		}
 		if strings.Contains(without, field) {
 			t.Errorf("prSearchQuery(false) should not fetch %q", field)
 		}
+	}
+	// publishedAt is only needed for review-thread comments, see prConversationFields.
+	if n := strings.Count(with, "publishedAt"); n != 1 {
+		t.Errorf("prSearchQuery(true) fetches publishedAt %d times, want once (review threads only)", n)
 	}
 	for _, q := range []string{with, without} {
 		for _, field := range []string{"statusCheckRollup", "comments(last:", "reviews(last:", "reviewDecision"} {

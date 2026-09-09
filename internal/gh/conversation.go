@@ -2,6 +2,17 @@ package gh
 
 import "time"
 
+// Page sizes of the conversation lists fetched by the search query. Both the
+// query (prConversationFields) and the truncation horizon (Conversation.horizon)
+// are built from them, so they cannot drift apart.
+const (
+	// conversationPageSize is how many comments, reviews, review threads, and
+	// comments per thread are fetched.
+	conversationPageSize = 10
+	// commitsPageSize is how many commits are fetched.
+	commitsPageSize = 5
+)
+
 // Conversation is the recent discussion on a pull request: the description,
 // the latest comments and reviews, the latest inline review threads, and the
 // latest commits. It is what Attention reads to decide whether the discussion
@@ -85,4 +96,56 @@ func (c Conversation) lastActivityBy(login string) time.Time {
 		bump(cm.Login, cm.At)
 	}
 	return last
+}
+
+// horizon returns the time before which events cannot be judged: the lists
+// hold only the tail of the history, and once a list is full, an activity of
+// the user older than its oldest fetched entry may have scrolled out of view.
+// Anything that happened before that entry might already have been answered by
+// such a hidden activity, so Attention ignores it. The horizon is the newest of
+// the oldest entries of the full lists among comments, reviews, and commits;
+// the zero time means no list is full and nothing is hidden.
+//
+// Review threads are left out on purpose: threads are ordered by creation, not
+// by activity, so a full thread window says nothing about which replies are
+// hidden, and a thread's own comment window rarely fills up.
+//
+// Reviews are counted after the PENDING ones were dropped, so a page holding a
+// pending review is not seen as full; the horizon then errs on the permissive
+// side, which is the harmless direction.
+func (c Conversation) horizon() time.Time {
+	var h time.Time
+	bump := func(at string) {
+		if t := parseTimestamp(at); t.After(h) {
+			h = t
+		}
+	}
+	if len(c.Comments) >= conversationPageSize {
+		bump(c.Comments[0].At)
+	}
+	if len(c.Reviews) >= conversationPageSize {
+		bump(c.Reviews[0].At)
+	}
+	if len(c.Commits) >= commitsPageSize {
+		bump(c.Commits[0].At)
+	}
+	return h
+}
+
+// latestActivity picks the most recent comment, review, and push out of the
+// conversation and lets NewLatestActivity choose between them.
+func (c Conversation) latestActivity() LatestActivity {
+	var commentLogin, commentAt string
+	if n := len(c.Comments); n > 0 {
+		commentLogin, commentAt = c.Comments[n-1].Login, c.Comments[n-1].At
+	}
+	var reviewLogin, reviewAt, reviewState string
+	if n := len(c.Reviews); n > 0 {
+		reviewLogin, reviewAt, reviewState = c.Reviews[n-1].Login, c.Reviews[n-1].At, c.Reviews[n-1].State
+	}
+	var pushLogin, pushAt string
+	if n := len(c.Commits); n > 0 && c.Commits[n-1].Login != "" {
+		pushLogin, pushAt = c.Commits[n-1].Login, c.Commits[n-1].At
+	}
+	return NewLatestActivity(commentLogin, commentAt, reviewLogin, reviewAt, reviewState, pushLogin, pushAt)
 }

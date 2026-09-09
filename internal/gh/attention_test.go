@@ -1,6 +1,9 @@
 package gh
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 const (
 	t1 = "2024-03-10T10:00:00Z"
@@ -26,7 +29,6 @@ func TestAttention_OwnedPR(t *testing.T) {
 		name string
 		conv Conversation
 		want Attention
-		ok   bool
 	}{
 		{
 			name: "no conversation",
@@ -40,7 +42,6 @@ func TestAttention_OwnedPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionCommented, Login: "alice", At: t2},
-			ok:   true,
 		},
 		{
 			name: "comment already answered by a later comment of mine",
@@ -92,7 +93,6 @@ func TestAttention_OwnedPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionMentioned, Login: "release-bot", At: t2},
-			ok:   true,
 		},
 		{
 			name: "COMMENTED review counts as a comment",
@@ -102,7 +102,6 @@ func TestAttention_OwnedPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionCommented, Login: "bob", At: t2},
-			ok:   true,
 		},
 		{
 			name: "CHANGES_REQUESTED review counts as a comment",
@@ -112,7 +111,6 @@ func TestAttention_OwnedPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionCommented, Login: "bob", At: t2},
-			ok:   true,
 		},
 		{
 			name: "approval does not count even with a body",
@@ -130,7 +128,6 @@ func TestAttention_OwnedPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionMentioned, Login: "bob", At: t2},
-			ok:   true,
 		},
 		{
 			name: "review-thread comment on my PR counts as a comment",
@@ -140,7 +137,6 @@ func TestAttention_OwnedPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionCommented, Login: "alice", At: t2},
-			ok:   true,
 		},
 		{
 			name: "resolved thread reply on my PR still counts as a comment",
@@ -150,13 +146,11 @@ func TestAttention_OwnedPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionCommented, Login: "alice", At: t3},
-			ok:   true,
 		},
 		{
 			name: "assigned PR opened by someone else with a comment I never saw",
 			conv: Conversation{Author: "alice", CreatedAt: t1, Comments: []Comment{comment("bob", "hey", t2)}},
 			want: Attention{Reason: AttentionCommented, Login: "bob", At: t2},
-			ok:   true,
 		},
 		{
 			name: "unparsable timestamp is ignored",
@@ -170,11 +164,7 @@ func TestAttention_OwnedPR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, ok := tt.conv.Attention("me", true)
-			if ok != tt.ok {
-				t.Fatalf("ok = %v, want %v (got %+v)", ok, tt.ok, got)
-			}
-			if got != tt.want {
+			if got := tt.conv.Attention("me", true); got != tt.want {
 				t.Errorf("Attention = %+v, want %+v", got, tt.want)
 			}
 		})
@@ -187,7 +177,6 @@ func TestAttention_OtherPR(t *testing.T) {
 		name string
 		conv Conversation
 		want Attention
-		ok   bool
 	}{
 		{
 			name: "plain comment on someone else's PR does not count",
@@ -205,13 +194,11 @@ func TestAttention_OtherPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionMentioned, Login: "bob", At: t2},
-			ok:   true,
 		},
 		{
 			name: "mention in the description of a PR I never touched",
 			conv: Conversation{Author: "alice", CreatedAt: t1, Body: "@me please look"},
 			want: Attention{Reason: AttentionMentioned, Login: "alice", At: t1},
-			ok:   true,
 		},
 		{
 			name: "mention in the description I already answered",
@@ -233,7 +220,6 @@ func TestAttention_OtherPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionReplied, Login: "alice", At: t3},
-			ok:   true,
 		},
 		{
 			name: "reply from a bot still counts as a reply",
@@ -243,7 +229,6 @@ func TestAttention_OtherPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionReplied, Login: "assistant", At: t3},
-			ok:   true,
 		},
 		{
 			name: "reply in a resolved thread does not count",
@@ -279,7 +264,6 @@ func TestAttention_OtherPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionMentioned, Login: "bob", At: t2},
-			ok:   true,
 		},
 		{
 			name: "among equal reasons the newest event is reported",
@@ -289,17 +273,12 @@ func TestAttention_OtherPR(t *testing.T) {
 				return c
 			}(),
 			want: Attention{Reason: AttentionMentioned, Login: "carol", At: t3},
-			ok:   true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, ok := tt.conv.Attention("me", false)
-			if ok != tt.ok {
-				t.Fatalf("ok = %v, want %v (got %+v)", ok, tt.ok, got)
-			}
-			if got != tt.want {
+			if got := tt.conv.Attention("me", false); got != tt.want {
 				t.Errorf("Attention = %+v, want %+v", got, tt.want)
 			}
 		})
@@ -308,8 +287,100 @@ func TestAttention_OtherPR(t *testing.T) {
 
 func TestAttention_EmptyLogin(t *testing.T) {
 	c := Conversation{Author: "alice", Comments: []Comment{comment("bob", "@ hi", t2)}}
-	if _, ok := c.Attention("", true); ok {
-		t.Error("Attention with an empty login should never report anything")
+	if att := c.Attention("", true); att != (Attention{}) {
+		t.Errorf("Attention with an empty login = %+v, want none", att)
+	}
+}
+
+func TestAttention_EventWithoutLoginIsIgnored(t *testing.T) {
+	// A deleted account comes back as a null author; there is nobody to show.
+	c := ownPR()
+	c.Comments = []Comment{comment("", "@me look", t2)}
+	c.Reviews = []Review{{Comment: comment("", "", t2), State: "CHANGES_REQUESTED"}}
+	c.Threads = []ReviewThread{{Comments: []Comment{comment("me", "rename", t2), comment("", "done", t3)}}}
+	if att := c.Attention("me", true); att != (Attention{}) {
+		t.Errorf("Attention = %+v, want none: every event has an empty login", att)
+	}
+}
+
+// resurrectedMention is the truncation scenario: bob mentioned "me" in a
+// review, "me" answered with a comment, and n more comments by others followed.
+// With n reaching the page size the answer has scrolled out of the fetched
+// comments while the review is still fetched, so only the horizon can tell
+// that the mention was answered.
+func resurrectedMention(n int) Conversation {
+	c := Conversation{Author: "alice", CreatedAt: t1}
+	c.Reviews = []Review{{Comment: comment("bob", "@me?", t2), State: "COMMENTED"}}
+	for i := range n {
+		c.Comments = append(c.Comments, comment("carol", "chatter", laterThan(t4, i)))
+	}
+	return c
+}
+
+// laterThan returns a timestamp i minutes after at.
+func laterThan(at string, i int) string {
+	return parseTimestamp(at).Add(time.Duration(i) * time.Minute).Format(time.RFC3339)
+}
+
+func TestAttention_Horizon(t *testing.T) {
+	tests := []struct {
+		name  string
+		conv  Conversation
+		owned bool
+		want  Attention
+	}{
+		{
+			name: "answered mention beyond a full comments window is not resurrected",
+			conv: resurrectedMention(conversationPageSize),
+		},
+		{
+			name: "mention beyond a comments window that is not full still counts",
+			conv: resurrectedMention(conversationPageSize - 1),
+			want: Attention{Reason: AttentionMentioned, Login: "bob", At: t2},
+		},
+		{
+			name: "mention beyond a full commits window is not resurrected",
+			conv: func() Conversation {
+				c := Conversation{Author: "alice", CreatedAt: t1}
+				c.Comments = []Comment{comment("bob", "@me?", t2)}
+				for i := range commitsPageSize {
+					c.Commits = append(c.Commits, Commit{Login: "alice", At: laterThan(t3, i)})
+				}
+				return c
+			}(),
+		},
+		{
+			name: "the oldest entry of a full window itself still counts",
+			conv: func() Conversation {
+				c := ownPR()
+				for i := range conversationPageSize {
+					c.Comments = append(c.Comments, comment("carol", "chatter", laterThan(t2, i)))
+				}
+				return c
+			}(),
+			owned: true,
+			want:  Attention{Reason: AttentionCommented, Login: "carol", At: laterThan(t2, conversationPageSize-1)},
+		},
+		{
+			name: "a full thread window sets no horizon",
+			conv: func() Conversation {
+				c := Conversation{Author: "alice", CreatedAt: t1}
+				c.Comments = []Comment{comment("bob", "@me?", t2)}
+				for i := range conversationPageSize {
+					c.Threads = append(c.Threads, ReviewThread{Comments: []Comment{comment("alice", "nit", laterThan(t3, i))}})
+				}
+				return c
+			}(),
+			want: Attention{Reason: AttentionMentioned, Login: "bob", At: t2},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.conv.Attention("me", tt.owned); got != tt.want {
+				t.Errorf("Attention = %+v, want %+v", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -340,5 +411,34 @@ func TestMentions(t *testing.T) {
 	}
 	if mentions("@", "") {
 		t.Error("mentions with an empty login should be false")
+	}
+}
+
+func TestStripQuotedAndCode(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{"plain mention", "hey @alice", true},
+		{"mention in inline code", "run `@alice`", false},
+		{"mention in double-backtick code", "run ``a ` @alice``", false},
+		{"mention next to inline code", "`x` @alice", true},
+		{"mention in a quoted line", "> @alice said\nno", false},
+		{"mention in an indented quoted line", "  > @alice said", false},
+		{"mention below a quoted line", "> bob said\n@alice?", true},
+		{"mention in a fence", "```\n@alice\n```\ntext", false},
+		{"mention outside the fence on another line", "```\ncode\n```\n@alice", true},
+		{"mention before an unterminated fence", "@alice\n```\ncode", true},
+		{"unterminated backtick is literal", "`@alice", true},
+		{"unterminated backtick keeps the rest of the line", "a ` b @alice", true},
+		{"unterminated backtick after a span", "`x` @alice `", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := mentions(tt.body, "alice"); got != tt.want {
+				t.Errorf("mentions(%q, alice) = %v, want %v (stripped: %q)", tt.body, got, tt.want, stripQuotedAndCode(tt.body))
+			}
+		})
 	}
 }

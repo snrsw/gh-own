@@ -25,11 +25,15 @@ type Attention struct {
 	At     string
 }
 
-// Attention reports whether the conversation is waiting on the user and why.
+// Attention reports whether the conversation is waiting on the user and why;
+// the zero value means it is not.
 //
 // Only what happened after the user's last activity on the pull request counts
 // (see lastActivityBy), so anything the user has already answered — by
-// commenting, reviewing, or pushing — drops out. Three things wait on the user:
+// commenting, reviewing, or pushing — drops out. Events older than the
+// truncation horizon (see Conversation.horizon) are ignored as well, since an
+// answer of the user could hide beyond the fetched tail. Three things wait on
+// the user:
 //
 //   - an @-mention of the user in the description, a comment, a review, or a
 //     review-thread comment, on any pull request;
@@ -39,11 +43,11 @@ type Attention struct {
 //     pull request the user owns (owned is true). Bot comments are ignored
 //     here, since CI and coverage bots comment on nearly every push;
 //     approvals are ignored too, they are what Ready to merge is for.
-func (c Conversation) Attention(login string, owned bool) (Attention, bool) {
+func (c Conversation) Attention(login string, owned bool) Attention {
 	if login == "" {
-		return Attention{}, false
+		return Attention{}
 	}
-	found := attentionFinder{login: login, owned: owned, since: c.lastActivityBy(login)}
+	found := attentionFinder{login: login, owned: owned, since: c.lastActivityBy(login), horizon: c.horizon()}
 
 	if c.Author != login && mentions(c.Body, login) {
 		found.add(AttentionMentioned, c.Author, c.CreatedAt)
@@ -57,7 +61,7 @@ func (c Conversation) Attention(login string, owned bool) (Attention, bool) {
 	for _, th := range c.Threads {
 		found.thread(th)
 	}
-	return found.best, found.best.Reason != ""
+	return found.best
 }
 
 // attentionFinder accumulates the strongest attention reason across the events
@@ -67,18 +71,22 @@ type attentionFinder struct {
 	owned bool
 	// since is the user's last activity; only events after it are considered.
 	since time.Time
-	best  Attention
+	// horizon is the truncation horizon; events before it are not considered.
+	horizon time.Time
+	best    Attention
 }
 
 // add records a reason if it beats the current best: a stronger reason wins,
 // and among equal reasons the most recent event wins. Events the user wrote,
-// or that predate the user's last activity, are ignored.
+// events that predate the user's last activity or the truncation horizon, and
+// events without a login (a deleted account, which GraphQL reports as a null
+// author) are ignored; the last because there is nobody to show.
 func (f *attentionFinder) add(reason, login, at string) {
-	if login == f.login {
+	if login == "" || login == f.login {
 		return
 	}
 	t := parseTimestamp(at)
-	if t.IsZero() || !t.After(f.since) {
+	if t.IsZero() || !t.After(f.since) || t.Before(f.horizon) {
 		return
 	}
 	if attentionRank(reason) < attentionRank(f.best.Reason) {
@@ -135,12 +143,13 @@ func attentionRank(reason string) int {
 
 // mentions reports whether body @-mentions the login. The match is
 // case-insensitive, as GitHub logins are, and must stand on its own: "@alice"
-// matches, "@alice-bot", "bob@alice" and the team "@alice/core" do not.
+// matches, "@alice-bot", "bob@alice" and the team "@alice/core" do not. Text
+// in code or in a block quote is skipped, as GitHub does not notify for it.
 func mentions(body, login string) bool {
 	if login == "" {
 		return false
 	}
-	body = strings.ToLower(body)
+	body = strings.ToLower(stripQuotedAndCode(body))
 	needle := "@" + strings.ToLower(login)
 	for from := 0; ; {
 		idx := strings.Index(body[from:], needle)
@@ -174,4 +183,78 @@ func isLoginChar(b byte) bool {
 	default:
 		return false
 	}
+}
+
+// stripQuotedAndCode removes the parts of a Markdown body GitHub does not
+// notify mentions in: fenced code blocks, inline code spans, and block-quoted
+// lines. A quoted mention is usually somebody else's text being replied to,
+// and a mention in code is a literal. The result keeps the remaining lines,
+// one per line, so that mention boundaries are preserved.
+func stripQuotedAndCode(body string) string {
+	var out strings.Builder
+	inFence := false
+	for _, line := range strings.Split(body, "\n") {
+		trimmed := strings.TrimLeft(line, " \t")
+		switch {
+		case strings.HasPrefix(trimmed, "```"):
+			inFence = !inFence
+			continue
+		case inFence, strings.HasPrefix(trimmed, ">"):
+			continue
+		}
+		out.WriteString(stripCodeSpans(line))
+		out.WriteByte('\n')
+	}
+	return out.String()
+}
+
+// stripCodeSpans removes the inline code spans of one line. As in CommonMark, a
+// span opens with a run of backticks and closes with the next run of the same
+// length; an opening run without a closing one is literal text, so an
+// unterminated backtick does not swallow the rest of the line.
+func stripCodeSpans(line string) string {
+	var out strings.Builder
+	for {
+		open := strings.IndexByte(line, '`')
+		if open < 0 {
+			out.WriteString(line)
+			return out.String()
+		}
+		out.WriteString(line[:open])
+		n := backtickRun(line[open:])
+		rest := line[open+n:]
+		closing := closingBacktickRun(rest, n)
+		if closing < 0 {
+			out.WriteString(line[open : open+n])
+			line = rest
+			continue
+		}
+		line = rest[closing+n:]
+	}
+}
+
+// backtickRun returns the length of the run of backticks s starts with.
+func backtickRun(s string) int {
+	n := 0
+	for n < len(s) && s[n] == '`' {
+		n++
+	}
+	return n
+}
+
+// closingBacktickRun returns the index in s of the first run of exactly n
+// backticks, or -1 when there is none.
+func closingBacktickRun(s string, n int) int {
+	for i := 0; i < len(s); {
+		if s[i] != '`' {
+			i++
+			continue
+		}
+		run := backtickRun(s[i:])
+		if run == n {
+			return i
+		}
+		i += run
+	}
+	return -1
 }

@@ -45,7 +45,7 @@ func promoteNeedsAction(r *gh.PRSearchResult, login string) *gh.PRSearchResult {
 func annotate(nodes []gh.PRSearchNode, login string, owned bool) []gh.PRSearchNode {
 	out := make([]gh.PRSearchNode, 0, len(nodes))
 	for _, n := range nodes {
-		n.Attention, _ = n.Conversation.Attention(login, owned)
+		n.Attention = n.Conversation.Attention(login, owned)
 		out = append(out, n)
 	}
 	return out
@@ -56,11 +56,10 @@ func annotate(nodes []gh.PRSearchNode, login string, owned bool) []gh.PRSearchNo
 func waitingOnUser(nodes []gh.PRSearchNode, login string, owned bool) []gh.PRSearchNode {
 	var out []gh.PRSearchNode
 	for _, n := range nodes {
-		att, ok := n.Conversation.Attention(login, owned)
-		if !ok {
+		n.Attention = n.Conversation.Attention(login, owned)
+		if n.Attention.Reason == "" {
 			continue
 		}
-		n.Attention = att
 		out = append(out, n)
 	}
 	return out
