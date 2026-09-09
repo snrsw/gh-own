@@ -13,7 +13,7 @@ GitHub CLI extension to list your owned PRs and issues across repositories unlik
 Key features:
 
 - List your pull requests across all repositories grouped by what to do next:
-  - Needs action — non-draft PRs where reviewers requested changes
+  - Needs action — PRs waiting on you: reviewers requested changes, someone commented on your PR, mentioned you, or replied to your review comment (see [What counts as needing action](#what-counts-as-needing-action))
   - Ready to merge — non-draft PRs that are approved
   - Requested your review (including teams)
   - Waiting for review or checks — non-draft PRs not yet approved and without changes requested
@@ -21,6 +21,7 @@ Key features:
   - You have participated in mentioned or commented (including teams)
 
   The state-based tabs (Needs action, Ready to merge, Waiting, Drafts) cover PRs you authored or are assigned to.
+  A PR that needs your action is listed there and nowhere else, except in Review Requested when your review is still due.
 - List your issues across all repositories grouped into:
   - Created by you
   - Assigned to you
@@ -237,6 +238,60 @@ issue:
 |---------|------|
 | `pr` | `drafts`, `needsAction`, `readyToMerge`, `waiting`, `review_requested`, `participated` |
 | `issue` | `created`, `assigned`, `participated` |
+
+### What counts as needing action
+
+The `needsAction` query only finds PRs where a reviewer requested changes. On
+top of that, gh-own reads the recent conversation of every PR it fetched —
+comments, reviews, inline review threads, and commits — and moves a PR into
+Needs action when the conversation is waiting on you:
+
+| Reason | Which PRs | What happened |
+|--------|-----------|---------------|
+| `mentioned you` | any | Someone @-mentioned you in the description, a comment, a review, or a review thread |
+| `replied to you` | any | Someone replied in an unresolved review thread you had commented in |
+| `commented` | yours (author or assignee) | A person commented, or left a `COMMENTED` / `CHANGES_REQUESTED` review |
+
+Only things that happened after your last activity on the PR count. Once you
+comment, review, reply in a thread, or push a commit, everything before that is
+considered answered and the PR goes back to its state tab. Two things are
+ignored on purpose: comments by bots (CI and coverage bots comment on nearly
+every push), and approvals (that is what Ready to merge is for). Mentions and
+thread replies count whoever wrote them.
+
+The description line of such a PR shows the reason, who, and when — for example
+`mentioned you by @alice 2h ago` — and the list is ordered by that time.
+
+A PR moved into Needs action leaves Drafts, Ready to merge, Waiting, and
+Participated, so those tabs only list PRs that are not waiting on you. It stays
+in Review Requested when your review is still due. Custom tabs are not affected.
+
+Only the most recent part of each conversation is fetched: the last ten
+comments and reviews, the ten most recently *opened* review threads (GitHub
+orders threads by when they were opened, not by their last reply) with the
+last ten comments of each, and the last five commits. So on a PR with more
+than ten threads, a reply in an older thread is not seen. When one of those
+lists is full, anything older than its oldest fetched entry is not judged at
+all, because an answer of yours could lie beyond the fetched tail; so on a
+very busy PR an old unanswered mention can drop out of Needs action rather
+than stick. Any commit you author on the PR counts as activity — including a
+merge of the base branch or "Update branch" — so it clears the comments
+before it. @-mentions inside code spans, fenced code blocks, and quoted lines
+(`> `) are ignored, matching GitHub's own notifications.
+
+This is the one place where a tab holds more than its query matches. To turn
+it off — because you want every tab to be exactly its query, or because the
+extra data makes the search too slow for you — set:
+
+```yaml
+pr:
+  needsAction:
+    conversation: false
+```
+
+With it off, gh-own fetches only the latest comment, review, and commit of
+each PR, Needs action is exactly the `needsAction` query, and no PR is moved
+between tabs.
 
 ## Requirements
 

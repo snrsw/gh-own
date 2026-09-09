@@ -30,9 +30,10 @@ var prCmd = &cobra.Command{
 			return cfgErr
 		}
 
+		conversation := cfg.PR.NeedsAction.ConversationEnabled()
 		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
 			if demo {
-				prg := pr.NewGroupedPullRequests(demodata.PRSearchResult(), "")
+				prg := pr.NewGroupedPullRequests(demodata.PRSearchResult(), "", false)
 				return prg.BuildTabs(), nil
 			}
 
@@ -70,7 +71,7 @@ var prCmd = &cobra.Command{
 			userCh := make(chan result[*gh.PRSearchResult], 1)
 			go func() {
 				defer timing.Track("pr:search-user")()
-				prs, err := gh.SearchPRs(client, entries)
+				prs, err := gh.SearchPRs(client, entries, conversation)
 				userCh <- result[*gh.PRSearchResult]{v: prs, err: err}
 			}()
 
@@ -87,7 +88,7 @@ var prCmd = &cobra.Command{
 				}
 
 				teamDone = timing.Track("pr:search-teams")
-				prs, err := gh.SearchPRsTeams(client, username, teams, filters)
+				prs, err := gh.SearchPRsTeams(client, username, teams, filters, conversation)
 				teamDone()
 				if err != nil {
 					teamCh <- result[*gh.PRSearchResult]{v: nil, err: err}
@@ -111,7 +112,7 @@ var prCmd = &cobra.Command{
 			done()
 
 			done = timing.Track("pr:group")
-			prg := pr.NewGroupedPullRequests(prs, username)
+			prg := pr.NewGroupedPullRequests(prs, username, conversation)
 			done()
 
 			return prg.BuildTabs(), nil

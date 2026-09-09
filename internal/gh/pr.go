@@ -10,12 +10,15 @@ import (
 	"github.com/snrsw/gh-own/internal/config"
 )
 
-func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchResult, error) {
+// SearchPRs runs every entry as a search. With conversation, each result also
+// carries the tail of its discussion (see PRSearchNode.Conversation), at the
+// cost of a larger response.
+func SearchPRs(client *api.GraphQLClient, entries map[string]string, conversation bool) (*PRSearchResult, error) {
 	if len(entries) == 0 {
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
-	raw, err := Search(client, prSearchQuery, entries, parsePRSearchJSON)
+	raw, err := Search(client, prSearchQuery(conversation), entries, parsePRSearchJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +26,9 @@ func SearchPRs(client *api.GraphQLClient, entries map[string]string) (*PRSearchR
 	return parsePRSearchResult(raw)
 }
 
-func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, filters config.Filters) (*PRSearchResult, error) {
+// SearchPRsTeams searches the pull requests of every team; see SearchPRs for
+// conversation.
+func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, filters config.Filters, conversation bool) (*PRSearchResult, error) {
 	if username == "" {
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
@@ -32,7 +37,7 @@ func SearchPRsTeams(client *api.GraphQLClient, username string, teams []string, 
 		return &PRSearchResult{Custom: make(map[string][]PRSearchNode)}, nil
 	}
 
-	raw, err := Search(client, prSearchQuery, prTeamEntries(teams, filters), parsePRSearchJSON)
+	raw, err := Search(client, prSearchQuery(conversation), prTeamEntries(teams, filters), parsePRSearchJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +101,19 @@ func parsePRSearchJSON(data json.RawMessage) ([]PRSearchNode, error) {
 	return parsePRSearchNodes(sr.Nodes), nil
 }
 
-const prSearchQuery = `query($q: String!) {
+// prSearchQuery builds the search query. Besides the fields shown in the list
+// it fetches, with conversation, the tail of each pull request's discussion so
+// that Conversation.Attention can tell whether it is waiting on the user, and
+// without it only the single latest comment, review and commit that the
+// activity line needs. The conversation page sizes are a trade-off: enough
+// history to find the user's last activity and what followed it, small enough
+// to keep the response of a search with fifty results reasonable.
+func prSearchQuery(conversation bool) string {
+	fields := prActivityFields
+	if conversation {
+		fields = prConversationFields
+	}
+	return `query($q: String!) {
 	result: search(query: $q, type: ISSUE, first: 50) {
 		nodes {
 			... on PullRequest {
@@ -109,6 +126,14 @@ const prSearchQuery = `query($q: String!) {
 				reviewDecision
 				author { login }
 				repository { nameWithOwner }
+` + fields + `
+			}
+		}
+	}
+}`
+}
+
+const prActivityFields = `
 				commits(last: 1) {
 					nodes {
 						commit {
@@ -123,11 +148,39 @@ const prSearchQuery = `query($q: String!) {
 				}
 				reviews(last: 1) {
 					nodes { author { login } submittedAt state }
+				}`
+
+// prConversationFields is built from the page sizes in conversation.go so that
+// the query and Conversation.horizon agree on how much of each list is fetched.
+// publishedAt is fetched for review-thread comments only: a comment drafted as
+// part of a review is created when typed but published when the review is
+// submitted, and only the latter is when others could read it. Issue comments
+// are published as they are created, so createdAt is enough there.
+var prConversationFields = fmt.Sprintf(`
+				body
+				commits(last: %[2]d) {
+					nodes {
+						commit {
+							statusCheckRollup { state }
+							committedDate
+							author { user { login } }
+						}
+					}
 				}
-			}
-		}
-	}
-}`
+				comments(last: %[1]d) {
+					nodes { author { __typename login } body createdAt }
+				}
+				reviews(last: %[1]d) {
+					nodes { author { __typename login } body submittedAt state }
+				}
+				reviewThreads(last: %[1]d) {
+					nodes {
+						isResolved
+						comments(last: %[1]d) {
+							nodes { author { __typename login } body createdAt publishedAt }
+						}
+					}
+				}`, conversationPageSize, commitsPageSize)
 
 func parsePRSearchResult(parsed map[string][]PRSearchNode) (*PRSearchResult, error) {
 	defaultKeys := config.DefaultPRKeys()
@@ -173,7 +226,12 @@ type PRSearchNode struct {
 	StatusState    string
 	ReviewDecision string
 	LatestActivity LatestActivity
-	Author         struct {
+	// Conversation is the recent discussion, see Conversation.Attention.
+	Conversation Conversation
+	// Attention is set once the pull request is found to be waiting on the
+	// user; its zero value means it is not.
+	Attention Attention
+	Author    struct {
 		Login string
 	}
 	Repository struct {
@@ -193,6 +251,7 @@ type prSearchRawNode struct {
 	Number         int    `json:"number"`
 	Title          string `json:"title"`
 	URL            string `json:"url"`
+	Body           string `json:"body"`
 	IsDraft        bool   `json:"isDraft"`
 	UpdatedAt      string `json:"updatedAt"`
 	CreatedAt      string `json:"createdAt"`
@@ -204,33 +263,86 @@ type prSearchRawNode struct {
 		NameWithOwner string `json:"nameWithOwner"`
 	} `json:"repository"`
 	Commits struct {
-		Nodes []struct {
-			Commit struct {
-				StatusCheckRollup *struct {
-					State string `json:"state"`
-				} `json:"statusCheckRollup"`
-				CommittedDate string `json:"committedDate"`
-				Author        struct {
-					User *struct {
-						Login string `json:"login"`
-					} `json:"user"`
-				} `json:"author"`
-			} `json:"commit"`
-		} `json:"nodes"`
+		Nodes []rawCommitNode `json:"nodes"`
 	} `json:"commits"`
 	Comments struct {
-		Nodes []struct {
-			Author    struct{ Login string `json:"login"` } `json:"author"`
-			CreatedAt string                                `json:"createdAt"`
-		} `json:"nodes"`
+		Nodes []rawComment `json:"nodes"`
 	} `json:"comments"`
 	Reviews struct {
-		Nodes []struct {
-			Author      struct{ Login string `json:"login"` } `json:"author"`
-			SubmittedAt string                                `json:"submittedAt"`
-			State       string                                `json:"state"`
-		} `json:"nodes"`
+		Nodes []rawReview `json:"nodes"`
 	} `json:"reviews"`
+	ReviewThreads struct {
+		Nodes []rawReviewThread `json:"nodes"`
+	} `json:"reviewThreads"`
+}
+
+// rawActor is a GraphQL Actor. The typename tells a GitHub App ("Bot") from a
+// person ("User"); the login of an App carries no "[bot]" suffix in GraphQL.
+type rawActor struct {
+	TypeName string `json:"__typename"`
+	Login    string `json:"login"`
+}
+
+func (a rawActor) comment(body, at string) Comment {
+	return Comment{Login: a.Login, IsBot: a.TypeName == "Bot", Body: body, At: at}
+}
+
+type rawComment struct {
+	Author    rawActor `json:"author"`
+	Body      string   `json:"body"`
+	CreatedAt string   `json:"createdAt"`
+}
+
+type rawReview struct {
+	Author      rawActor `json:"author"`
+	Body        string   `json:"body"`
+	SubmittedAt string   `json:"submittedAt"`
+	State       string   `json:"state"`
+}
+
+// rawThreadComment is a review-thread comment. PublishedAt is null while the
+// review it belongs to is still pending.
+type rawThreadComment struct {
+	rawComment
+	PublishedAt string `json:"publishedAt"`
+}
+
+// at returns when the comment became visible to others: its publication, or
+// its creation when GitHub reports no publication time.
+func (c rawThreadComment) at() string {
+	if c.PublishedAt != "" {
+		return c.PublishedAt
+	}
+	return c.CreatedAt
+}
+
+type rawReviewThread struct {
+	IsResolved bool `json:"isResolved"`
+	Comments   struct {
+		Nodes []rawThreadComment `json:"nodes"`
+	} `json:"comments"`
+}
+
+type rawCommitNode struct {
+	Commit struct {
+		StatusCheckRollup *struct {
+			State string `json:"state"`
+		} `json:"statusCheckRollup"`
+		CommittedDate string `json:"committedDate"`
+		Author        struct {
+			User *struct {
+				Login string `json:"login"`
+			} `json:"user"`
+		} `json:"author"`
+	} `json:"commit"`
+}
+
+func (c rawCommitNode) commit() Commit {
+	cm := Commit{At: c.Commit.CommittedDate}
+	if c.Commit.Author.User != nil {
+		cm.Login = c.Commit.Author.User.Login
+	}
+	return cm
 }
 
 func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
@@ -247,35 +359,48 @@ func parsePRSearchNodes(rawNodes []prSearchRawNode) []PRSearchNode {
 			UpdatedAt:      n.UpdatedAt,
 			CreatedAt:      n.CreatedAt,
 			ReviewDecision: n.ReviewDecision,
+			Conversation:   n.conversation(),
 		}
 		node.Author.Login = n.Author.Login
 		node.Repository.NameWithOwner = n.Repository.NameWithOwner
 
-		if len(n.Commits.Nodes) > 0 && n.Commits.Nodes[0].Commit.StatusCheckRollup != nil {
-			node.StatusState = n.Commits.Nodes[0].Commit.StatusCheckRollup.State
+		// The lists are chronological, so the latest entry is the last one.
+		if last := len(n.Commits.Nodes) - 1; last >= 0 && n.Commits.Nodes[last].Commit.StatusCheckRollup != nil {
+			node.StatusState = n.Commits.Nodes[last].Commit.StatusCheckRollup.State
 		}
-
-		var commentLogin, commentAt string
-		if len(n.Comments.Nodes) > 0 {
-			commentLogin = n.Comments.Nodes[0].Author.Login
-			commentAt = n.Comments.Nodes[0].CreatedAt
-		}
-		var reviewLogin, reviewAt, reviewState string
-		if len(n.Reviews.Nodes) > 0 {
-			reviewLogin = n.Reviews.Nodes[0].Author.Login
-			reviewAt = n.Reviews.Nodes[0].SubmittedAt
-			reviewState = n.Reviews.Nodes[0].State
-		}
-		var pushLogin, pushAt string
-		if len(n.Commits.Nodes) > 0 && n.Commits.Nodes[0].Commit.Author.User != nil {
-			pushLogin = n.Commits.Nodes[0].Commit.Author.User.Login
-			pushAt = n.Commits.Nodes[0].Commit.CommittedDate
-		}
-		node.LatestActivity = NewLatestActivity(commentLogin, commentAt, reviewLogin, reviewAt, reviewState, pushLogin, pushAt)
+		node.LatestActivity = node.Conversation.latestActivity()
 
 		nodes = append(nodes, node)
 	}
 	return nodes
+}
+
+func (n prSearchRawNode) conversation() Conversation {
+	c := Conversation{
+		Author:    n.Author.Login,
+		CreatedAt: n.CreatedAt,
+		Body:      n.Body,
+	}
+	for _, cm := range n.Comments.Nodes {
+		c.Comments = append(c.Comments, cm.Author.comment(cm.Body, cm.CreatedAt))
+	}
+	for _, r := range n.Reviews.Nodes {
+		if r.State == "PENDING" {
+			continue // Not submitted yet: only its author can see it.
+		}
+		c.Reviews = append(c.Reviews, Review{Comment: r.Author.comment(r.Body, r.SubmittedAt), State: r.State})
+	}
+	for _, th := range n.ReviewThreads.Nodes {
+		thread := ReviewThread{IsResolved: th.IsResolved}
+		for _, cm := range th.Comments.Nodes {
+			thread.Comments = append(thread.Comments, cm.Author.comment(cm.Body, cm.at()))
+		}
+		c.Threads = append(c.Threads, thread)
+	}
+	for _, cm := range n.Commits.Nodes {
+		c.Commits = append(c.Commits, cm.commit())
+	}
+	return c
 }
 
 func deduplicatePRNodes(nodes []PRSearchNode) []PRSearchNode {

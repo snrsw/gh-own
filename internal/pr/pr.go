@@ -21,7 +21,13 @@ type GroupedPullRequests struct {
 	currentLogin    string
 }
 
-func NewGroupedPullRequests(ghResult *gh.PRSearchResult, currentLogin string) *GroupedPullRequests {
+// NewGroupedPullRequests groups the search results into tabs. With conversation
+// true, pull requests waiting on the user move into Needs action first (see
+// promoteNeedsAction); with it false every bucket is exactly its query.
+func NewGroupedPullRequests(ghResult *gh.PRSearchResult, currentLogin string, conversation bool) *GroupedPullRequests {
+	if conversation {
+		ghResult = promoteNeedsAction(ghResult, currentLogin)
+	}
 	custom := make(map[string]gh.SearchResult[pullRequest], len(ghResult.Custom))
 	for k, nodes := range ghResult.Custom {
 		custom[k] = toSearchResult(nodes)
@@ -52,9 +58,20 @@ type pullRequest struct {
 	CIStatus       cistatus.CIStatus         `json:"-"`
 	ReviewStatus   reviewstatus.ReviewStatus `json:"-"`
 	LatestActivity gh.LatestActivity         `json:"-"`
+	// Attention says why the pull request is waiting on the user, when it is.
+	Attention gh.Attention `json:"-"`
 	// SortAt is the timestamp the list is ordered by. It matches the time shown
 	// on the description line (see toItem).
 	SortAt time.Time `json:"-"`
+}
+
+// shownActivity is the event the description line reports: what is waiting on
+// the user when something is, and the latest activity otherwise.
+func (p *pullRequest) shownActivity() gh.LatestActivity {
+	if p.Attention.Reason != "" {
+		return gh.LatestActivity{Kind: p.Attention.Reason, Login: p.Attention.Login, At: p.Attention.At}
+	}
+	return p.LatestActivity
 }
 
 func (p *pullRequest) repositoryFullName() string {
@@ -84,7 +101,7 @@ func fromGraphQLNodes(nodes []gh.PRSearchNode) []pullRequest {
 }
 
 func fromGraphQL(node gh.PRSearchNode) pullRequest {
-	return pullRequest{
+	p := pullRequest{
 		Number:         node.Number,
 		User:           gh.User{Login: node.Author.Login},
 		RepositoryURL:  node.RepositoryURL(),
@@ -96,6 +113,8 @@ func fromGraphQL(node gh.PRSearchNode) pullRequest {
 		CIStatus:       node.CIStatus(),
 		ReviewStatus:   reviewstatus.ParseReviewDecision(node.ReviewDecision),
 		LatestActivity: node.LatestActivity,
-		SortAt:         gh.SortAt(node.LatestActivity, node.UpdatedAt),
+		Attention:      node.Attention,
 	}
+	p.SortAt = gh.SortAt(p.shownActivity(), node.UpdatedAt)
+	return p
 }
