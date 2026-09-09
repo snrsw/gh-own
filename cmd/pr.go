@@ -30,9 +30,10 @@ var prCmd = &cobra.Command{
 			return cfgErr
 		}
 
+		conversation := cfg.PR.NeedsAction.ConversationEnabled()
 		fetch := ui.FetchCmd(func() ([]ui.Tab, error) {
 			if demo {
-				prg := pr.NewGroupedPullRequests(demodata.PRSearchResult(), "", cfg.PR.NeedsAction)
+				prg := pr.NewGroupedPullRequests(demodata.PRSearchResult(), "", false)
 				return prg.BuildTabs(), nil
 			}
 
@@ -45,7 +46,6 @@ var prCmd = &cobra.Command{
 
 			filters := searchFilters(cfg)
 			entries := config.PRSearchEntries(cfg.PR.Queries, username, filters)
-			conversation := cfg.PR.NeedsAction.ConversationEnabled()
 
 			done = timing.Track("pr:rest-client")
 			restClient, err := api.DefaultRESTClient()
@@ -112,7 +112,7 @@ var prCmd = &cobra.Command{
 			done()
 
 			done = timing.Track("pr:group")
-			prg := pr.NewGroupedPullRequests(prs, username, cfg.PR.NeedsAction)
+			prg := pr.NewGroupedPullRequests(prs, username, conversation)
 			done()
 
 			return prg.BuildTabs(), nil

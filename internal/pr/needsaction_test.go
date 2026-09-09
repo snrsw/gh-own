@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/snrsw/gh-own/internal/config"
 	"github.com/snrsw/gh-own/internal/gh"
 )
 
@@ -32,10 +31,6 @@ func numbers(nodes []gh.PRSearchNode) []int {
 	return out
 }
 
-func equalNumbers(a []int, b ...int) bool {
-	return slices.Equal(a, b)
-}
-
 func TestPromoteNeedsAction_MovesOwnedPRsWithNewComments(t *testing.T) {
 	newComment := gh.Comment{Login: "bob", Body: "hm", At: "2024-03-10T09:00:00Z"}
 	r := &gh.PRSearchResult{
@@ -47,16 +42,16 @@ func TestPromoteNeedsAction_MovesOwnedPRsWithNewComments(t *testing.T) {
 
 	got := promoteNeedsAction(r, "me")
 
-	if !equalNumbers(numbers(got.NeedsAction), 1, 2, 4, 6) {
+	if !slices.Equal(numbers(got.NeedsAction), []int{1, 2, 4, 6}) {
 		t.Errorf("NeedsAction = %v, want [1 2 4 6]", numbers(got.NeedsAction))
 	}
-	if !equalNumbers(numbers(got.Drafts), 3) {
+	if !slices.Equal(numbers(got.Drafts), []int{3}) {
 		t.Errorf("Drafts = %v, want [3]", numbers(got.Drafts))
 	}
-	if !equalNumbers(numbers(got.ReadyToMerge), 5) {
+	if !slices.Equal(numbers(got.ReadyToMerge), []int{5}) {
 		t.Errorf("ReadyToMerge = %v, want [5]", numbers(got.ReadyToMerge))
 	}
-	if !equalNumbers(numbers(got.Waiting), 7) {
+	if !slices.Equal(numbers(got.Waiting), []int{7}) {
 		t.Errorf("Waiting = %v, want [7]", numbers(got.Waiting))
 	}
 	for _, n := range got.NeedsAction[1:] {
@@ -85,13 +80,13 @@ func TestPromoteNeedsAction_OtherPeoplesPRs(t *testing.T) {
 
 	got := promoteNeedsAction(r, "me")
 
-	if !equalNumbers(numbers(got.NeedsAction), 1, 3) {
+	if !slices.Equal(numbers(got.NeedsAction), []int{1, 3}) {
 		t.Errorf("NeedsAction = %v, want [1 3]", numbers(got.NeedsAction))
 	}
-	if !equalNumbers(numbers(got.Participated), 2) {
+	if !slices.Equal(numbers(got.Participated), []int{2}) {
 		t.Errorf("Participated = %v, want [2]: a promoted PR leaves Participated", numbers(got.Participated))
 	}
-	if !equalNumbers(numbers(got.ReviewRequested), 3, 4) {
+	if !slices.Equal(numbers(got.ReviewRequested), []int{3, 4}) {
 		t.Errorf("ReviewRequested = %v, want [3 4]: the review is still due", numbers(got.ReviewRequested))
 	}
 	if got.NeedsAction[0].Attention.Reason != gh.AttentionReplied {
@@ -112,7 +107,7 @@ func TestPromoteNeedsAction_SamePRInSeveralBuckets(t *testing.T) {
 
 	got := promoteNeedsAction(r, "me")
 
-	if !equalNumbers(numbers(got.NeedsAction), 1) {
+	if !slices.Equal(numbers(got.NeedsAction), []int{1}) {
 		t.Errorf("NeedsAction = %v, want [1]", numbers(got.NeedsAction))
 	}
 	if len(got.Waiting) != 0 || len(got.Participated) != 0 {
@@ -138,7 +133,7 @@ func TestNewGroupedPullRequests_PromotesAndDescribes(t *testing.T) {
 		Custom:  map[string][]gh.PRSearchNode{},
 	}
 
-	grouped := NewGroupedPullRequests(r, "me", config.NeedsActionConfig{})
+	grouped := NewGroupedPullRequests(r, "me", true)
 
 	if grouped.NeedsAction.TotalCount != 1 || grouped.Waiting.TotalCount != 1 {
 		t.Fatalf("NeedsAction = %d, Waiting = %d, want 1 and 1", grouped.NeedsAction.TotalCount, grouped.Waiting.TotalCount)
@@ -162,9 +157,7 @@ func TestNewGroupedPullRequests_ConversationOff(t *testing.T) {
 		Waiting: []gh.PRSearchNode{ownedNode(1, newComment)},
 		Custom:  map[string][]gh.PRSearchNode{},
 	}
-	off := false
-
-	grouped := NewGroupedPullRequests(r, "me", config.NeedsActionConfig{Conversation: &off})
+	grouped := NewGroupedPullRequests(r, "me", false)
 
 	if grouped.NeedsAction.TotalCount != 0 || grouped.Waiting.TotalCount != 1 {
 		t.Errorf("NeedsAction = %d, Waiting = %d; want 0 and 1 with the conversation off", grouped.NeedsAction.TotalCount, grouped.Waiting.TotalCount)

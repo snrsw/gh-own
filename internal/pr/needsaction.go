@@ -13,6 +13,9 @@ import "github.com/snrsw/gh-own/internal/gh"
 // those tabs list only what is not waiting on the user; Review Requested keeps
 // it, since the review is still due whatever else happened.
 //
+// A pull request the search returned in several buckets is judged once, in the
+// bucket order above, so it appears in Needs action at most once.
+//
 // An empty login disables the promotion, which is what the demo data relies on.
 func promoteNeedsAction(r *gh.PRSearchResult, login string) *gh.PRSearchResult {
 	if login == "" {
@@ -20,24 +23,37 @@ func promoteNeedsAction(r *gh.PRSearchResult, login string) *gh.PRSearchResult {
 	}
 
 	needs := annotate(r.NeedsAction, login, true)
-	needs = append(needs, waitingOnUser(r.Drafts, login, true)...)
-	needs = append(needs, waitingOnUser(r.ReadyToMerge, login, true)...)
-	needs = append(needs, waitingOnUser(r.Waiting, login, true)...)
-	needs = append(needs, waitingOnUser(r.Participated, login, false)...)
-	needs = append(needs, waitingOnUser(r.ReviewRequested, login, false)...)
-	needs = dedupByURL(needs)
-
-	promoted := make(map[string]bool, len(needs))
+	seen := make(map[string]bool, len(needs))
 	for _, n := range needs {
-		promoted[n.URL] = true
+		seen[n.URL] = true
 	}
+	// take appends the nodes waiting on the user, skipping those already
+	// taken so that a pull request found in several buckets is added once.
+	take := func(nodes []gh.PRSearchNode, owned bool) {
+		for _, n := range nodes {
+			if seen[n.URL] {
+				continue
+			}
+			n.Attention = n.Conversation.Attention(login, owned)
+			if n.Attention.Reason == "" {
+				continue
+			}
+			seen[n.URL] = true
+			needs = append(needs, n)
+		}
+	}
+	take(r.Drafts, true)
+	take(r.ReadyToMerge, true)
+	take(r.Waiting, true)
+	take(r.Participated, false)
+	take(r.ReviewRequested, false)
 
 	out := *r
 	out.NeedsAction = needs
-	out.Drafts = without(r.Drafts, promoted)
-	out.ReadyToMerge = without(r.ReadyToMerge, promoted)
-	out.Waiting = without(r.Waiting, promoted)
-	out.Participated = without(r.Participated, promoted)
+	out.Drafts = without(r.Drafts, seen)
+	out.ReadyToMerge = without(r.ReadyToMerge, seen)
+	out.Waiting = without(r.Waiting, seen)
+	out.Participated = without(r.Participated, seen)
 	return &out
 }
 
@@ -46,33 +62,6 @@ func annotate(nodes []gh.PRSearchNode, login string, owned bool) []gh.PRSearchNo
 	out := make([]gh.PRSearchNode, 0, len(nodes))
 	for _, n := range nodes {
 		n.Attention = n.Conversation.Attention(login, owned)
-		out = append(out, n)
-	}
-	return out
-}
-
-// waitingOnUser returns only the nodes waiting on the user, with Attention
-// filled in.
-func waitingOnUser(nodes []gh.PRSearchNode, login string, owned bool) []gh.PRSearchNode {
-	var out []gh.PRSearchNode
-	for _, n := range nodes {
-		n.Attention = n.Conversation.Attention(login, owned)
-		if n.Attention.Reason == "" {
-			continue
-		}
-		out = append(out, n)
-	}
-	return out
-}
-
-func dedupByURL(nodes []gh.PRSearchNode) []gh.PRSearchNode {
-	seen := make(map[string]bool, len(nodes))
-	out := make([]gh.PRSearchNode, 0, len(nodes))
-	for _, n := range nodes {
-		if seen[n.URL] {
-			continue
-		}
-		seen[n.URL] = true
 		out = append(out, n)
 	}
 	return out

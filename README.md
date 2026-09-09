@@ -266,10 +266,18 @@ A PR moved into Needs action leaves Drafts, Ready to merge, Waiting, and
 Participated, so those tabs only list PRs that are not waiting on you. It stays
 in Review Requested when your review is still due. Custom tabs are not affected.
 
-Only the most recent part of each conversation is fetched (the last ten
-comments, reviews, and review threads, the last ten comments of each thread,
-and the last five commits), so on a very long PR an older exchange can be
-missed.
+Only the most recent part of each conversation is fetched: the last ten
+comments and reviews, the ten most recently *opened* review threads (GitHub
+orders threads by when they were opened, not by their last reply) with the
+last ten comments of each, and the last five commits. So on a PR with more
+than ten threads, a reply in an older thread is not seen. When one of those
+lists is full, anything older than its oldest fetched entry is not judged at
+all, because an answer of yours could lie beyond the fetched tail; so on a
+very busy PR an old unanswered mention can drop out of Needs action rather
+than stick. Any commit you author on the PR counts as activity — including a
+merge of the base branch or "Update branch" — so it clears the comments
+before it. @-mentions inside code spans, fenced code blocks, and quoted lines
+(`> `) are ignored, matching GitHub's own notifications.
 
 This is the one place where a tab holds more than its query matches. To turn
 it off — because you want every tab to be exactly its query, or because the

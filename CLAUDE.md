@@ -24,10 +24,10 @@ gh-own is a GitHub CLI extension that displays the user's owned PRs and issues i
   - `pr.go` — `SearchPRs`, `SearchPRsTeams`, `MergeSearchPRsResults`, `PRSearchNode`, `PRSearchResult`
   - `issue.go` — `SearchIssues`, `SearchIssuesTeams`, `MergeSearchIssuesResults`, `IssueSearchNode`, `IssueSearchResult`
   - `activity.go` — `LatestActivity`, `NewLatestActivity` (picks most recent of comment / review / push)
-  - `conversation.go` — `Conversation` (recent comments, reviews, review threads, commits of a PR, fetched by the PR search query) and `lastActivityBy`
-  - `attention.go` — `Conversation.Attention(login, owned)` decides whether a PR is waiting on the user (mentioned / replied to you / commented) and `mentions` (whole-login @-match)
+  - `conversation.go` — `Conversation` (recent comments, reviews, review threads, commits of a PR, fetched by the PR search query), `lastActivityBy`, and `horizon` (truncation horizon: events older than the oldest entry of a full list are not judged)
+  - `attention.go` — `Conversation.Attention(login, owned)` decides whether a PR is waiting on the user (mentioned / replied to you / commented) and `mentions` (whole-login @-match; skips code spans, fenced blocks, and quoted lines)
   - `sort.go` — `SortAt` (the timestamp a list entry is ordered by), `SortByUpdatedDesc`
-- **internal/pr/** - PR data types and search logic (groups by: needs action, ready to merge, review-requested, waiting, drafts, participated); `needsaction.go` promotes PRs whose `Conversation.Attention` fires into Needs action and drops them from the other default tabs (Review Requested keeps them); `BuildTabs()` produces `[]ui.Tab`
+- **internal/pr/** - PR data types and search logic (groups by: needs action, ready to merge, review-requested, waiting, drafts, participated); `NewGroupedPullRequests(result, login, conversation bool)` runs `needsaction.go`'s promotion when `conversation` is true: PRs whose `Conversation.Attention` fires move into Needs action and leave the other default tabs (Review Requested keeps them); `BuildTabs()` produces `[]ui.Tab`
 - **internal/issue/** - Issue data types and search logic (groups by: created, assigned, participated); `BuildTabs()` produces `[]ui.Tab`
 - **internal/ui/** - Bubbletea TUI with tabbed interface; `Model` manages tabs, `Item` represents list entries, `NewLoadingModel` shows a spinner while data is fetched
 - **internal/config/** - YAML config at `~/.config/gh-own/config.yaml`: per-tab queries, `exclude`, and `pr.needsAction.conversation` (default true; false skips both the conversation fields in the PR search query and `promoteNeedsAction`, so every tab is exactly its query)
