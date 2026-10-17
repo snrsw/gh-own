@@ -12,6 +12,20 @@ go test ./internal/ui # Run tests for a specific package
 golangci-lint run     # Run linter
 ```
 
+## Concept Docs
+
+`docs/concepts/` is an OKF v0.2 bundle that explains gh-own's concepts to agents; start from `docs/concepts/index.md`. Load the `okf` skill before editing it.
+
+Every PR keeps the bundle in sync with the code. Before opening or updating a PR, check the diff against the concepts:
+
+- **Behavior a concept describes changed** — update that concept file, and its `index.md` entry if its `description` changed.
+- **New concept** (a new tab, rule, config field, or pipeline stage) — add the concept file and its `index.md` entry.
+- **Concept removed or renamed** — update or delete the file and every link to it; paths are concept identities, so rename only when necessary.
+- **Any of the above** — add a dated entry to `docs/concepts/log.md` (newest first), and list the concept files touched in the PR's `## Changes`.
+- **Nothing a concept describes changed** (refactor, tests, CI) — leave the bundle alone.
+
+Cite code by identifier (`promoteNeedsAction`), not by line number, so that a rename shows up as a grep miss.
+
 ## Architecture
 
 gh-own is a GitHub CLI extension that displays the user's owned PRs and issues in a terminal UI.
