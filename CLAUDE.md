@@ -16,6 +16,8 @@ golangci-lint run     # Run linter
 
 gh-own is a GitHub CLI extension that displays the user's owned PRs and issues in a terminal UI.
 
+Concept docs live in `docs/concepts/`, an OKF v0.2 bundle; start from `docs/concepts/index.md`. When you change the behavior a concept describes, update that concept file, its `index.md` entry if the description changes, and `docs/concepts/log.md`.
+
 ### Package Structure
 
 - **cmd/** - Cobra command definitions (`root`, `pr`, `issue`); `root` has a persistent `--debug` flag that enables slog debug output
