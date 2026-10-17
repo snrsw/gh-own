@@ -40,12 +40,12 @@ func (o *GroupedPullRequests) BuildTabs() []ui.Tab {
 
 func (p pullRequest) toItem(currentLogin string) ui.Item {
 	var desc string
-	if p.LatestActivity.Login != "" {
+	if activity := p.shownActivity(); activity.Login != "" {
 		desc = fmt.Sprintf(
 			"%s by %s %s · opened on %s by %s",
-			ui.RenderActivityKind(p.LatestActivity.Kind),
-			ui.RenderUser(p.LatestActivity.Login, currentLogin),
-			ui.UpdatedAgo(p.LatestActivity.At),
+			ui.RenderActivityKind(activity.Kind),
+			ui.RenderUser(activity.Login, currentLogin),
+			ui.UpdatedAgo(activity.At),
 			ui.CreatedOn(p.CreatedAt),
 			ui.RenderUser(p.User.Login, currentLogin),
 		)

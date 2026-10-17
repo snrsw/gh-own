@@ -12,13 +12,35 @@ import (
 )
 
 type Config struct {
-	PR      CommandConfig `yaml:"pr"`
+	PR      PRConfig      `yaml:"pr"`
 	Issue   CommandConfig `yaml:"issue"`
 	Exclude ExcludeConfig `yaml:"exclude"`
 }
 
 type CommandConfig struct {
 	Queries map[string]string `yaml:"queries"`
+}
+
+// PRConfig is the pr section: the tab queries plus the Needs action options.
+type PRConfig struct {
+	CommandConfig `yaml:",inline"`
+	NeedsAction   NeedsActionConfig `yaml:"needsAction"`
+}
+
+// NeedsActionConfig tunes what lands in the Needs action tab beyond what its
+// query matches.
+type NeedsActionConfig struct {
+	// Conversation, when false, stops gh-own from reading each pull request's
+	// conversation to find the ones waiting on you (see gh.Conversation), so
+	// the tab holds exactly what the needsAction query matches and every other
+	// tab exactly what its own query matches. Unset means true.
+	Conversation *bool `yaml:"conversation"`
+}
+
+// ConversationEnabled reports whether the conversation-based Needs action
+// promotion is on; it is unless the config turns it off.
+func (c NeedsActionConfig) ConversationEnabled() bool {
+	return c.Conversation == nil || *c.Conversation
 }
 
 // ExcludeConfig names the authors whose pull requests and issues are dropped

@@ -52,6 +52,13 @@ func TestNewLatestActivity_ReviewDismissed(t *testing.T) {
 	}
 }
 
+func TestNewLatestActivity_ReviewCommented(t *testing.T) {
+	got := NewLatestActivity("", "", "dave", "2024-03-10T10:00:00Z", "COMMENTED", "", "")
+	if got.Kind != "commented" {
+		t.Errorf("Kind = %q, want %q", got.Kind, "commented")
+	}
+}
+
 func TestNewLatestActivity_PushOnly(t *testing.T) {
 	got := NewLatestActivity("", "", "", "", "", "eve", "2024-03-10T10:00:00Z")
 	if got.Kind != "pushed" {

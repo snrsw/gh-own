@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -758,5 +759,50 @@ func TestResolveExcludeAuthors(t *testing.T) {
 				t.Errorf("ResolveExcludeAuthors() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestLoadFromPath_NeedsActionConversation(t *testing.T) {
+	tests := []struct {
+		name string
+		yaml string
+		want bool
+	}{
+		{name: "unset means on", yaml: "pr:\n  queries:\n    drafts: \"is:pr draft:true\"\n", want: true},
+		{name: "explicit true", yaml: "pr:\n  needsAction:\n    conversation: true\n", want: true},
+		{name: "explicit false", yaml: "pr:\n  needsAction:\n    conversation: false\n", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.yaml")
+			if err := os.WriteFile(path, []byte(tt.yaml), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			cfg, err := LoadFromPath(path)
+			if err != nil {
+				t.Fatalf("LoadFromPath returned error: %v", err)
+			}
+			if got := cfg.PR.NeedsAction.ConversationEnabled(); got != tt.want {
+				t.Errorf("ConversationEnabled() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadFromPath_NeedsActionNextToQueries(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	yaml := "pr:\n  queries:\n    drafts: \"is:pr draft:true\"\n  needsAction:\n    conversation: false\n"
+	if err := os.WriteFile(path, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadFromPath(path)
+	if err != nil {
+		t.Fatalf("LoadFromPath returned error: %v", err)
+	}
+	if cfg.PR.Queries["drafts"] != "is:pr draft:true" {
+		t.Errorf("PR.Queries = %v, want the drafts override next to needsAction", cfg.PR.Queries)
+	}
+	if cfg.PR.NeedsAction.ConversationEnabled() {
+		t.Error("ConversationEnabled() = true, want false")
 	}
 }
