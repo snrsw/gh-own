@@ -2,6 +2,13 @@
 
 All notable changes to this repository will be documented in this file.
 
+## [0.1.6](https://github.com/snrsw/gh-own/compare/0.1.5...0.1.6) - 2026-10-22
+
+### Other Changes
+- ✨(pr): move PRs waiting on you into Needs action by @snrsw in https://github.com/snrsw/gh-own/pull/71
+- 📝 Replace CI status plan with OKF concept docs for agents by @snrsw in https://github.com/snrsw/gh-own/pull/73
+- ⬆️(go): bump Go to 1.27 by @snrsw in https://github.com/snrsw/gh-own/pull/74
+
 ## [0.1.5](https://github.com/snrsw/gh-own/compare/0.1.4...0.1.5) - 2026-08-11
 
 ### Other Changes
